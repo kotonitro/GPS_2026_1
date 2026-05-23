@@ -3,7 +3,9 @@ import ("backend/internal/inventario")
 
 type Promocion struct {
 	ID 		  	string `gorm:"primaryKey;type:uuid;default;gen_random_uuid()" json:"id_promocion"`
-	Mayorista 	int `json:"mayorista"`
+	Tipo        string `json:"tipo"` //dsp este va a ser NXM,pocentaje o precio fijo 
+	Lleva 	    int `json:"lleva"` //N
+	Paga        int `json:"paga"`  //M
 	Descuento 	float64 `json:"descuento"`
 }
 
