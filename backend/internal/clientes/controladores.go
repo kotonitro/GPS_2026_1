@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/gin-gonic/gonic/gin"
+	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
 
