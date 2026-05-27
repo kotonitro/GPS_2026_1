@@ -24,8 +24,8 @@ Sigue estos pasos para levantar el entorno local de desarrollo por primera vez:
 
 1. **Clonar el repositorio:**
    ```bash
-   git clone [https://github.com/tu_usuario/tu_repositorio.git](https://github.com/tu_usuario/tu_repositorio.git)
-   cd tu_repositorio
+   git clone [https://github.com/kotonitro/GPS_2026_1.git](https://github.com/kotonitro/GPS_2026_1.git)
+   cd GPS_2026_1
 
 2. **Construir y levantar la infraestructura:**
 Este comando descarga las imágenes, instala las dependencias de los contenedores y levanta la base de datos PostgreSQL junto con el entorno de programación en segundo plano.
