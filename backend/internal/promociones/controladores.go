@@ -47,10 +47,58 @@ func CrearPromocion (c *gin.Context){
 		"promocion":nuevaPromocion,
 	})
 }
-//Muestra todas las promociones de la bdd
-func ObtenerTodasLasPromociones(db *gorm.DB)([]Promocion,error){
-	var promociones []Promocion
-	result :=db.Find(&promociones)
-	return promociones, result.Error
+//obtiene todas las promociones
+func ObtenerPromociones(c *gin.Context){
+	dbInstance, _ := c.Get("db")
+	db := dbInstance.(*gorm.DB)
+	promociones, err := ObtenerTodasLasPromociones(db)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"ERROR":"Error al consultar bdd"})
+		return
+	}
+	c.JSON(http.StatusOK, promociones)
 }
 
+//Obtiene una promocion por ID
+func ObtenerPromocion(c *gin.Context){
+	dbInstance, _:= c.Get("db")
+	db := dbInstance.(*gorm.DB)
+	id:= c.Param("id")
+	promocion, err := ObtenerPromocionPorID(db,id)
+	if err != nil{
+		c.JSON(http.StatusNotFound,gin.H{"ERROR":"Promocion no encontrada"})
+		return
+	}
+	c.JSON(http.StatusOK,promocion)
+}
+// Actualiza una promocion
+func ActualizarPromociones(c *gin.Context){
+	dbInstance, _:= c.Get("db")
+	db := dbInstance.(*gorm.DB)
+	id := c.Param("id")
+
+	var datosNuevos Promocion
+	if err := c.ShouldBindJSON(&datosNuevos); err!=nil{
+		c.JSON(http.StatusBadRequest,gin.H{"ERROR":"datos no validos" + err.Error()})
+		return
+	}
+	promocionActualizada, err:= ActualizarPromocion(db,id,&datosNuevos)
+	if err!= nil{
+		c.JSON(http.StatusNotFound,gin.H{"ERROR":"No se pudo actualizar la promocion"})
+		return
+	}
+	c.JSON(http.StatusOK,gin.H{"mensaje":"Promocion actualizada","promocion":promocionActualizada})
+}
+//elimina una promocion
+func EliminarPromociones(c *gin.Context){
+	dbInstance, _:= c.Get("db")
+	db := dbInstance.(*gorm.DB)
+	id:= c.Param("id")
+
+	err:=EliminarPromocion(db,id)
+	if err !=nil{
+		c.JSON(http.StatusInternalServerError,gin.H{"ERROR":"No se pudo eliminar la promocion"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"mensaje":"Promocion eliminada exitosamente"})
+}

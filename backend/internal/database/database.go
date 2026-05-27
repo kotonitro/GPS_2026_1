@@ -37,7 +37,7 @@ func Init() *gorm.DB {
 		&inventario.Categoria{},
 		&inventario.Producto{},
 		&promociones.Promocion{},
-		&promociones.DetalleVenta{},
+		&promociones.DetallePromocion{},
 		&ventas.MetodoPago{},
 		&ventas.Venta{},
 		&ventas.DetalleVenta{},
