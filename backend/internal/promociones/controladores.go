@@ -47,7 +47,10 @@ func CrearPromocion (c *gin.Context){
 		"promocion":nuevaPromocion,
 	})
 }
-func GuardarPromocion(db *gorm.DB, promocion *Promocion) error{
-	result :=db.Create(promocion)
-	return result.Error
+//Muestra todas las promociones de la bdd
+func ObtenerTodasLasPromociones(db *gorm.DB)([]Promocion,error){
+	var promociones []Promocion
+	result :=db.Find(&promociones)
+	return promociones, result.Error
 }
+
