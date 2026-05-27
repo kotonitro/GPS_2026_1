@@ -8,6 +8,7 @@ import (
 	"backend/internal/clientes"
 	"backend/internal/inventario"
 	"backend/internal/promociones"
+	"backend/internal/ventas"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -37,6 +38,10 @@ func Init() *gorm.DB {
 		&inventario.Producto{},
 		&promociones.Promocion{},
 		&promociones.DetalleVenta{},
+		&ventas.MetodoPago{},
+		&ventas.Venta{},
+		&ventas.DetalleVenta{},
+		&ventas.Fiado{},
 	)
 	if err != nil {
 		log.Fatalf("Error crítico al ejecutar las migraciones de tablas: %v", err)

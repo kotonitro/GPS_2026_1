@@ -4,7 +4,8 @@ import (
 	"backend/internal/clientes"
 	"backend/internal/database"
 	"backend/internal/inventario"
-
+	"backend/internal/ventas"
+	
 	"github.com/gin-gonic/gin"
 )
 
@@ -34,6 +35,11 @@ func main() {
 	rutasInventario := r.Group("/inventario")
 	{
 		rutasInventario.POST("/productos", inventario.CrearProducto)
+	}
+	
+	rutasVentas := r.Group("/ventas")
+	{
+		rutasVentas.POST("", ventas.CrearVenta)
 	}
 
 	// Encendemos el servidor en el puerto 8080
