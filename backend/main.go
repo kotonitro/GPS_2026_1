@@ -3,24 +3,32 @@ package main
 import (
 	"backend/internal/clientes"
 	"backend/internal/database"
+	"backend/internal/empleados"
 	"backend/internal/inventario"
+	"backend/internal/validations"
 	"backend/internal/ventas"
-	
+	"log"
+
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
+	"github.com/go-playground/validator/v10"
 )
 
 func main() {
 
-	db := database.Init()
+	database.Init()
 
-	// Crea el enrutador de Gin con la configuración por defecto
+	err := database.DB.AutoMigrate(&empleados.Empleado{})
+	if err != nil {
+		log.Fatal("Error al ejecutar la migración de la base de datos:", err)
+	}
+
+	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
+		v.RegisterValidation("contrasena_segura", validations.ValidarContrasena)
+		v.RegisterValidation("rut_valido", validations.ValidarRUT)
+	}
+
 	r := gin.Default()
-
-	r.Use(func(c *gin.Context) {
-		c.Set("db", db)
-		c.Next()
-	})
-
 	// Rutas de la api
 
 	rutasClientes := r.Group("/clientes")
@@ -36,7 +44,7 @@ func main() {
 	{
 		rutasInventario.POST("/productos", inventario.CrearProducto)
 	}
-	
+
 	rutasVentas := r.Group("/ventas")
 	{
 		rutasVentas.POST("", ventas.CrearVenta)
