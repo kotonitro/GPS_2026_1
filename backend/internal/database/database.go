@@ -10,9 +10,9 @@ import (
 	"gorm.io/gorm"
 )
 
-// Init inicializa la conexión a PostgreSQL y ejecuta las migraciones automáticas
 var DB *gorm.DB
 
+// Inicializa la conexión a PostgreSQL
 func Init() {
 
 	err := godotenv.Load()

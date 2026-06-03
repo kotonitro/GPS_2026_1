@@ -6,7 +6,6 @@ import (
 	"backend/internal/empleados"
 	"backend/internal/inventario"
 	"backend/internal/validations"
-	"backend/internal/ventas"
 	"log"
 
 	"github.com/gin-gonic/gin"
@@ -29,21 +28,12 @@ func main() {
 	}
 
 	r := gin.Default()
+
 	// Rutas de la api
 	api := r.Group("/api")
 
 	inventario.ConfigurarRutas(api)
 	clientes.ConfigurarRutas(api)
-
-	rutasInventario := r.Group("/inventario")
-	{
-		rutasInventario.POST("/productos", inventario.CrearProducto)
-	}
-
-	rutasVentas := r.Group("/ventas")
-	{
-		rutasVentas.POST("", ventas.CrearVenta)
-	}
 
 	// Encendemos el servidor en el puerto 8080
 	r.Run(":8080")
