@@ -30,15 +30,10 @@ func main() {
 
 	r := gin.Default()
 	// Rutas de la api
+	api := r.Group("/api")
 
-	rutasClientes := r.Group("/clientes")
-	{
-		rutasClientes.POST("", clientes.CreateCliente)
-		rutasClientes.GET("", clientes.GetClientes)
-		rutasClientes.GET("/:id", clientes.GetClienteByID)
-		rutasClientes.PUT("/:id", clientes.UpdateCliente)
-		rutasClientes.DELETE("/:id", clientes.DeleteCliente)
-	}
+	inventario.ConfigurarRutas(api)
+	clientes.ConfigurarRutas(api)
 
 	rutasInventario := r.Group("/inventario")
 	{
