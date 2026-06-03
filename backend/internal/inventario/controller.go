@@ -16,11 +16,22 @@ func CrearProducto(c *gin.Context) {
 		return
 	}
 
-	// 2. Extrae la conexión a la base de datos del Middleware
+	//------------- validaciones--------------
+	if nuevoProducto.Stock < 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "El stock no puede ser negativo"})
+		return
+	}
+	if nuevoProducto.Precio <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "El precio debe ser mayor a cero"})
+		return
+	}
+	// ---------------------------------------
+
+	// 2. Extrae la conexión a la base de datos
 	dbInstance, _ := c.Get("db")
 	db := dbInstance.(*gorm.DB)
 
-	// 3. LLamado al repositorio
+	// 3. Llamado al repositorio
 	err := GuardarProducto(db, &nuevoProducto)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"Error": "No se pudo guardar el producto"})
@@ -68,43 +79,51 @@ func GetProductoByID(c *gin.Context) {
 	c.JSON(http.StatusOK, producto)
 }
 
-// UpdateProducto maneja la solicitud para actualizar un producto.
+// UpdateProducto maneja la petición PUT para modificar el inventario
 func UpdateProducto(c *gin.Context) {
+	// 1. Obtener el UUID
 	id := c.Param("id")
 
-	dbInstance, _ := c.Get("db")
+	// 2. Extraer la base de datos del contexto
+	dbInstance, existe := c.Get("db")
+	if !existe {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error interno del servidor"})
+		return
+	}
 	db := dbInstance.(*gorm.DB)
 
-	// Verificar si el producto existe
-	productoExistente, err := ObtenerProductoPorID(db, id)
-	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"Error": "El producto que intenta actualizar no existe"})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"Error": "Error al buscar el producto"})
+	// 3.Buscar el producto existente en la BD primero
+	var productoExistente Producto
+	if err := db.First(&productoExistente, "id = ?", id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "El producto que intentas actualizar no existe"})
 		return
 	}
 
-	// Leer los nuevos datos
+	// 4. Leer el JSON del frontend con los datos nuevos
 	var datosNuevos Producto
 	if err := c.ShouldBindJSON(&datosNuevos); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": "Datos inválidos"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "El formato de los datos es incorrecto"})
 		return
 	}
 
-	// Llamar al repositorio para actualizar
-	if err := ActualizarProducto(db, productoExistente, &datosNuevos); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"Error": "No se pudo actualizar el producto"})
+	if datosNuevos.Stock < 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Operación rechazada: El stock no puede ser negativo"})
+		return
+	}
+	if datosNuevos.Precio <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Operación rechazada: El precio debe ser mayor a cero"})
 		return
 	}
 
-	// Volver a buscar el producto para devolver el estado más reciente con la categoría actualizada.
-	productoActualizado, _ := ObtenerProductoPorID(db, id)
+	// 5. Llamar al Repositorio
+	if err := ActualizarProducto(db, &productoExistente, &datosNuevos); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "No se pudieron guardar los cambios en la base de datos"})
+		return
+	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"mensaje":  "Producto actualizado exitosamente",
-		"producto": productoActualizado,
+		"mensaje":  "Producto actualizado correctamente",
+		"producto": productoExistente,
 	})
 }
 
