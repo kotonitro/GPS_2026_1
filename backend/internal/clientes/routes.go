@@ -9,6 +9,8 @@ func ConfigurarRutas(api *gin.RouterGroup) {
 		grupo.POST("", CreateCliente)
 		grupo.GET("", GetClientes)
 		grupo.GET("/:id", GetClienteByID)
+		grupo.GET("/rut/:rut", SearchClienteByRut)
+		grupo.GET("/search/nombre", SearchClienteByNombre)
 		grupo.PUT("/:id", UpdateCliente)
 		grupo.DELETE("/:id", DeleteCliente)
 	}
