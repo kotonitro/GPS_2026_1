@@ -5,6 +5,7 @@ import "github.com/gin-gonic/gin"
 // ConfigurarRutas registra todos los endpoints del módulo de clientes
 func ConfigurarRutas(api *gin.RouterGroup) {
 	grupo := api.Group("/clientes")
+	grupo.Use(ClienteMiddleware())
 	{
 		grupo.POST("", CreateCliente)
 		grupo.GET("", GetClientes)
