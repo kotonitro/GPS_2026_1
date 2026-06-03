@@ -25,15 +25,7 @@ func main() {
 	api := r.Group("/api")
 
 	inventario.ConfigurarRutas(api)
-
-	rutasClientes := r.Group("/clientes")
-	{
-		rutasClientes.POST("", clientes.CreateCliente)
-		rutasClientes.GET("", clientes.GetClientes)
-		rutasClientes.GET("/:id", clientes.GetClienteByID)
-		rutasClientes.PUT("/:id", clientes.UpdateCliente)
-		rutasClientes.DELETE("/:id", clientes.DeleteCliente)
-	}
+	clientes.ConfigurarRutas(api)
 
 	rutasVentas := r.Group("/ventas")
 	{
