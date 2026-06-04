@@ -28,12 +28,11 @@ func main() {
 	}
 
 	r := gin.Default()
-
-	// Rutas de la api
 	api := r.Group("/api")
 
 	inventario.ConfigurarRutas(api)
 	clientes.ConfigurarRutas(api)
+	empleados.ConfigurarRutas(api)
 
 	// Encendemos el servidor en el puerto 8080
 	r.Run(":8080")
