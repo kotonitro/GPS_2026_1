@@ -25,7 +25,7 @@ func main() {
 	api := r.Group("/api")
 
 	inventario.ConfigurarRutas(api)
-
+	ventas.ConfigurarRutas(api)
 	rutasClientes := r.Group("/clientes")
 	{
 		rutasClientes.POST("", clientes.CreateCliente)
@@ -35,14 +35,7 @@ func main() {
 		rutasClientes.DELETE("/:id", clientes.DeleteCliente)
 	}
 
-	rutasVentas := r.Group("/ventas")
-	{
-		rutasVentas.POST("", ventas.CrearVenta)
-		rutasVentas.GET("", ventas.GetVentas)
-		rutasVentas.GET("/:id", ventas.GetVentaByID)
-		rutasVentas.PUT("/:id", ventas.UpdateVenta)
-		rutasVentas.DELETE("/:id", ventas.DeleteVenta)
-	}
+	
 
 	// Encendemos el servidor en el puerto 8080
 	r.Run(":8080")
