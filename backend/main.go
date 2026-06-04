@@ -1,11 +1,14 @@
 package main
 
 import (
+	"backend/internal/cajas"
 	"backend/internal/clientes"
 	"backend/internal/database"
 	"backend/internal/empleados"
 	"backend/internal/inventario"
+	"backend/internal/promociones"
 	"backend/internal/validations"
+	"backend/internal/ventas"
 	"log"
 
 	"github.com/gin-gonic/gin"
@@ -17,7 +20,20 @@ func main() {
 
 	database.Init()
 
-	err := database.DB.AutoMigrate(&empleados.Empleado{})
+	err := database.DB.AutoMigrate(
+		&empleados.Empleado{},
+		&clientes.Cliente{},
+		&cajas.Caja{},
+		&inventario.Categoria{},
+		&inventario.Producto{},
+		&promociones.Promocion{},
+		&promociones.DetallePromocion{},
+		&ventas.MetodoPago{},
+		&ventas.Venta{},
+		&ventas.DetalleVenta{},
+		&ventas.Fiado{},
+	)
+
 	if err != nil {
 		log.Fatal("Error al ejecutar la migración de la base de datos:", err)
 	}
