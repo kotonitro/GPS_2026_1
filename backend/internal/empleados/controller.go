@@ -57,7 +57,7 @@ func CrearEmpleado(c *gin.Context) {
 	hashContrasena, err := bcrypt.GenerateFromPassword([]byte(input.Contrasena), bcrypt.DefaultCost)
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ocurrió un error interno al procesar la seguridad del usuario."})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ocurrió un error interno al procesar la contraseña."})
 		return
 	}
 

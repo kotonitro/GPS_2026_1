@@ -7,8 +7,8 @@ func ConfigurarRutas(api *gin.RouterGroup) {
 	grupo := api.Group("empleados")
 	{
 		grupo.POST("", CrearEmpleado)
-		// grupoEmpleados.GET("/", ListarEmpleados)
-		// grupoEmpleados.GET("/:id", ObtenerEmpleado)
-		// grupoEmpleados.PUT("/:id", ActualizarEmpleado)
+		// grupo.GET("/", ListarEmpleados)
+		// grupo.GET("/:id", ObtenerEmpleado)
+		// grupo.PUT("/:id", ActualizarEmpleado)
 	}
 }
