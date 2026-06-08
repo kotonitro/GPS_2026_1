@@ -48,7 +48,7 @@ func main() {
 
 	inventario.ConfigurarRutas(api)
 	clientes.ConfigurarRutas(api)
-	empleados.ConfigurarRutas(api)
+	empleados.RoutesConfig(api)
 
 	// Encendemos el servidor en el puerto 8080
 	r.Run(":8080")

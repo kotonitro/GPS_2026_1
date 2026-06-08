@@ -2,13 +2,13 @@ package empleados
 
 import "github.com/gin-gonic/gin"
 
-func ConfigurarRutas(api *gin.RouterGroup) {
+func RoutesConfig(api *gin.RouterGroup) {
 
 	grupo := api.Group("empleados")
 	{
-		grupo.POST("", CrearEmpleado)
-		// grupo.GET("/", ListarEmpleados)
-		// grupo.GET("/:id", ObtenerEmpleado)
+		grupo.GET("/", GetEmpleadosController)
+		grupo.GET("/:id", GetEmpleadoByIDController)
+		grupo.POST("", CreateEmpleadoController)
 		// grupo.PUT("/:id", ActualizarEmpleado)
 	}
 }

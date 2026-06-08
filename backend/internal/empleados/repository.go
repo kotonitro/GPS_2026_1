@@ -2,7 +2,25 @@ package empleados
 
 import "gorm.io/gorm"
 
-func GuardarEmpleado(db *gorm.DB, empleado *Empleado) error {
+func GetEmpleados(db *gorm.DB) ([]Empleado, error) {
+	var empleados []Empleado
+
+	result := db.Find(&empleados)
+	return empleados, result.Error
+}
+
+func GetEmpleadosByID(db *gorm.DB, id string) (*Empleado, error) {
+	var empleado Empleado
+
+	result := db.First(&empleado, "id = ?", id)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	return &empleado, nil
+}
+
+func CreateEmpleado(db *gorm.DB, empleado *Empleado) error {
 
 	resultado := db.Create(empleado)
 
