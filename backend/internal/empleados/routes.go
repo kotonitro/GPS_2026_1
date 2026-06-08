@@ -1,14 +1,18 @@
 package empleados
 
-import "github.com/gin-gonic/gin"
+import (
+	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
+)
 
-func ConfigurarRutas(api *gin.RouterGroup) {
+func RoutesConfig(api *gin.RouterGroup, db *gorm.DB) {
+
+	ctrl := NewEmpleadoController(db)
 
 	grupo := api.Group("empleados")
 	{
-		grupo.POST("", CrearEmpleado)
-		// grupoEmpleados.GET("/", ListarEmpleados)
-		// grupoEmpleados.GET("/:id", ObtenerEmpleado)
-		// grupoEmpleados.PUT("/:id", ActualizarEmpleado)
+		grupo.GET("/", ctrl.GetEmpleadosController)
+		grupo.GET("/:id", ctrl.GetEmpleadoByIDController)
+		grupo.POST("", ctrl.CreateEmpleadoController)
 	}
 }

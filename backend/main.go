@@ -1,15 +1,11 @@
 package main
 
 import (
-	"backend/internal/cajas"
 	"backend/internal/clientes"
 	"backend/internal/database"
 	"backend/internal/empleados"
 	"backend/internal/inventario"
-	"backend/internal/promociones"
 	"backend/internal/validations"
-	"backend/internal/ventas"
-	"log"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
@@ -18,25 +14,8 @@ import (
 
 func main() {
 
-	database.Init()
-
-	err := database.DB.AutoMigrate(
-		&empleados.Empleado{},
-		&clientes.Cliente{},
-		&cajas.Caja{},
-		&inventario.Categoria{},
-		&inventario.Producto{},
-		&promociones.Promocion{},
-		&promociones.DetallePromocion{},
-		&ventas.MetodoPago{},
-		&ventas.Venta{},
-		&ventas.DetalleVenta{},
-		&ventas.Fiado{},
-	)
-
-	if err != nil {
-		log.Fatal("Error al ejecutar la migración de la base de datos:", err)
-	}
+	db := database.Init()
+	database.Migrations(db)
 
 	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
 		v.RegisterValidation("contrasena_segura", validations.ValidarContrasena)
@@ -48,7 +27,7 @@ func main() {
 
 	inventario.ConfigurarRutas(api)
 	clientes.ConfigurarRutas(api)
-	empleados.ConfigurarRutas(api)
+	empleados.RoutesConfig(api, db)
 
 	// Encendemos el servidor en el puerto 8080
 	r.Run(":8080")
