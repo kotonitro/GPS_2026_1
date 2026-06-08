@@ -1,7 +1,6 @@
 package empleados
 
 import (
-	"backend/internal/database"
 	"errors"
 	"net/http"
 
@@ -11,16 +10,16 @@ import (
 	"gorm.io/gorm"
 )
 
-type CreateEmpleadoInput struct {
-	Rut        string `json:"rut" binding:"required,rut_valido"`
-	Usuario    string `json:"usuario" binding:"required"`
-	Contrasena string `json:"contrasena" binding:"required,contrasena_segura"`
-	Telefono   string `json:"telefono"`
-	Rol        string `json:"rol" binding:"required"`
+type EmpleadoController struct {
+	db *gorm.DB
 }
 
-func GetEmpleadosController(c *gin.Context) {
-	listaEmpleados, err := GetEmpleados(database.DB)
+func NewEmpleadoController(db *gorm.DB) *EmpleadoController {
+	return &EmpleadoController{db: db}
+}
+
+func (ctrl *EmpleadoController) GetEmpleadosController(c *gin.Context) {
+	listaEmpleados, err := GetEmpleados(ctrl.db)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error interno al obtener la lista de empleados."})
 		return
@@ -29,11 +28,11 @@ func GetEmpleadosController(c *gin.Context) {
 	c.JSON(http.StatusOK, listaEmpleados)
 }
 
-func GetEmpleadoByIDController(c *gin.Context) {
+func (ctrl *EmpleadoController) GetEmpleadoByIDController(c *gin.Context) {
 
 	id := c.Param("id")
 
-	empleado, err := GetEmpleadosByID(database.DB, id)
+	empleado, err := GetEmpleadosByID(ctrl.db, id)
 	if err != nil {
 
 		if err == gorm.ErrRecordNotFound {
@@ -48,7 +47,15 @@ func GetEmpleadoByIDController(c *gin.Context) {
 	c.JSON(http.StatusOK, empleado)
 }
 
-func CreateEmpleadoController(c *gin.Context) {
+type CreateEmpleadoInput struct {
+	Rut        string `json:"rut" binding:"required,rut_valido"`
+	Usuario    string `json:"usuario" binding:"required"`
+	Contrasena string `json:"contrasena" binding:"required,contrasena_segura"`
+	Telefono   string `json:"telefono"`
+	Rol        string `json:"rol" binding:"required"`
+}
+
+func (ctrl *EmpleadoController) CreateEmpleadoController(c *gin.Context) {
 	var input CreateEmpleadoInput
 
 	if err := c.ShouldBindJSON(&input); err != nil {
@@ -99,7 +106,7 @@ func CreateEmpleadoController(c *gin.Context) {
 		Rol:        input.Rol,
 	}
 
-	err = CreateEmpleado(database.DB, &nuevoEmpleado)
+	err = CreateEmpleado(ctrl.db, &nuevoEmpleado)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "No se pudo registrar el empleado.",

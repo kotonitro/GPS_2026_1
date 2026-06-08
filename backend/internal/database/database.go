@@ -10,10 +10,8 @@ import (
 	"gorm.io/gorm"
 )
 
-var DB *gorm.DB
-
 // Inicializa la conexión a PostgreSQL
-func Init() {
+func Init() *gorm.DB {
 
 	err := godotenv.Load()
 	if err != nil {
@@ -34,10 +32,12 @@ func Init() {
 		host, user, password, name, port,
 	)
 
-	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		log.Fatal("Error: No se pudo conectar a la base de datos \n", err)
 	}
 
 	fmt.Println("Conexión con la base de datos establecida")
+
+	return db
 }
