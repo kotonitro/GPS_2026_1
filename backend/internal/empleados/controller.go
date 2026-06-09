@@ -32,11 +32,11 @@ func (ctrl *EmpleadoController) GetEmpleadoByIDController(c *gin.Context) {
 
 	id := c.Param("id")
 
-	empleado, err := GetEmpleadosByID(ctrl.db, id)
+	empleado, err := GetEmpleadoByID(ctrl.db, id)
 	if err != nil {
 
 		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "El empleado no existe."})
+			c.JSON(http.StatusNotFound, gin.H{"error": "El empleado solicitado no existe."})
 			return
 		}
 
@@ -60,34 +60,8 @@ func (ctrl *EmpleadoController) CreateEmpleadoController(c *gin.Context) {
 
 	if err := c.ShouldBindJSON(&input); err != nil {
 
-		var errs validator.ValidationErrors
-		if errors.As(err, &errs) {
-
-			mensajes := make(map[string]string)
-
-			for _, f := range errs {
-
-				switch f.Tag() {
-
-				case "required":
-					mensajes[f.Field()] = "Este campo es obligatorio."
-
-				case "rut_valido":
-					mensajes[f.Field()] = "El RUT ingresado no es válido."
-
-				case "contrasena_segura":
-					mensajes[f.Field()] = "La contraseña debe tener al menos 8 caracteres, 1 número y 1 caracter especial."
-
-				default:
-					mensajes[f.Field()] = "El formato ingresado no es válido."
-				}
-			}
-
-			c.JSON(http.StatusBadRequest, gin.H{"errores": mensajes})
-			return
-		}
-
-		c.JSON(http.StatusBadRequest, gin.H{"error": "El cuerpo de la petición es inválido."})
+		errores := ValidationErrorsFormat(err)
+		c.JSON(http.StatusBadRequest, gin.H{"errores": errores})
 		return
 	}
 
@@ -120,4 +94,96 @@ func (ctrl *EmpleadoController) CreateEmpleadoController(c *gin.Context) {
 		"id_empleado": nuevoEmpleado.ID,
 	})
 
+}
+
+func (ctrl *EmpleadoController) DeleteEmpleadoController(c *gin.Context) {
+	id := c.Param("id")
+
+	err := DeleteEmpleadoByID(ctrl.db, id)
+
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "El empleado que intenta eliminar no existe."})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error interno al eliminar el empleado."})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"mensaje": "Empleado eliminado exitosamente."})
+}
+
+type UpdateEmpleadoInput struct {
+	Usuario    *string `json:"usuario"`
+	Contrasena *string `json:"contrasena" binding:"omitempty,contrasena_segura"`
+	Telefono   *string `json:"telefono"`
+	Rol        *string `json:"rol"`
+}
+
+func (ctrl *EmpleadoController) UpdateEmpleadoByIDController(c *gin.Context) {
+	id := c.Param("id")
+
+	var input UpdateEmpleadoInput
+
+	if err := c.ShouldBindJSON(&input); err != nil {
+		errores := ValidationErrorsFormat(err)
+		c.JSON(http.StatusBadRequest, gin.H{"errores": errores})
+		return
+	}
+
+	if input.Usuario == nil && input.Contrasena == nil && input.Telefono == nil && input.Rol == nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Se requiere al menos un campo válido para modificar.",
+		})
+		return
+	}
+
+	if input.Contrasena != nil {
+		hashContrasena, err := bcrypt.GenerateFromPassword([]byte(*input.Contrasena), bcrypt.DefaultCost)
+
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error interno al procesar la contraseña."})
+			return
+		}
+
+		hashString := string(hashContrasena)
+		input.Contrasena = &hashString
+	}
+
+	err := UpdateEmpleadoByID(ctrl.db, id, input)
+
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"Error": "El empleado a modificar no existe."})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"Error": "Error interno al modificar el empleado."})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"mensaje": "Empleado modificado exitosamente."})
+}
+
+func ValidationErrorsFormat(err error) map[string]string {
+	var errs validator.ValidationErrors
+	mensajes := make(map[string]string)
+
+	if errors.As(err, &errs) {
+		for _, f := range errs {
+			switch f.Tag() {
+			case "rut_valido":
+				mensajes[f.Field()] = "El RUT ingresado no es válido."
+			case "contrasena_segura":
+				mensajes[f.Field()] = "La contraseña debe tener al menos 8 caracteres, 1 número y 1 caracter especial."
+			case "required":
+				mensajes[f.Field()] = "Este campo es obligatorio."
+			default:
+				mensajes[f.Field()] = "El formato ingresado no es válido."
+			}
+		}
+		return mensajes
+	}
+
+	mensajes["error"] = "El cuerpo de la petición es inválido."
+	return mensajes
 }
