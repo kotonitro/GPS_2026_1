@@ -14,6 +14,7 @@ func RoutesConfig(api *gin.RouterGroup, db *gorm.DB) {
 		grupo.GET("/", ctrl.GetEmpleadosController)
 		grupo.GET("/:id", ctrl.GetEmpleadoByIDController)
 		grupo.POST("", ctrl.CreateEmpleadoController)
-		grupo.DELETE(":id", ctrl.DeleteEmpleadoController)
+		grupo.DELETE("/:id", ctrl.DeleteEmpleadoController)
+		grupo.PATCH("/:id", ctrl.UpdateEmpleadoByIDController)
 	}
 }

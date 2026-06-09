@@ -40,3 +40,17 @@ func DeleteEmpleadoByID(db *gorm.DB, id string) error {
 
 	return nil
 }
+
+func UpdateEmpleadoByID(db *gorm.DB, id string, data UpdateEmpleadoInput) error {
+	var empleado Empleado
+
+	if err := db.First(&empleado, "id = ?", id).Error; err != nil {
+		return err
+	}
+
+	if err := db.Model(&empleado).Updates(data).Error; err != nil {
+		return err
+	}
+
+	return nil
+}
