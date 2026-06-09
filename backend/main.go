@@ -8,20 +8,18 @@ import (
 	"backend/internal/validations"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gin-gonic/gin/binding"
-	"github.com/go-playground/validator/v10"
 )
 
 func main() {
 
+	// base de datos
 	db := database.Init()
 	database.Migrations(db)
 
-	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
-		v.RegisterValidation("contrasena_segura", validations.ValidarContrasena)
-		v.RegisterValidation("rut_valido", validations.ValidarRUT)
-	}
+	// validaciones
+	validations.ValidationsConfig()
 
+	// rutas
 	r := gin.Default()
 	api := r.Group("/api")
 
@@ -29,6 +27,5 @@ func main() {
 	clientes.ConfigurarRutas(api)
 	empleados.RoutesConfig(api, db)
 
-	// Encendemos el servidor en el puerto 8080
 	r.Run(":8080")
 }

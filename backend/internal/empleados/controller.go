@@ -32,11 +32,11 @@ func (ctrl *EmpleadoController) GetEmpleadoByIDController(c *gin.Context) {
 
 	id := c.Param("id")
 
-	empleado, err := GetEmpleadosByID(ctrl.db, id)
+	empleado, err := GetEmpleadoByID(ctrl.db, id)
 	if err != nil {
 
 		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "El empleado no existe."})
+			c.JSON(http.StatusNotFound, gin.H{"error": "El empleado solicitado no existe."})
 			return
 		}
 
@@ -68,15 +68,14 @@ func (ctrl *EmpleadoController) CreateEmpleadoController(c *gin.Context) {
 			for _, f := range errs {
 
 				switch f.Tag() {
-
-				case "required":
-					mensajes[f.Field()] = "Este campo es obligatorio."
-
 				case "rut_valido":
 					mensajes[f.Field()] = "El RUT ingresado no es válido."
 
 				case "contrasena_segura":
 					mensajes[f.Field()] = "La contraseña debe tener al menos 8 caracteres, 1 número y 1 caracter especial."
+
+				case "required":
+					mensajes[f.Field()] = "Este campo es obligatorio."
 
 				default:
 					mensajes[f.Field()] = "El formato ingresado no es válido."
@@ -120,4 +119,21 @@ func (ctrl *EmpleadoController) CreateEmpleadoController(c *gin.Context) {
 		"id_empleado": nuevoEmpleado.ID,
 	})
 
+}
+
+func (ctrl *EmpleadoController) DeleteEmpleadoController(c *gin.Context) {
+	id := c.Param("id")
+
+	err := DeleteEmpleadoByID(ctrl.db, id)
+
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "El empleado que intenta eliminar no existe."})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error interno al eliminar el empleado."})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"mensaje": "Empleado eliminado exitosamente."})
 }
