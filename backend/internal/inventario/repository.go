@@ -2,17 +2,18 @@ package inventario
 
 import "gorm.io/gorm"
 
+// ---- PRODUCTOS ----
 // Recibe la BD y un puntero al producto para inyectarle el UUID
 func GuardarProducto(db *gorm.DB, producto *Producto) error {
 	err := db.Create(producto).Error
 	return err
 }
 
-// ObtenerTodosProductos recupera todos los productos de la base de datos, incluyendo su categoría.
+// ver todos los productos ACTIVOS de la base de datos.
 func ObtenerTodosProductos(db *gorm.DB) ([]Producto, error) {
 	var productos []Producto
-	// Preload("Categoria") carga la información de la categoría asociada a cada producto.
-	if err := db.Preload("Categoria").Find(&productos).Error; err != nil {
+	// Ocultamos los productos descontinuados
+	if err := db.Preload("Categoria").Where("estado = ?", true).Find(&productos).Error; err != nil {
 		return nil, err
 	}
 	return productos, nil
@@ -27,12 +28,46 @@ func ObtenerProductoPorID(db *gorm.DB, id string) (*Producto, error) {
 	return &producto, nil
 }
 
+func ObtenerProductoPorCodigo(db *gorm.DB, codigo string) (*Producto, error) {
+	var producto Producto
+	// Usamos Preload para que también nos traiga los datos de su categoría
+	if err := db.Preload("Categoria").First(&producto, "codigo_barras = ?", codigo).Error; err != nil {
+		return nil, err
+	}
+	return &producto, nil
+}
+
 // ActualizarProducto actualiza los datos de un producto en la base de datos.
 func ActualizarProducto(db *gorm.DB, productoExistente *Producto, datosNuevos *Producto) error {
 	return db.Model(productoExistente).Updates(datosNuevos).Error
 }
 
-// EliminarProducto elimina un producto de la base de datos por su ID.
+// Desactivamos un producto en la base de datos, marcándolo como descontinuado
 func EliminarProducto(db *gorm.DB, id string) error {
-	return db.Delete(&Producto{}, "id = ?", id).Error
+	return db.Model(&Producto{}).Where("id = ?", id).Update("estado", false).Error
+}
+
+// ---- CATEGORIAS ----
+
+func GuardarCategoria(db *gorm.DB, categoria *Categoria) error {
+	return db.Create(categoria).Error
+}
+
+// Obtener todas las categorías de la base de datos.
+func ObtenerTodasCategorias(db *gorm.DB) ([]Categoria, error) {
+	var categorias []Categoria
+	if err := db.Find(&categorias).Error; err != nil {
+		return nil, err
+	}
+	return categorias, nil
+}
+
+// modifica el nombre de una categoría existente
+func ActualizarCategoria(db *gorm.DB, id string, datosNuevos *Categoria) error {
+	return db.Model(&Categoria{}).Where("id = ?", id).Updates(datosNuevos).Error
+}
+
+// borra una categoría de la base de datos
+func EliminarCategoria(db *gorm.DB, id string) error {
+	return db.Where("id = ?", id).Delete(&Categoria{}).Error
 }
