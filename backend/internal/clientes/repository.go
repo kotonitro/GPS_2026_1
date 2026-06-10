@@ -66,3 +66,23 @@ func EliminarCliente(db *gorm.DB, id string) error {
 	}
 	return nil
 }
+
+//buscar por rut
+func BuscarClientePorRut(db *gorm.DB, rut string) (*Cliente, error) {
+	var cliente Cliente
+	result := db.Where("rut = ?", rut).First(&cliente)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return &cliente, nil
+}
+
+//buscar por nombre 
+func BuscarClientesPorNombre(db *gorm.DB, nombre string) ([]Cliente, error) {
+	var clientes []Cliente
+	result := db.Where("nombre ILIKE ?", "%"+nombre+"%").Find(&clientes)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return clientes, nil
+}

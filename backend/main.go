@@ -3,40 +3,30 @@ package main
 import (
 	"backend/internal/clientes"
 	"backend/internal/database"
+	"backend/internal/empleados"
 	"backend/internal/inventario"
-	"backend/internal/ventas"
+	"backend/internal/validations"
 
 	"github.com/gin-gonic/gin"
 )
 
 func main() {
 
+	// base de datos
 	db := database.Init()
+	database.Migrations(db)
 
-	// Crea el enrutador de Gin con la configuración por defecto
+	// validaciones
+	validations.ValidationsConfig()
+
+	// rutas
 	r := gin.Default()
-
-	r.Use(func(c *gin.Context) {
-		c.Set("db", db)
-		c.Next()
-	})
-
-	// Rutas de la api
 	api := r.Group("/api")
 
 	inventario.ConfigurarRutas(api)
 	ventas.ConfigurarRutas(api)
-	rutasClientes := r.Group("/clientes")
-	{
-		rutasClientes.POST("", clientes.CreateCliente)
-		rutasClientes.GET("", clientes.GetClientes)
-		rutasClientes.GET("/:id", clientes.GetClienteByID)
-		rutasClientes.PUT("/:id", clientes.UpdateCliente)
-		rutasClientes.DELETE("/:id", clientes.DeleteCliente)
-	}
+	clientes.ConfigurarRutas(api)
+	empleados.RoutesConfig(api, db)
 
-	
-
-	// Encendemos el servidor en el puerto 8080
 	r.Run(":8080")
 }

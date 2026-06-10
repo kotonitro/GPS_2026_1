@@ -185,3 +185,59 @@ func DeleteCliente(c *gin.Context) {
 		"mensaje": "Cliente eliminado exitosamente",
 	})
 }
+
+
+func SearchClienteByRut(c *gin.Context) {
+	rut := c.Param("rut")
+	//sera necesario validar formato, siempre y cuando no este vacio
+	if rut == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "El RUT es requerido"})
+		return
+	}
+
+	dbInstance, _ := c.Get("db")
+	db := dbInstance.(*gorm.DB)
+	//hace la busqueda por rut
+	cliente, err := BuscarClientePorRut(db, rut)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"Error": "No se encontró cliente con ese RUT"})
+			return
+		}
+		//error general
+		c.JSON(http.StatusInternalServerError, gin.H{"Error": "Error al buscar el cliente"})
+		return
+	}
+
+	c.JSON(http.StatusOK, cliente)
+}
+
+
+func SearchClienteByNombre(c *gin.Context) {
+	nombre := c.Query("nombre")
+	//vemos que no este vacio el nombre
+	if nombre == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "El nombre es requerido"})
+		return
+	}
+
+	dbInstance, _ := c.Get("db")
+	db := dbInstance.(*gorm.DB)
+	//hace la busqueda por nombre
+	clientes, err := BuscarClientesPorNombre(db, nombre)
+	if err != nil {
+		//error general
+		c.JSON(http.StatusInternalServerError, gin.H{"Error": "Error al buscar clientes"})
+		return
+	}
+	//sino hay ninguno
+	if len(clientes) == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"Error": "No se encontraron clientes con ese nombre", "resultados": []Cliente{}})
+		return
+	}
+	//entrega el resutado
+	c.JSON(http.StatusOK, gin.H{
+		"resultados": clientes,
+		"cantidad":   len(clientes),
+	})
+}

@@ -5,17 +5,18 @@ import (
 	"log"
 	"os"
 
-	"backend/internal/clientes"
-	"backend/internal/inventario"
-	"backend/internal/promociones"
-	"backend/internal/ventas"
-
+	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
-// Init inicializa la conexión a PostgreSQL y ejecuta las migraciones automáticas
+// Inicializa la conexión a PostgreSQL
 func Init() *gorm.DB {
+
+	err := godotenv.Load()
+	if err != nil {
+		fmt.Println("Aviso: No se encontro el archivo .env")
+	}
 
 	host := os.Getenv("DB_HOST")
 	user := os.Getenv("DB_USER")
@@ -23,29 +24,20 @@ func Init() *gorm.DB {
 	name := os.Getenv("DB_NAME")
 	port := os.Getenv("DB_PORT")
 
+	if host == "" {
+		log.Fatal("Error: Las variables de entorno de la base de datos no están configuradas")
+	}
+
 	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable",
 		host, user, password, name, port,
 	)
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
-		log.Fatalf("Error crítico al conectar con la base de datos: %v", err)
+		log.Fatal("Error: No se pudo conectar a la base de datos \n", err)
 	}
 
-	err = db.AutoMigrate(
-		&clientes.Cliente{},
-		&inventario.Categoria{},
-		&inventario.Producto{},
-		&promociones.Promocion{},
-		&promociones.DetallePromocion{},
-		&ventas.MetodoPago{},
-		&ventas.Venta{},
-		&ventas.DetalleVenta{},
-		&ventas.Fiado{},
-	)
-	if err != nil {
-		log.Fatalf("Error crítico al ejecutar las migraciones de tablas: %v", err)
-	}
+	fmt.Println("Conexión con la base de datos establecida")
 
 	return db
 }
