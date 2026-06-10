@@ -6,6 +6,7 @@ import (
 	"backend/internal/empleados"
 	"backend/internal/inventario"
 	"backend/internal/validations"
+	"backend/internal/ventas"
 
 	"github.com/gin-gonic/gin"
 )
