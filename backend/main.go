@@ -24,6 +24,7 @@ func main() {
 	api := r.Group("/api")
 
 	inventario.ConfigurarRutas(api)
+	ventas.ConfigurarRutas(api)
 	clientes.ConfigurarRutas(api)
 	empleados.RoutesConfig(api, db)
 
