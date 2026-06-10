@@ -5,7 +5,7 @@ import (
 	"backend/internal/database"
 	"backend/internal/inventario"
 	"backend/internal/ventas"
-
+	
 	"github.com/gin-gonic/gin"
 )
 
@@ -22,9 +22,6 @@ func main() {
 	})
 
 	// Rutas de la api
-	api := r.Group("/api")
-
-	inventario.ConfigurarRutas(api)
 
 	rutasClientes := r.Group("/clientes")
 	{
@@ -35,6 +32,11 @@ func main() {
 		rutasClientes.DELETE("/:id", clientes.DeleteCliente)
 	}
 
+	rutasInventario := r.Group("/inventario")
+	{
+		rutasInventario.POST("/productos", inventario.CrearProducto)
+	}
+	
 	rutasVentas := r.Group("/ventas")
 	{
 		rutasVentas.POST("", ventas.CrearVenta)
