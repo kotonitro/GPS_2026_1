@@ -1,0 +1,26 @@
+version: 2
+updates:
+  # 1. Vigilar las dependencias de Go 
+  - package-ecosystem: "gomod"
+    directory: "/backend" # go.mod está en esta carpeta
+    schedule:
+      interval: "weekly"
+    assignees:
+      - "kotonitro" 
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+
+  # 2. Vigilar ockerfile
+  - package-ecosystem: "docker"
+    directory: "/backend" # Busca el Dockerfile del backend
+    schedule:
+      interval: "weekly"
+    assignees:
+      - "kotonitro"
+
+  # 3. Vigilar los bots de GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/" 
+    schedule:
+      interval: "weekly"
