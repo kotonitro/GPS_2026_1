@@ -1,24 +1,24 @@
 package promociones
 
 import (
-	"net/http"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
+	"net/http"
 )
 
 // verifica el JSON antes de que llegue al controlador
 func ValidarPromocionMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var promo Promocion
-		
+
 		// Lee el JSON
 		if err := c.ShouldBindJSON(&promo); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"ERROR": "Datos inválidos: " + err.Error()})
-			c.Abort() //  detiene la ejecución 
+			c.Abort() //  detiene la ejecución
 			return
 		}
 
-		// validacion 
+		// validacion
 		switch promo.Tipo {
 		case "NXM":
 			if promo.Lleva <= 0 || promo.Paga <= 0 {
@@ -85,7 +85,7 @@ func ActualizarPromocionesMiddleware(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"ERROR": "No se pudo actualizar la promoción"})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"mensaje":   "Promoción actualizada",
 		"promocion": promocionActualizada,
