@@ -20,9 +20,9 @@ func RoutesConfig(api *gin.RouterGroup, db *gorm.DB, jwtSecret string) {
 		adminGroup := group.Group("")
 		adminGroup.Use(auth.RoleMiddleware("Admin"))
 		{
-			group.POST("", ctrl.CreateEmpleadoController)
-			group.DELETE("/:id", ctrl.DeleteEmpleadoByIDController)
-			group.PATCH("/:id", ctrl.UpdateEmpleadoByIDController)
+			adminGroup.POST("", ctrl.CreateEmpleadoController)
+			adminGroup.DELETE("/:id", ctrl.DeleteEmpleadoByIDController)
+			adminGroup.PATCH("/:id", ctrl.UpdateEmpleadoByIDController)
 		}
 	}
 }

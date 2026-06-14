@@ -33,7 +33,7 @@ func AuthMiddleware(jwtSecret string) gin.HandlerFunc {
 
 		if claims, ok := token.Claims.(*JWTClaims); ok {
 			c.Set("id_empleado", claims.ID)
-			c.Set("rol_empleado", claims.Rol)
+			c.Set("rol", claims.Rol)
 		} else {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Acceso denegado, datos de identidad corruptos."})
 			return
@@ -45,21 +45,21 @@ func AuthMiddleware(jwtSecret string) gin.HandlerFunc {
 func RoleMiddleware(roles ...string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 
-		rolContexto, existe := c.Get("rol_empleado")
+		rolContexto, existe := c.Get("rol")
 		if !existe {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "No se pudo verificar la identidad del usuario."})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "No se pudo verificar la identidad del empleado."})
 			return
 		}
 
-		rolUsuario, ok := rolContexto.(string)
+		rolEmpleado, ok := rolContexto.(string)
 		if !ok {
-			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Error interno al procesar el rol del usuario."})
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Error interno al procesar el rol del empleado."})
 			return
 		}
 
 		permitido := false
 		for _, rol := range roles {
-			if rolUsuario == rol {
+			if rolEmpleado == rol {
 				permitido = true
 				break
 			}

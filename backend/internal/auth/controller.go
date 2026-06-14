@@ -79,7 +79,7 @@ func (ctrl *AuthController) Login(c *gin.Context) {
 
 	tokenString, err := token.SignedString([]byte(ctrl.jwtSecret))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error interno al generar el token de autorización"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error interno al generar el token de autorización."})
 		return
 	}
 
@@ -96,9 +96,9 @@ func (ctrl *AuthController) Login(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"mensaje": "Sesión iniciada exitosamente.",
 		"empleado": gin.H{
-			"id":      empleado.ID,
-			"usuario": empleado.Usuario,
-			"rol":     empleado.Rol,
+			"id_empleado": empleado.ID,
+			"usuario":     empleado.Usuario,
+			"rol":         empleado.Rol,
 		},
 	})
 }

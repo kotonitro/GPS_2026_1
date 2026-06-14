@@ -23,6 +23,9 @@ func main() {
 	db := database.Connect(cfg)
 	database.Migrations(db)
 
+	// setup inicial
+	config.InitialSetup(db)
+
 	// validaciones
 	validations.ValidationsConfig()
 
