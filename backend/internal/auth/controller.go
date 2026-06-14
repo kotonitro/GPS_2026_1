@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"backend/internal/empleados"
 	"net/http"
 	"time"
 
@@ -10,6 +9,17 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
+
+type EmpleadoAuth struct {
+	ID         string
+	Usuario    string
+	Contrasena string
+	Rol        string
+}
+
+func (EmpleadoAuth) TableName() string {
+	return "empleados"
+}
 
 type AuthController struct {
 	db        *gorm.DB
@@ -42,7 +52,7 @@ func (ctrl *AuthController) Login(c *gin.Context) {
 		return
 	}
 
-	var empleado empleados.Empleado
+	var empleado EmpleadoAuth
 
 	if err := ctrl.db.Where("usuario = ?", input.Usuario).First(&empleado).Error; err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Credenciales inválidas."})

@@ -1,20 +1,30 @@
 package cajas
 
 import (
+	"backend/internal/auth"
+
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
 
-func RoutesConfig(api *gin.RouterGroup, db *gorm.DB) {
+func RoutesConfig(api *gin.RouterGroup, db *gorm.DB, jwtSecret string) {
 
 	ctrl := NewCajaController(db)
 
-	grupo := api.Group("cajas")
+	group := api.Group("cajas")
+	group.Use(auth.AuthMiddleware(jwtSecret))
 	{
-		grupo.GET("/", ctrl.GetCajasController)
-		grupo.GET("/:id", ctrl.GetCajaByIDController)
-		grupo.POST("", ctrl.CreateCajaController)
-		grupo.DELETE("/:id", ctrl.DeleteCajaByIDController)
-		grupo.PATCH("/:id", ctrl.UpdateCajaByIDController)
+		group.GET("/", ctrl.GetCajasController)
+		group.GET("/:id", ctrl.GetCajaByIDController)
+
+		adminGroup := group.Group("")
+		adminGroup.Use(auth.RoleMiddleware("Admin"))
+		{
+
+			group.POST("", ctrl.CreateCajaController)
+			group.DELETE("/:id", ctrl.DeleteCajaByIDController)
+			group.PATCH("/:id", ctrl.UpdateCajaByIDController)
+
+		}
 	}
 }
