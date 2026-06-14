@@ -1,7 +1,6 @@
 package empleados
 
 import (
-	"database/sql"
 	"errors"
 	"net/http"
 
@@ -49,11 +48,11 @@ func (ctrl *EmpleadoController) GetEmpleadoByIDController(c *gin.Context) {
 }
 
 type CreateEmpleadoInput struct {
-	Rut        string         `json:"rut" binding:"required,rut_valido"`
-	Usuario    string         `json:"usuario" binding:"required"`
-	Contrasena string         `json:"contrasena" binding:"required,contrasena_segura"`
-	Telefono   sql.NullString `json:"telefono"`
-	Rol        string         `json:"rol" binding:"required"`
+	Rut        string `json:"rut" binding:"required,rut_valido"`
+	Usuario    string `json:"usuario" binding:"required"`
+	Contrasena string `json:"contrasena" binding:"required,contrasena_segura"`
+	Telefono   string `json:"telefono"`
+	Rol        string `json:"rol" binding:"required"`
 }
 
 func (ctrl *EmpleadoController) CreateEmpleadoController(c *gin.Context) {
