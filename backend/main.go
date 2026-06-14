@@ -1,7 +1,6 @@
 package main
 
 import (
-	"backend/internal/cajas"
 	"backend/internal/clientes"
 	"backend/internal/database"
 	"backend/internal/empleados"
@@ -25,11 +24,10 @@ func main() {
 	r := gin.Default()
 	api := r.Group("/api")
 
-	cajas.RoutesConfig(api, db)
-	clientes.ConfigurarRutas(api)
-	empleados.RoutesConfig(api, db)
 	inventario.ConfigurarRutas(api)
 	ventas.ConfigurarRutas(api)
+	clientes.ConfigurarRutas(api)
+	empleados.RoutesConfig(api, db)
 
 	r.Run(":8080")
 }
