@@ -97,7 +97,7 @@ func (ctrl *EmpleadoController) CreateEmpleadoController(c *gin.Context) {
 
 }
 
-func (ctrl *EmpleadoController) DeleteEmpleadoController(c *gin.Context) {
+func (ctrl *EmpleadoController) DeleteEmpleadoByIDController(c *gin.Context) {
 	id := c.Param("id")
 
 	err := DeleteEmpleadoByID(ctrl.db, id)
