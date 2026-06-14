@@ -1,20 +1,28 @@
 package empleados
 
 import (
+	"backend/internal/auth"
+
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
 
-func RoutesConfig(api *gin.RouterGroup, db *gorm.DB) {
+func RoutesConfig(api *gin.RouterGroup, db *gorm.DB, jwtSecret string) {
 
 	ctrl := NewEmpleadoController(db)
 
-	grupo := api.Group("empleados")
+	group := api.Group("empleados")
+	group.Use(auth.AuthMiddleware(jwtSecret))
 	{
-		grupo.GET("/", ctrl.GetEmpleadosController)
-		grupo.GET("/:id", ctrl.GetEmpleadoByIDController)
-		grupo.POST("", ctrl.CreateEmpleadoController)
-		grupo.DELETE("/:id", ctrl.DeleteEmpleadoByIDController)
-		grupo.PATCH("/:id", ctrl.UpdateEmpleadoByIDController)
+		group.GET("/", ctrl.GetEmpleadosController)
+		group.GET("/:id", ctrl.GetEmpleadoByIDController)
+
+		adminGroup := group.Group("")
+		adminGroup.Use(auth.RoleMiddleware("Admin"))
+		{
+			adminGroup.POST("", ctrl.CreateEmpleadoController)
+			adminGroup.DELETE("/:id", ctrl.DeleteEmpleadoByIDController)
+			adminGroup.PATCH("/:id", ctrl.UpdateEmpleadoByIDController)
+		}
 	}
 }

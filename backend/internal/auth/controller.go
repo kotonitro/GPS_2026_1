@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"backend/internal/empleados"
 	"net/http"
 	"time"
 
@@ -10,6 +9,17 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
+
+type EmpleadoAuth struct {
+	ID         string
+	Usuario    string
+	Contrasena string
+	Rol        string
+}
+
+func (EmpleadoAuth) TableName() string {
+	return "empleados"
+}
 
 type AuthController struct {
 	db        *gorm.DB
@@ -42,7 +52,7 @@ func (ctrl *AuthController) Login(c *gin.Context) {
 		return
 	}
 
-	var empleado empleados.Empleado
+	var empleado EmpleadoAuth
 
 	if err := ctrl.db.Where("usuario = ?", input.Usuario).First(&empleado).Error; err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Credenciales inválidas."})
@@ -69,7 +79,7 @@ func (ctrl *AuthController) Login(c *gin.Context) {
 
 	tokenString, err := token.SignedString([]byte(ctrl.jwtSecret))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error interno al generar el token de autorización"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error interno al generar el token de autorización."})
 		return
 	}
 
@@ -86,9 +96,9 @@ func (ctrl *AuthController) Login(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"mensaje": "Sesión iniciada exitosamente.",
 		"empleado": gin.H{
-			"id":      empleado.ID,
-			"usuario": empleado.Usuario,
-			"rol":     empleado.Rol,
+			"id_empleado": empleado.ID,
+			"usuario":     empleado.Usuario,
+			"rol":         empleado.Rol,
 		},
 	})
 }

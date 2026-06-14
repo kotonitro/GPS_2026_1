@@ -23,6 +23,9 @@ func main() {
 	db := database.Connect(cfg)
 	database.Migrations(db)
 
+	// setup inicial
+	config.InitialSetup(db)
+
 	// validaciones
 	validations.ValidationsConfig()
 
@@ -34,9 +37,9 @@ func main() {
 
 	// rutas
 	auth.RoutesConfig(api, db, cfg.JWTSecret)
-	cajas.RoutesConfig(api, db)
+	cajas.RoutesConfig(api, db, cfg.JWTSecret)
 	clientes.ConfigurarRutas(api)
-	empleados.RoutesConfig(api, db)
+	empleados.RoutesConfig(api, db, cfg.JWTSecret)
 	inventario.ConfigurarRutas(api)
 	ventas.ConfigurarRutas(api)
 

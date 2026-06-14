@@ -47,6 +47,7 @@ func (ctrl *CajaController) GetCajaByIDController(c *gin.Context) {
 }
 
 type CreateCajaInput struct {
+	Nombre       string `json:"nombre" binding:"required"`
 	Ubicacion    string `json:"ubicacion" binding:"required"`
 	SaldoInicial uint   `json:"saldo_inicial"`
 	SaldoFinal   uint   `json:"saldo_final"`
@@ -63,6 +64,7 @@ func (ctrl *CajaController) CreateCajaController(c *gin.Context) {
 	}
 
 	nuevaCaja := Caja{
+		Nombre:       input.Nombre,
 		Ubicacion:    input.Ubicacion,
 		SaldoInicial: input.SaldoInicial,
 		SaldoFinal:   input.SaldoFinal,
@@ -102,6 +104,7 @@ func (ctrl *CajaController) DeleteCajaByIDController(c *gin.Context) {
 }
 
 type UpdateCajaInput struct {
+	Nombre       *string `json:"nombre"`
 	Ubicacion    *string `json:"ubicacion"`
 	SaldoInicial *uint   `json:"saldo_inicial"`
 	SaldoFinal   *uint   `json:"saldo_final"`
