@@ -102,7 +102,7 @@ func (ctrl *CajaController) DeleteCajaByIDController(c *gin.Context) {
 }
 
 type UpdateCajaInput struct {
-	Ubicacion    *string `json:"ubicacion" binding:"required"`
+	Ubicacion    *string `json:"ubicacion"`
 	SaldoInicial *uint   `json:"saldo_inicial"`
 	SaldoFinal   *uint   `json:"saldo_final"`
 }
