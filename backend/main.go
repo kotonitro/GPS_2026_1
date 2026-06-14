@@ -7,7 +7,7 @@ import (
 	"backend/internal/inventario"
 	"backend/internal/validations"
 	"backend/internal/ventas"
-
+	"backend/internal/promociones"
 	"github.com/gin-gonic/gin"
 )
 
@@ -28,6 +28,7 @@ func main() {
 	ventas.ConfigurarRutas(api)
 	clientes.ConfigurarRutas(api)
 	empleados.RoutesConfig(api, db)
+	promociones.RoutesConfig(api, db)
 
 	r.Run(":8080")
 }
