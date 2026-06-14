@@ -48,11 +48,11 @@ func (ctrl *EmpleadoController) GetEmpleadoByIDController(c *gin.Context) {
 }
 
 type CreateEmpleadoInput struct {
-	Rut        string `json:"rut" binding:"required,rut_valido"`
-	Usuario    string `json:"usuario" binding:"required"`
-	Contrasena string `json:"contrasena" binding:"required,contrasena_segura"`
-	Telefono   string `json:"telefono"`
-	Rol        string `json:"rol" binding:"required"`
+	Rut        string  `json:"rut" binding:"required,rut_valido"`
+	Usuario    string  `json:"usuario" binding:"required"`
+	Contrasena string  `json:"contrasena" binding:"required,contrasena_segura"`
+	Telefono   *string `json:"telefono"`
+	Rol        string  `json:"rol" binding:"required"`
 }
 
 func (ctrl *EmpleadoController) CreateEmpleadoController(c *gin.Context) {
@@ -96,7 +96,7 @@ func (ctrl *EmpleadoController) CreateEmpleadoController(c *gin.Context) {
 
 }
 
-func (ctrl *EmpleadoController) DeleteEmpleadoController(c *gin.Context) {
+func (ctrl *EmpleadoController) DeleteEmpleadoByIDController(c *gin.Context) {
 	id := c.Param("id")
 
 	err := DeleteEmpleadoByID(ctrl.db, id)
