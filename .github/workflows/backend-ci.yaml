@@ -1,0 +1,47 @@
+name: Backend CI Pipeline
+
+# Se activa al hacer push o PR hacia las ramas principales
+on:
+  push:
+    branches: [ "dev", "main" ]
+  pull_request:
+    branches: [ "dev", "main" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    container: debian:bookworm
+    
+    defaults:
+      run:
+        working-directory: ./backend 
+
+    steps:
+    - name: Checkout del código
+      uses: actions/checkout@v4
+
+    - name: Instalar dependencias de Debian
+      run: apt-get update && apt-get install -y curl git build-essential
+
+    - name: Configurar Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.22'
+
+    - name: Instalar dependencias de Go (Gin, Gorm, etc.)
+      run: go mod tidy
+
+    # --- REVISIÓN ESTRICTA (NIVEL 2) ---
+
+    - name: 1. Verificar formato del código (Linter)
+      run: |
+        if [ "$(gofmt -s -l . | wc -l)" -gt 0 ]; then 
+          echo "ERROR: Hay archivos desordenados. Ejecuta 'go fmt ./...' en tu PC antes de subir el código."
+          exit 1
+        fi
+
+    - name: 2. Ejecutar Pruebas Unitarias
+      run: go test -v ./...
+
+    - name: 3. Compilar Backend (Build)
+      run: go build -v ./...

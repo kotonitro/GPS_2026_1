@@ -1,35 +1,25 @@
 package database
 
 import (
+	"backend/internal/cajas"
+	"backend/internal/clientes"
+	"backend/internal/config"
+	"backend/internal/empleados"
+	"backend/internal/inventario"
+	"backend/internal/promociones"
+	"backend/internal/ventas"
 	"fmt"
 	"log"
-	"os"
 
-	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
 // Inicializa la conexión a PostgreSQL
-func Init() *gorm.DB {
-
-	err := godotenv.Load()
-	if err != nil {
-		fmt.Println("Aviso: No se encontro el archivo .env")
-	}
-
-	host := os.Getenv("DB_HOST")
-	user := os.Getenv("DB_USER")
-	password := os.Getenv("DB_PASSWORD")
-	name := os.Getenv("DB_NAME")
-	port := os.Getenv("DB_PORT")
-
-	if host == "" {
-		log.Fatal("Error: Las variables de entorno de la base de datos no están configuradas")
-	}
+func Connect(cfg *config.AppConfig) *gorm.DB {
 
 	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable",
-		host, user, password, name, port,
+		cfg.DBHost, cfg.DBUser, cfg.DBPassword, cfg.DBName, cfg.DBPort,
 	)
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
@@ -40,4 +30,27 @@ func Init() *gorm.DB {
 	fmt.Println("Conexión con la base de datos establecida")
 
 	return db
+}
+
+// Migra automaticamente las tablas
+func Migrations(db *gorm.DB) {
+	err := db.AutoMigrate(
+		&empleados.Empleado{},
+		&clientes.Cliente{},
+		&cajas.Caja{},
+		&inventario.Categoria{},
+		&inventario.Producto{},
+		&promociones.Promocion{},
+		&promociones.DetallePromocion{},
+		&ventas.MetodoPago{},
+		&ventas.Venta{},
+		&ventas.DetalleVenta{},
+		&ventas.Fiado{},
+	)
+
+	if err != nil {
+		log.Fatal("Error fatal al ejecutar las migraciones: ", err)
+	}
+
+	log.Println("Migraciones ejecutadas exitosamente")
 }

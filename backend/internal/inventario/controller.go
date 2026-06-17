@@ -79,6 +79,25 @@ func GetProductoByID(c *gin.Context) {
 	c.JSON(http.StatusOK, producto)
 }
 
+func GetProductoByCodigo(c *gin.Context) {
+	codigo := c.Param("codigo")
+
+	dbInstance, _ := c.Get("db")
+	db := dbInstance.(*gorm.DB)
+
+	producto, err := ObtenerProductoPorCodigo(db, codigo)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"Error": "Producto no encontrado"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"Error": "Error al buscar el producto"})
+		return
+	}
+
+	c.JSON(http.StatusOK, producto)
+}
+
 // UpdateProducto maneja la petición PUT para modificar el inventario
 func UpdateProducto(c *gin.Context) {
 	// 1. Obtener el UUID
@@ -140,4 +159,84 @@ func DeleteProducto(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"mensaje": "Producto eliminado exitosamente"})
+}
+
+// ---- CATEGORIAS ----
+
+func CrearCategoria(c *gin.Context) {
+	var nuevaCategoria Categoria
+
+	if err := c.ShouldBindJSON(&nuevaCategoria); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "Datos inválidos"})
+		return
+	}
+
+	dbInstance, _ := c.Get("db")
+	db := dbInstance.(*gorm.DB)
+
+	err := GuardarCategoria(db, &nuevaCategoria)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"Error": "No se pudo guardar la categoría"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{
+		"mensaje":   "Categoría agregada",
+		"categoria": nuevaCategoria,
+	})
+}
+
+func GetCategorias(c *gin.Context) {
+	dbInstance, _ := c.Get("db")
+	db := dbInstance.(*gorm.DB)
+
+	categorias, err := ObtenerTodasCategorias(db)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"Error": "Error al obtener las categorías"})
+		return
+	}
+
+	c.JSON(http.StatusOK, categorias)
+}
+
+// UpdateCategoria maneja la petición PUT para modificar una categoría
+func UpdateCategoria(c *gin.Context) {
+	id := c.Param("id")
+
+	dbInstance, _ := c.Get("db")
+	db := dbInstance.(*gorm.DB)
+
+	var datosNuevos Categoria
+	if err := c.ShouldBindJSON(&datosNuevos); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "Datos de categoría inválidos"})
+		return
+	}
+
+	if err := ActualizarCategoria(db, id, &datosNuevos); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"Error": "No se pudo actualizar la categoría"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"mensaje": "Categoría actualizada exitosamente",
+	})
+}
+
+// borrar una categoría
+func DeleteCategoria(c *gin.Context) {
+	id := c.Param("id")
+
+	dbInstance, _ := c.Get("db")
+	db := dbInstance.(*gorm.DB)
+
+	err := EliminarCategoria(db, id)
+	if err != nil {
+		// Aplicamos integridad referencial
+		c.JSON(http.StatusConflict, gin.H{
+			"Error": "No puedes eliminar esta categoría porque hay productos que la están usando. Reasigna los productos primero.",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"mensaje": "Categoría eliminada exitosamente"})
 }

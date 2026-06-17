@@ -14,4 +14,3 @@ func ConfigurarRutas(api *gin.RouterGroup) {
 		rutasVentas.DELETE("/:id", DeleteVenta)
 	}
 }
-

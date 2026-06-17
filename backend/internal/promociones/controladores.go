@@ -6,99 +6,172 @@ import (
 	"gorm.io/gorm"
 )
 
-func CrearPromocion (c *gin.Context){
-	var nuevaPromocion Promocion
-	//lee el json
-	if err := c.ShouldBindJSON(&nuevaPromocion); err != nil{
-		c.JSON(http.StatusBadRequest, gin.H{"ERROR": "datos invalidos:" + err.Error()})
+// PromocionController maneja las peticiones web
+type PromocionController struct {
+	db *gorm.DB
+}
+
+// constructor del controlador
+func NewPromocionController(db *gorm.DB) *PromocionController {
+	return &PromocionController{db: db}
+}
+
+type CreatePromocionInput struct {
+	Tipo      string  `json:"tipo" binding:"required"`
+	Lleva     int     `json:"lleva"`
+	Paga      int     `json:"paga"`
+	Descuento float64 `json:"descuento"`
+}
+
+type UpdatePromocionInput struct {
+	Tipo      *string  `json:"tipo"`
+	Lleva     *int     `json:"lleva"`
+	Paga      *int     `json:"paga"`
+	Descuento *float64 `json:"descuento"`
+}
+
+func (ctrl *PromocionController) CreatePromocionController(c *gin.Context) {
+	var input CreatePromocionInput
+
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Datos inválidos: " + err.Error()})
 		return
 	}
 
-	//validacion
-	switch nuevaPromocion.Tipo{
-		case "NXM":
-			if nuevaPromocion.Lleva <=0 || nuevaPromocion.Paga <=0{
-					c.JSON(http.StatusBadRequest, gin.H{"ERROR": "Para promociones NXM lleva y paga deben ser mayores a 0"})
-					return
-			}
-		case "porcentaje","precio_fijo":
-			if nuevaPromocion.Descuento <=0{
-					c.JSON(http.StatusBadRequest,gin.H{"ERROR":"Para la promocion este valor debe ser mayor a 0"})
-					return
-			}
-		default:
-				c.JSON(http.StatusBadRequest,gin.H{"ERROR":"Tipo de promocion no valida"})
-				return
-	}
-	//conexion bdd
-	dbInstance, _ := c.Get("db")
-	db := dbInstance.(*gorm.DB)
-
-	//repositorio
-	err := GuardarPromocion(db,&nuevaPromocion)
-	if err!= nil{
-			c.JSON(http.StatusInternalServerError,gin.H{"ERROR":"No se pudo guardar la promocion en la bdd"})
+	switch input.Tipo {
+	case "NXM":
+		if input.Lleva <= 0 || input.Paga <= 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Para promociones NXM lleva y paga deben ser mayores a 0"})
 			return
+		}
+	case "porcentaje", "precio_fijo":
+		if input.Descuento <= 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Para la promocion este valor debe ser mayor a 0"})
+			return
+		}
+	default:
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Tipo de promocion no valida"})
+		return
+	}
+	
+	nuevaPromocion := Promocion{
+		Tipo:      input.Tipo,
+		Lleva:     input.Lleva,
+		Paga:      input.Paga,
+		Descuento: input.Descuento,
 	}
 
-	//mensaje
+	err := GuardarPromocion(ctrl.db, &nuevaPromocion)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "No se pudo guardar la promocion en la base de datos."})
+		return
+	}
+
 	c.JSON(http.StatusCreated, gin.H{
-		"mensaje":"promocion creada exitosamente",
-		"promocion":nuevaPromocion,
+		"mensaje":   "Promocion creada exitosamente.",
+		"promocion": nuevaPromocion,
 	})
 }
-//obtiene todas las promociones
-func ObtenerPromociones(c *gin.Context){
-	dbInstance, _ := c.Get("db")
-	db := dbInstance.(*gorm.DB)
-	promociones, err := ObtenerTodasLasPromociones(db)
+
+func (ctrl *PromocionController) GetPromocionesController(c *gin.Context) {
+	promociones, err := ObtenerTodasLasPromociones(ctrl.db)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"ERROR":"Error al consultar bdd"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error interno al obtener la lista de promociones."})
 		return
 	}
+
 	c.JSON(http.StatusOK, promociones)
 }
 
-//Obtiene una promocion por ID
-func ObtenerPromocion(c *gin.Context){
-	dbInstance, _:= c.Get("db")
-	db := dbInstance.(*gorm.DB)
-	id:= c.Param("id")
-	promocion, err := ObtenerPromocionPorID(db,id)
-	if err != nil{
-		c.JSON(http.StatusNotFound,gin.H{"ERROR":"Promocion no encontrada"})
-		return
-	}
-	c.JSON(http.StatusOK,promocion)
-}
-// Actualiza una promocion
-func ActualizarPromociones(c *gin.Context){
-	dbInstance, _:= c.Get("db")
-	db := dbInstance.(*gorm.DB)
+func (ctrl *PromocionController) GetPromocionByIDController(c *gin.Context) {
 	id := c.Param("id")
 
-	var datosNuevos Promocion
-	if err := c.ShouldBindJSON(&datosNuevos); err!=nil{
-		c.JSON(http.StatusBadRequest,gin.H{"ERROR":"datos no validos" + err.Error()})
+	promocion, err := ObtenerPromocionPorID(ctrl.db, id)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "La promocion solicitada no existe."})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error interno al buscar la promocion en la base de datos."})
 		return
 	}
-	promocionActualizada, err:= ActualizarPromocion(db,id,&datosNuevos)
-	if err!= nil{
-		c.JSON(http.StatusNotFound,gin.H{"ERROR":"No se pudo actualizar la promocion"})
-		return
-	}
-	c.JSON(http.StatusOK,gin.H{"mensaje":"Promocion actualizada","promocion":promocionActualizada})
-}
-//elimina una promocion
-func EliminarPromociones(c *gin.Context){
-	dbInstance, _:= c.Get("db")
-	db := dbInstance.(*gorm.DB)
-	id:= c.Param("id")
 
-	err:=EliminarPromocion(db,id)
-	if err !=nil{
-		c.JSON(http.StatusInternalServerError,gin.H{"ERROR":"No se pudo eliminar la promocion"})
+	c.JSON(http.StatusOK, promocion)
+}
+
+func (ctrl *PromocionController) UpdatePromocionByIDController(c *gin.Context) {
+	id := c.Param("id")
+	var input UpdatePromocionInput
+
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Datos inválidos: " + err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"mensaje":"Promocion eliminada exitosamente"})
+
+
+	if input.Tipo != nil {
+		switch *input.Tipo {
+		case "NXM":
+		
+			if (input.Lleva != nil && *input.Lleva <= 0) || (input.Paga != nil && *input.Paga <= 0) {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "Para promociones NXM lleva y paga deben ser mayores a 0"})
+				return
+			}
+		case "porcentaje", "precio_fijo":
+			if input.Descuento != nil && *input.Descuento <= 0 {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "Para la promocion este valor debe ser mayor a 0"})
+				return
+			}
+		default:
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Tipo de promocion no valida"})
+			return
+		}
+	}
+
+
+
+	var datosActualizados Promocion
+	if input.Tipo != nil {
+		datosActualizados.Tipo = *input.Tipo
+	}
+	if input.Lleva != nil {
+		datosActualizados.Lleva = *input.Lleva
+	}
+	if input.Paga != nil {
+		datosActualizados.Paga = *input.Paga
+	}
+	if input.Descuento != nil {
+		datosActualizados.Descuento = *input.Descuento
+	}
+
+	promocionActualizada, err := ActualizarPromocion(ctrl.db, id, &datosActualizados)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "La promocion a modificar no existe."})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error interno al modificar la promocion."})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"mensaje":   "Promocion modificada exitosamente.",
+		"promocion": promocionActualizada,
+	})
+}
+
+func (ctrl *PromocionController) DeletePromocionController(c *gin.Context) {
+	id := c.Param("id")
+
+	err := EliminarPromocion(ctrl.db, id)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "La promocion que intenta eliminar no existe."})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error interno al eliminar la promocion."})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"mensaje": "Promocion eliminada exitosamente."})
 }

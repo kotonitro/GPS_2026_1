@@ -1,4 +1,5 @@
 package ventas
+
 import "time"
 
 type Venta struct {
@@ -17,24 +18,23 @@ type Venta struct {
 	MetodoPago MetodoPago     `gorm:"foreignKey:MetodoID" json:"metodo_pago,omitempty"`
 }
 
-
 type DetalleVenta struct {
-		ID         string  `gorm:"primaryKey;type:uuid;default:gen_random_uuid()" json:"id_detalle"`
-		VentaID    string  `json:"id_venta"`
-		ProductoID string  `json:"id_producto"`
-		Cantidad   int     `json:"cantidad"`
-		MontoFinal float64 `json:"monto_final"`
+	ID         string  `gorm:"primaryKey;type:uuid;default:gen_random_uuid()" json:"id_detalle"`
+	VentaID    string  `json:"id_venta"`
+	ProductoID string  `json:"id_producto"`
+	Cantidad   int     `json:"cantidad"`
+	MontoFinal float64 `json:"monto_final"`
 }
 
 type MetodoPago struct {
-		ID           string `gorm:"primaryKey;type:uuid;default:gen_random_uuid()" json:"id_metodo"`
-		NombreMetodo string `json:"nombre_metodo"`
+	ID           string `gorm:"primaryKey;type:uuid;default:gen_random_uuid()" json:"id_metodo"`
+	NombreMetodo string `json:"nombre_metodo"`
 }
 
 type Fiado struct {
-		ID          string    `gorm:"primaryKey;type:uuid;default:gen_random_uuid()" json:"id_fiado"`
-		ClienteID   string    `json:"id_cliente"`
-		VentaID     string    `json:"id_venta"`
-		FechaInicio time.Time `json:"fecha_inicio"`
-		FechaLimite time.Time `json:"fecha_limite"`
+	ID          string    `gorm:"primaryKey;type:uuid;default:gen_random_uuid()" json:"id_fiado"`
+	ClienteID   string    `json:"id_cliente"`
+	VentaID     string    `json:"id_venta"`
+	FechaInicio time.Time `json:"fecha_inicio"`
+	FechaLimite time.Time `json:"fecha_limite"`
 }

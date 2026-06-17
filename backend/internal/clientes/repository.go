@@ -2,7 +2,7 @@ package clientes
 
 import "gorm.io/gorm"
 
-//cuando creamos clientes, lo guardamos en la db
+// cuando creamos clientes, lo guardamos en la db
 func GuardarCliente(db *gorm.DB, nuevoCliente *Cliente) error {
 	result := db.Create(nuevoCliente)
 	if result.Error != nil {
@@ -11,7 +11,7 @@ func GuardarCliente(db *gorm.DB, nuevoCliente *Cliente) error {
 	return nil
 }
 
-//verificar si el rut ya existe
+// verificar si el rut ya existe
 func CheckRutExiste(db *gorm.DB, rut string) (bool, error) {
 	var count int64
 
@@ -24,20 +24,19 @@ func CheckRutExiste(db *gorm.DB, rut string) (bool, error) {
 	return count > 0, nil
 }
 
-//obtener todos los clientes
+// obtener todos los clientes
 func ObtenerTodosLosClientes(db *gorm.DB) ([]Cliente, error) {
 	var listaClientes []Cliente
-	
-	
+
 	result := db.Find(&listaClientes) //busca registros
 	if result.Error != nil {
 		return nil, result.Error
 	}
-	
+
 	return listaClientes, nil
 }
 
-//obtener por id
+// obtener por id
 func ObtenerClientePorID(db *gorm.DB, id string) (*Cliente, error) {
 	var cliente Cliente
 	result := db.First(&cliente, id)
@@ -47,7 +46,7 @@ func ObtenerClientePorID(db *gorm.DB, id string) (*Cliente, error) {
 	return &cliente, nil
 }
 
-//actualizar 
+// actualizar
 func ActualizarCliente(db *gorm.DB, clienteExistente *Cliente, datosNuevos *Cliente) error {
 	// Updates actualiza los campos modificados basados en el modelo estructurado
 	result := db.Model(clienteExistente).Updates(datosNuevos)
@@ -57,7 +56,7 @@ func ActualizarCliente(db *gorm.DB, clienteExistente *Cliente, datosNuevos *Clie
 	return nil
 }
 
-//eliminar
+// eliminar
 func EliminarCliente(db *gorm.DB, id string) error {
 	// Pasamos un struct vacío de Cliente con el ID para indicarle a GORM qué borrar
 	result := db.Delete(&Cliente{}, id)
@@ -67,7 +66,7 @@ func EliminarCliente(db *gorm.DB, id string) error {
 	return nil
 }
 
-//buscar por rut
+// buscar por rut
 func BuscarClientePorRut(db *gorm.DB, rut string) (*Cliente, error) {
 	var cliente Cliente
 	result := db.Where("rut = ?", rut).First(&cliente)
@@ -77,7 +76,7 @@ func BuscarClientePorRut(db *gorm.DB, rut string) (*Cliente, error) {
 	return &cliente, nil
 }
 
-//buscar por nombre 
+// buscar por nombre
 func BuscarClientesPorNombre(db *gorm.DB, nombre string) ([]Cliente, error) {
 	var clientes []Cliente
 	result := db.Where("nombre ILIKE ?", "%"+nombre+"%").Find(&clientes)

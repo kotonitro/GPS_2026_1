@@ -17,7 +17,7 @@ func CreateCliente(c *gin.Context) {
 		return
 	}
 
-	//extraemos la conexión a la base de datos 
+	//extraemos la conexión a la base de datos
 	dbInstance, _ := c.Get("db")
 	db := dbInstance.(*gorm.DB)
 
@@ -54,9 +54,8 @@ func CreateCliente(c *gin.Context) {
 	})
 }
 
-
 func GetClientes(c *gin.Context) {
-	
+
 	dbInstance, _ := c.Get("db")
 	db := dbInstance.(*gorm.DB)
 
@@ -70,7 +69,6 @@ func GetClientes(c *gin.Context) {
 	c.JSON(http.StatusOK, listaClientes)
 }
 
-
 func GetClienteByID(c *gin.Context) {
 	//primeramente vemos el id
 	id := c.Param("id")
@@ -78,10 +76,9 @@ func GetClienteByID(c *gin.Context) {
 	dbInstance, _ := c.Get("db")
 	db := dbInstance.(*gorm.DB)
 
-	
 	cliente, err := ObtenerClientePorID(db, id)
 	if err != nil {
-		
+
 		if err == gorm.ErrRecordNotFound {
 			c.JSON(http.StatusNotFound, gin.H{"Error": "El cliente solicitado no existe"})
 			return
@@ -93,7 +90,6 @@ func GetClienteByID(c *gin.Context) {
 
 	c.JSON(http.StatusOK, cliente)
 }
-
 
 func UpdateCliente(c *gin.Context) {
 	//ver el id
@@ -114,7 +110,7 @@ func UpdateCliente(c *gin.Context) {
 		return
 	}
 
-	//leemos y validamos los nuevos datos 
+	//leemos y validamos los nuevos datos
 	var datosNuevos Cliente
 	if err := c.ShouldBindJSON(&datosNuevos); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": "Datos inválidos o campos obligatorios faltantes"})
@@ -154,7 +150,6 @@ func UpdateCliente(c *gin.Context) {
 	})
 }
 
-
 func DeleteCliente(c *gin.Context) {
 	//vemos el id
 	id := c.Param("id")
@@ -186,7 +181,6 @@ func DeleteCliente(c *gin.Context) {
 	})
 }
 
-
 func SearchClienteByRut(c *gin.Context) {
 	rut := c.Param("rut")
 	//sera necesario validar formato, siempre y cuando no este vacio
@@ -211,7 +205,6 @@ func SearchClienteByRut(c *gin.Context) {
 
 	c.JSON(http.StatusOK, cliente)
 }
-
 
 func SearchClienteByNombre(c *gin.Context) {
 	nombre := c.Query("nombre")

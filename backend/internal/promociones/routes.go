@@ -1,14 +1,22 @@
 package promociones
 
-import "github.com/gin-gonic/gin"
+import (
+	"backend/internal/auth"
+	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
+)
 
-func ConfigurarRutas(api *gin.RouterGroup){
-	grupo := api.Group("/promociones")
+func RoutesConfig(api *gin.RouterGroup, db *gorm.DB, jwtSecret string) {
+
+	ctrl := NewPromocionController(db)
+
+	group := api.Group("promociones")
+	group.Use(auth.AuthMiddleware(jwtSecret))
 	{
-		grupo.POST("/promocion",CrearPromocion)
-		grupo.GET("/promocion",ObtenerPromociones)
-		grupo.GET("/promocion/:id",ObtenerPromocion)
-		grupo.DELETE("/promocion/:id",EliminarPromociones)
-		grupo.PUT("/promocion/:id",ActualizarPromociones)
+		group.GET("/", ctrl.GetPromocionesController)
+		group.GET("/:id", ctrl.GetPromocionByIDController)
+		group.POST("", ctrl.CreatePromocionController)
+		group.DELETE("/:id", ctrl.DeletePromocionController)
+		group.PATCH("/:id", ctrl.UpdatePromocionByIDController)
 	}
 }
