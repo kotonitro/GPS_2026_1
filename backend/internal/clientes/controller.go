@@ -25,7 +25,7 @@ func (ctrl *ClienteController) GetClientesController(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, listaClientes) 
+	c.JSON(http.StatusOK, listaClientes)
 }
 
 func (ctrl *ClienteController) GetClienteByIDController(c *gin.Context) {
@@ -60,7 +60,6 @@ func (ctrl *ClienteController) CreateClienteController(c *gin.Context) {
 		return
 	}
 
-
 	input.Telefono = normalizarTelefono(input.Telefono)
 
 	nuevoCliente := Cliente{
@@ -72,7 +71,7 @@ func (ctrl *ClienteController) CreateClienteController(c *gin.Context) {
 	err := CreateCliente(ctrl.db, &nuevoCliente)
 	if err != nil {
 		errMsg := err.Error()
-		
+
 		if strings.Contains(errMsg, "rut") {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error":   "No se pudo registrar el cliente.",
@@ -80,7 +79,7 @@ func (ctrl *ClienteController) CreateClienteController(c *gin.Context) {
 			})
 			return
 		}
-		
+
 		if strings.Contains(errMsg, "telefono") {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error":   "No se pudo registrar el cliente.",
@@ -88,7 +87,7 @@ func (ctrl *ClienteController) CreateClienteController(c *gin.Context) {
 			})
 			return
 		}
-		
+
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "No se pudo registrar el cliente.",
 			"detalle": "Error interno al crear el cliente.",
@@ -97,7 +96,7 @@ func (ctrl *ClienteController) CreateClienteController(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, gin.H{
-		"mensaje":     "Cliente creado exitosamente.",
+		"mensaje":    "Cliente creado exitosamente.",
 		"id_cliente": nuevoCliente.ID,
 	})
 }
@@ -143,7 +142,6 @@ func (ctrl *ClienteController) UpdateClienteByIDController(c *gin.Context) {
 		return
 	}
 
-	
 	if input.Telefono != nil {
 		telefonoNormalizado := normalizarTelefono(*input.Telefono)
 		input.Telefono = &telefonoNormalizado
@@ -156,7 +154,7 @@ func (ctrl *ClienteController) UpdateClienteByIDController(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "El cliente a modificar no existe."})
 			return
 		}
-		
+
 		errMsg := err.Error()
 		if strings.Contains(errMsg, "rut") {
 			c.JSON(http.StatusInternalServerError, gin.H{
@@ -165,7 +163,7 @@ func (ctrl *ClienteController) UpdateClienteByIDController(c *gin.Context) {
 			})
 			return
 		}
-		
+
 		if strings.Contains(errMsg, "telefono") {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error":   "No se pudo actualizar el cliente.",
@@ -173,7 +171,7 @@ func (ctrl *ClienteController) UpdateClienteByIDController(c *gin.Context) {
 			})
 			return
 		}
-		
+
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error interno al modificar el cliente."})
 		return
 	}
