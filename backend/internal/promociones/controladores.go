@@ -1,9 +1,9 @@
 package promociones
 
 import (
-	"net/http"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
+	"net/http"
 )
 
 // PromocionController maneja las peticiones web
@@ -53,7 +53,7 @@ func (ctrl *PromocionController) CreatePromocionController(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Tipo de promocion no valida"})
 		return
 	}
-	
+
 	nuevaPromocion := Promocion{
 		Tipo:      input.Tipo,
 		Lleva:     input.Lleva,
@@ -108,11 +108,10 @@ func (ctrl *PromocionController) UpdatePromocionByIDController(c *gin.Context) {
 		return
 	}
 
-
 	if input.Tipo != nil {
 		switch *input.Tipo {
 		case "NXM":
-		
+
 			if (input.Lleva != nil && *input.Lleva <= 0) || (input.Paga != nil && *input.Paga <= 0) {
 				c.JSON(http.StatusBadRequest, gin.H{"error": "Para promociones NXM lleva y paga deben ser mayores a 0"})
 				return
@@ -127,8 +126,6 @@ func (ctrl *PromocionController) UpdatePromocionByIDController(c *gin.Context) {
 			return
 		}
 	}
-
-
 
 	var datosActualizados Promocion
 	if input.Tipo != nil {

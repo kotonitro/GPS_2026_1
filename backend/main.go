@@ -8,9 +8,9 @@ import (
 	"backend/internal/database"
 	"backend/internal/empleados"
 	"backend/internal/inventario"
+	"backend/internal/promociones"
 	"backend/internal/validations"
 	"backend/internal/ventas"
-	"backend/internal/promociones"
 	"github.com/gin-gonic/gin"
 )
 
@@ -42,7 +42,7 @@ func main() {
 	empleados.RoutesConfig(api, db, cfg.JWTSecret)
 	inventario.ConfigurarRutas(api)
 	ventas.ConfigurarRutas(api)
-  promociones.RoutesConfig(api, db,cfg.JWTSecret)
-  
+	promociones.RoutesConfig(api, db, cfg.JWTSecret)
+
 	r.Run(":8080")
 }
