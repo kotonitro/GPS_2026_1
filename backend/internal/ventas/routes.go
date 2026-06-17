@@ -1,16 +1,24 @@
 package ventas
 
-import "github.com/gin-gonic/gin"
-
-// ConfigurarRutas registra todos los endpoints del módulo de ventas
-func ConfigurarRutas(api *gin.RouterGroup) {
+import (
+	"backend/internal/auth"
+	"github.com/gin-gonic/gin"
+)
+func ConfigurarRutas(api *gin.RouterGroup, jwtSecret string) {
+	
 	rutasVentas := api.Group("/ventas")
+	
+	rutasVentas.Use(auth.AuthMiddleware(jwtSecret))
 	{
-		// Rutas para el CRUD de ventas
 		rutasVentas.POST("", CrearVenta)
 		rutasVentas.GET("", GetVentas)
 		rutasVentas.GET("/:id", GetVentaByID)
-		rutasVentas.PUT("/:id", UpdateVenta)
-		rutasVentas.DELETE("/:id", DeleteVenta)
+
+		rutasAdmin := rutasVentas.Group("")
+		rutasAdmin.Use(auth.RoleMiddleware("Admin"))
+		{
+			rutasAdmin.PUT("/:id", UpdateVenta)
+			rutasAdmin.DELETE("/:id", DeleteVenta)
+		}
 	}
 }
