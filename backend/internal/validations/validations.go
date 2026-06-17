@@ -21,5 +21,6 @@ func ValidationsConfig() {
 
 		v.RegisterValidation("rut_valido", ValidarRUT)
 		v.RegisterValidation("contrasena_segura", ValidarContrasena)
+		v.RegisterValidation("telefono_valido", ValidarTelefono)
 	}
 }
