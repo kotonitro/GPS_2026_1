@@ -4,10 +4,11 @@ import (
 	"backend/internal/auth"
 	"github.com/gin-gonic/gin"
 )
+
 func ConfigurarRutas(api *gin.RouterGroup, jwtSecret string) {
-	
+
 	rutasVentas := api.Group("/ventas")
-	
+
 	rutasVentas.Use(auth.AuthMiddleware(jwtSecret))
 	{
 		rutasVentas.POST("", CrearVenta)
