@@ -11,6 +11,9 @@ import (
 	"backend/internal/promociones"
 	"backend/internal/validations"
 	"backend/internal/ventas"
+	"time"
+
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
@@ -32,6 +35,16 @@ func main() {
 	// router
 	r := gin.Default()
 
+	//CORS
+	r.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{cfg.FrontendURL},
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
+
 	// api
 	api := r.Group("/api")
 
@@ -40,7 +53,7 @@ func main() {
 	cajas.RoutesConfig(api, db, cfg.JWTSecret)
 	clientes.RoutesConfig(api, db, cfg.JWTSecret)
 	empleados.RoutesConfig(api, db, cfg.JWTSecret)
-	inventario.ConfigurarRutas(api)
+	inventario.RoutesConfig(api, db, cfg.JWTSecret)
 	ventas.ConfigurarRutas(api, cfg.JWTSecret)
 	promociones.RoutesConfig(api, db, cfg.JWTSecret)
 
