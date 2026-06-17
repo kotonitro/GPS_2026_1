@@ -1,236 +1,205 @@
 package clientes
 
 import (
+	"errors"
 	"net/http"
-	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
 	"gorm.io/gorm"
 )
 
-func CreateCliente(c *gin.Context) {
-	var nuevoCliente Cliente
+type ClienteController struct {
+	db *gorm.DB
+}
 
-	//ve los atributos
-	if err := c.ShouldBindJSON(&nuevoCliente); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": "Datos inválidos o campos obligatorios faltantes"})
-		return
-	}
+func NewClienteController(db *gorm.DB) *ClienteController {
+	return &ClienteController{db: db}
+}
 
-	//extraemos la conexión a la base de datos
-	dbInstance, _ := c.Get("db")
-	db := dbInstance.(*gorm.DB)
-
-	//lo importante es validar el formato del rut(chileno)
-	nuevoCliente.Rut = strings.TrimSpace(nuevoCliente.Rut)
-	if len(nuevoCliente.Rut) < 8 {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": "El formato del RUT no es válido"})
-		return
-	}
-
-	//verificamos que el rut no esté en la bd
-	existe, err := CheckRutExiste(db, nuevoCliente.Rut)
+func (ctrl *ClienteController) GetClientesController(c *gin.Context) {
+	listaClientes, err := GetClientes(ctrl.db)
 	if err != nil {
-		//error general
-		c.JSON(http.StatusInternalServerError, gin.H{"Error": "Error al verificar la duplicidad del RUT"})
-		return
-	}
-	if existe {
-		c.JSON(http.StatusConflict, gin.H{"Error": "El RUT ingresado ya se encuentra registrado"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error interno al obtener la lista de clientes."})
 		return
 	}
 
-	//guardar
-	err = GuardarCliente(db, &nuevoCliente)
+	c.JSON(http.StatusOK, listaClientes) 
+}
+
+func (ctrl *ClienteController) GetClienteByIDController(c *gin.Context) {
+	id := c.Param("id")
+
+	cliente, err := GetClienteByID(ctrl.db, id)
 	if err != nil {
-		//error general
-		c.JSON(http.StatusInternalServerError, gin.H{"Error": "No se pudo guardar el cliente en la base de datos"})
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "El cliente solicitado no existe."})
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error interno al buscar el cliente en la base de datos."})
+		return
+	}
+
+	c.JSON(http.StatusOK, cliente)
+}
+
+type CreateClienteInput struct {
+	Nombre   string  `json:"nombre" binding:"required"`
+	Rut      string  `json:"rut" binding:"required,rut_valido"`
+	Telefono *string `json:"telefono"`
+}
+
+func (ctrl *ClienteController) CreateClienteController(c *gin.Context) {
+	var input CreateClienteInput
+
+	if err := c.ShouldBindJSON(&input); err != nil {
+		errores := ValidationErrorsFormat(err)
+		c.JSON(http.StatusBadRequest, gin.H{"errores": errores})
+		return
+	}
+
+	telefono := ""
+	if input.Telefono != nil {
+		telefono = *input.Telefono
+	}
+
+	nuevoCliente := Cliente{
+		Nombre:   input.Nombre,
+		Rut:      input.Rut,
+		Telefono: telefono,
+	}
+
+	err := CreateCliente(ctrl.db, &nuevoCliente)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "No se pudo registrar el cliente.",
+			"detalle": "El RUT ya se encuentra registrado en el sistema.",
+		})
 		return
 	}
 
 	c.JSON(http.StatusCreated, gin.H{
-		"mensaje": "Cliente agregado exitosamente",
-		"cliente": nuevoCliente,
+		"mensaje":     "Cliente creado exitosamente.",
+		"id_cliente": nuevoCliente.ID,
 	})
 }
 
-func GetClientes(c *gin.Context) {
-
-	dbInstance, _ := c.Get("db")
-	db := dbInstance.(*gorm.DB)
-
-	listaClientes, err := ObtenerTodosLosClientes(db)
-	if err != nil {
-		//error general
-		c.JSON(http.StatusInternalServerError, gin.H{"Error": "Error al obtener la lista de clientes"})
-		return
-	}
-
-	c.JSON(http.StatusOK, listaClientes)
-}
-
-func GetClienteByID(c *gin.Context) {
-	//primeramente vemos el id
+func (ctrl *ClienteController) DeleteClienteByIDController(c *gin.Context) {
 	id := c.Param("id")
 
-	dbInstance, _ := c.Get("db")
-	db := dbInstance.(*gorm.DB)
+	err := DeleteClienteByID(ctrl.db, id)
 
-	cliente, err := ObtenerClientePorID(db, id)
 	if err != nil {
-
 		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"Error": "El cliente solicitado no existe"})
+			c.JSON(http.StatusNotFound, gin.H{"error": "El cliente que intenta eliminar no existe."})
 			return
 		}
-		//error general
-		c.JSON(http.StatusInternalServerError, gin.H{"Error": "Error al buscar el cliente en la base de datos"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error interno al eliminar el cliente."})
 		return
 	}
 
-	c.JSON(http.StatusOK, cliente)
+	c.JSON(http.StatusOK, gin.H{"mensaje": "Cliente eliminado exitosamente."})
 }
 
-func UpdateCliente(c *gin.Context) {
-	//ver el id
+type UpdateClienteInput struct {
+	Nombre   *string `json:"nombre"`
+	Rut      *string `json:"rut" binding:"omitempty,rut_valido"`
+	Telefono *string `json:"telefono"`
+}
+
+func (ctrl *ClienteController) UpdateClienteByIDController(c *gin.Context) {
 	id := c.Param("id")
 
-	dbInstance, _ := c.Get("db")
-	db := dbInstance.(*gorm.DB)
+	var input UpdateClienteInput
 
-	//verificamos que exista realmente
-	clienteExistente, err := ObtenerClientePorID(db, id)
+	if err := c.ShouldBindJSON(&input); err != nil {
+		errores := ValidationErrorsFormat(err)
+		c.JSON(http.StatusBadRequest, gin.H{"errores": errores})
+		return
+	}
+
+	if input.Nombre == nil && input.Rut == nil && input.Telefono == nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Se requiere al menos un campo válido para modificar.",
+		})
+		return
+	}
+
+	err := UpdateClienteByID(ctrl.db, id, input)
+
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"Error": "El cliente que intenta actualizar no existe"})
+			c.JSON(http.StatusNotFound, gin.H{"error": "El cliente a modificar no existe."})
 			return
 		}
-		//error general
-		c.JSON(http.StatusInternalServerError, gin.H{"Error": "Error al buscar el cliente en la base de datos"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error interno al modificar el cliente."})
 		return
 	}
 
-	//leemos y validamos los nuevos datos
-	var datosNuevos Cliente
-	if err := c.ShouldBindJSON(&datosNuevos); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": "Datos inválidos o campos obligatorios faltantes"})
-		return
-	}
-
-	//formato del rut
-	if datosNuevos.Rut != "" && len(datosNuevos.Rut) < 8 {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": "El formato del nuevo RUT no es válido"})
-		return
-	}
-
-	//unico con su rut
-	if datosNuevos.Rut != "" && datosNuevos.Rut != clienteExistente.Rut {
-		existe, err := CheckRutExiste(db, datosNuevos.Rut)
-		if err != nil {
-			//error general
-			c.JSON(http.StatusInternalServerError, gin.H{"Error": "Error al verificar la duplicidad del RUT"})
-			return
-		}
-		if existe {
-			c.JSON(http.StatusConflict, gin.H{"Error": "El nuevo RUT ingresado ya pertenece a otro cliente"})
-			return
-		}
-	}
-
-	err = ActualizarCliente(db, clienteExistente, &datosNuevos)
-	if err != nil {
-		//error general
-		c.JSON(http.StatusInternalServerError, gin.H{"Error": "No se pudieron actualizar los datos del cliente"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"mensaje": "Cliente actualizado exitosamente",
-		"cliente": clienteExistente,
-	})
+	c.JSON(http.StatusOK, gin.H{"mensaje": "Cliente modificado exitosamente."})
 }
 
-func DeleteCliente(c *gin.Context) {
-	//vemos el id
-	id := c.Param("id")
-
-	dbInstance, _ := c.Get("db")
-	db := dbInstance.(*gorm.DB)
-
-	//verificamos que exista realmente
-	_, err := ObtenerClientePorID(db, id)
-	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"Error": "El cliente que intenta eliminar no existe"})
-			return
-		}
-		//error general
-		c.JSON(http.StatusInternalServerError, gin.H{"Error": "Error al verificar el cliente en la base de datos"})
-		return
-	}
-
-	err = EliminarCliente(db, id)
-	if err != nil {
-		//error general
-		c.JSON(http.StatusInternalServerError, gin.H{"Error": "No se pudo eliminar el cliente"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"mensaje": "Cliente eliminado exitosamente",
-	})
-}
-
-func SearchClienteByRut(c *gin.Context) {
+func (ctrl *ClienteController) GetClienteByRutController(c *gin.Context) {
 	rut := c.Param("rut")
-	//sera necesario validar formato, siempre y cuando no este vacio
-	if rut == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": "El RUT es requerido"})
-		return
-	}
 
-	dbInstance, _ := c.Get("db")
-	db := dbInstance.(*gorm.DB)
-	//hace la busqueda por rut
-	cliente, err := BuscarClientePorRut(db, rut)
+	cliente, err := GetClienteByRut(ctrl.db, rut)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"Error": "No se encontró cliente con ese RUT"})
+			c.JSON(http.StatusNotFound, gin.H{"error": "No se encontró cliente con ese RUT."})
 			return
 		}
-		//error general
-		c.JSON(http.StatusInternalServerError, gin.H{"Error": "Error al buscar el cliente"})
+
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error interno al buscar el cliente."})
 		return
 	}
 
 	c.JSON(http.StatusOK, cliente)
 }
 
-func SearchClienteByNombre(c *gin.Context) {
+func (ctrl *ClienteController) GetClientesByNombreController(c *gin.Context) {
 	nombre := c.Query("nombre")
-	//vemos que no este vacio el nombre
+
 	if nombre == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": "El nombre es requerido"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "El nombre es requerido."})
 		return
 	}
 
-	dbInstance, _ := c.Get("db")
-	db := dbInstance.(*gorm.DB)
-	//hace la busqueda por nombre
-	clientes, err := BuscarClientesPorNombre(db, nombre)
+	clientes, err := GetClientesByNombre(ctrl.db, nombre)
 	if err != nil {
-		//error general
-		c.JSON(http.StatusInternalServerError, gin.H{"Error": "Error al buscar clientes"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error interno al buscar clientes."})
 		return
 	}
-	//sino hay ninguno
+
 	if len(clientes) == 0 {
-		c.JSON(http.StatusNotFound, gin.H{"Error": "No se encontraron clientes con ese nombre", "resultados": []Cliente{}})
+		c.JSON(http.StatusNotFound, gin.H{"error": "No se encontraron clientes con ese nombre.", "resultados": []Cliente{}})
 		return
 	}
-	//entrega el resutado
+
 	c.JSON(http.StatusOK, gin.H{
 		"resultados": clientes,
 		"cantidad":   len(clientes),
 	})
+}
+
+func ValidationErrorsFormat(err error) map[string]string {
+	var errs validator.ValidationErrors
+	mensajes := make(map[string]string)
+
+	if errors.As(err, &errs) {
+		for _, f := range errs {
+			switch f.Tag() {
+			case "rut_valido":
+				mensajes[f.Field()] = "El RUT ingresado no es válido."
+			case "required":
+				mensajes[f.Field()] = "Este campo es obligatorio."
+			default:
+				mensajes[f.Field()] = "El formato ingresado no es válido."
+			}
+		}
+		return mensajes
+	}
+
+	mensajes["error"] = "El cuerpo de la petición es inválido."
+	return mensajes
 }

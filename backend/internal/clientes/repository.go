@@ -2,86 +2,75 @@ package clientes
 
 import "gorm.io/gorm"
 
-// cuando creamos clientes, lo guardamos en la db
-func GuardarCliente(db *gorm.DB, nuevoCliente *Cliente) error {
-	result := db.Create(nuevoCliente)
-	if result.Error != nil {
-		return result.Error
-	}
-	return nil
+func GetClientes(db *gorm.DB) ([]Cliente, error) {
+	var clientes []Cliente
+
+	result := db.Find(&clientes)
+	return clientes, result.Error
 }
 
-// verificar si el rut ya existe
-func CheckRutExiste(db *gorm.DB, rut string) (bool, error) {
-	var count int64
-
-	err := db.Model(&Cliente{}).Where("rut = ?", rut).Count(&count).Error
-	if err != nil {
-
-		return false, err
-	}
-
-	return count > 0, nil
-}
-
-// obtener todos los clientes
-func ObtenerTodosLosClientes(db *gorm.DB) ([]Cliente, error) {
-	var listaClientes []Cliente
-
-	result := db.Find(&listaClientes) //busca registros
-	if result.Error != nil {
-		return nil, result.Error
-	}
-
-	return listaClientes, nil
-}
-
-// obtener por id
-func ObtenerClientePorID(db *gorm.DB, id string) (*Cliente, error) {
+func GetClienteByID(db *gorm.DB, id string) (*Cliente, error) {
 	var cliente Cliente
-	result := db.First(&cliente, id)
+
+	result := db.First(&cliente, "id = ?", id)
 	if result.Error != nil {
 		return nil, result.Error
 	}
+
 	return &cliente, nil
 }
 
-// actualizar
-func ActualizarCliente(db *gorm.DB, clienteExistente *Cliente, datosNuevos *Cliente) error {
-	// Updates actualiza los campos modificados basados en el modelo estructurado
-	result := db.Model(clienteExistente).Updates(datosNuevos)
-	if result.Error != nil {
-		return result.Error
-	}
-	return nil
+func CreateCliente(db *gorm.DB, cliente *Cliente) error {
+	resultado := db.Create(cliente)
+	return resultado.Error
 }
 
-// eliminar
-func EliminarCliente(db *gorm.DB, id string) error {
-	// Pasamos un struct vacío de Cliente con el ID para indicarle a GORM qué borrar
-	result := db.Delete(&Cliente{}, id)
-	if result.Error != nil {
-		return result.Error
-	}
-	return nil
-}
-
-// buscar por rut
-func BuscarClientePorRut(db *gorm.DB, rut string) (*Cliente, error) {
+func DeleteClienteByID(db *gorm.DB, id string) error {
 	var cliente Cliente
+
+	if err := db.First(&cliente, "id = ?", id).Error; err != nil {
+		return err
+	}
+
+	if err := db.Delete(&cliente).Error; err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func UpdateClienteByID(db *gorm.DB, id string, data UpdateClienteInput) error {
+	var cliente Cliente
+
+	if err := db.First(&cliente, "id = ?", id).Error; err != nil {
+		return err
+	}
+
+	if err := db.Model(&cliente).Updates(data).Error; err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func GetClienteByRut(db *gorm.DB, rut string) (*Cliente, error) {
+	var cliente Cliente
+
 	result := db.Where("rut = ?", rut).First(&cliente)
 	if result.Error != nil {
 		return nil, result.Error
 	}
+
 	return &cliente, nil
 }
 
-// buscar por nombre
-func BuscarClientesPorNombre(db *gorm.DB, nombre string) ([]Cliente, error) {
+func GetClientesByNombre(db *gorm.DB, nombre string) ([]Cliente, error) {
 	var clientes []Cliente
+
 	result := db.Where("nombre ILIKE ?", "%"+nombre+"%").Find(&clientes)
 	if result.Error != nil {
 		return nil, result.Error
 	}
+
 	return clientes, nil
 }
