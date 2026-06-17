@@ -45,9 +45,9 @@ func (ctrl *ClienteController) GetClienteByIDController(c *gin.Context) {
 }
 
 type CreateClienteInput struct {
-	Nombre   string  `json:"nombre" binding:"required"`
-	Rut      string  `json:"rut" binding:"required,rut_valido"`
-	Telefono *string `json:"telefono"`
+	Nombre   string `json:"nombre" binding:"required"`
+	Rut      string `json:"rut" binding:"required,rut_valido"`
+	Telefono string `json:"telefono" binding:"required"`
 }
 
 func (ctrl *ClienteController) CreateClienteController(c *gin.Context) {
@@ -59,15 +59,10 @@ func (ctrl *ClienteController) CreateClienteController(c *gin.Context) {
 		return
 	}
 
-	telefono := ""
-	if input.Telefono != nil {
-		telefono = *input.Telefono
-	}
-
 	nuevoCliente := Cliente{
 		Nombre:   input.Nombre,
 		Rut:      input.Rut,
-		Telefono: telefono,
+		Telefono: input.Telefono,
 	}
 
 	err := CreateCliente(ctrl.db, &nuevoCliente)
@@ -192,7 +187,11 @@ func ValidationErrorsFormat(err error) map[string]string {
 			case "rut_valido":
 				mensajes[f.Field()] = "El RUT ingresado no es válido."
 			case "required":
-				mensajes[f.Field()] = "Este campo es obligatorio."
+				if f.Field() == "Telefono" {
+					mensajes[f.Field()] = "Se requiere un numero de teléfono para llamar."
+				} else {
+					mensajes[f.Field()] = "Este campo es obligatorio."
+				}
 			default:
 				mensajes[f.Field()] = "El formato ingresado no es válido."
 			}
