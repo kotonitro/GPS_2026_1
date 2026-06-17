@@ -38,7 +38,7 @@ func main() {
 	// rutas
 	auth.RoutesConfig(api, db, cfg.JWTSecret)
 	cajas.RoutesConfig(api, db, cfg.JWTSecret)
-	clientes.ConfigurarRutas(api)
+	clientes.RoutesConfig(api, db, cfg.JWTSecret)
 	empleados.RoutesConfig(api, db, cfg.JWTSecret)
 	inventario.ConfigurarRutas(api)
 	ventas.ConfigurarRutas(api, cfg.JWTSecret)

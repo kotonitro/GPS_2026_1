@@ -1,18 +1,29 @@
 package clientes
 
-import "github.com/gin-gonic/gin"
+import (
+	"backend/internal/auth"
 
-// ConfigurarRutas registra todos los endpoints del módulo de clientes
-func ConfigurarRutas(api *gin.RouterGroup) {
-	grupo := api.Group("/clientes")
-	grupo.Use(ClienteMiddleware())
+	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
+)
+
+func RoutesConfig(api *gin.RouterGroup, db *gorm.DB, jwtSecret string) {
+	ctrl := NewClienteController(db)
+
+	group := api.Group("clientes")
+	group.Use(auth.AuthMiddleware(jwtSecret))
 	{
-		grupo.POST("", CreateCliente)
-		grupo.GET("", GetClientes)
-		grupo.GET("/:id", GetClienteByID)
-		grupo.GET("/rut/:rut", SearchClienteByRut)
-		grupo.GET("/search/nombre", SearchClienteByNombre)
-		grupo.PUT("/:id", UpdateCliente)
-		grupo.DELETE("/:id", DeleteCliente)
+		group.GET("/", ctrl.GetClientesController)
+		group.GET("/:id", ctrl.GetClienteByIDController)
+		group.GET("/rut/:rut", ctrl.GetClienteByRutController)
+		group.GET("/search/nombre", ctrl.GetClientesByNombreController)
+
+		adminGroup := group.Group("")
+		adminGroup.Use(auth.RoleMiddleware("Admin"))
+		{
+			adminGroup.POST("", ctrl.CreateClienteController)
+			adminGroup.PATCH("/:id", ctrl.UpdateClienteByIDController)
+			adminGroup.DELETE("/:id", ctrl.DeleteClienteByIDController)
+		}
 	}
 }
