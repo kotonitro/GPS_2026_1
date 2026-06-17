@@ -3,6 +3,7 @@ package clientes
 import (
 	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
@@ -47,7 +48,7 @@ func (ctrl *ClienteController) GetClienteByIDController(c *gin.Context) {
 type CreateClienteInput struct {
 	Nombre   string `json:"nombre" binding:"required"`
 	Rut      string `json:"rut" binding:"required,rut_valido"`
-	Telefono string `json:"telefono" binding:"required"`
+	Telefono string `json:"telefono" binding:"required,telefono_valido"`
 }
 
 func (ctrl *ClienteController) CreateClienteController(c *gin.Context) {
@@ -59,6 +60,9 @@ func (ctrl *ClienteController) CreateClienteController(c *gin.Context) {
 		return
 	}
 
+
+	input.Telefono = normalizarTelefono(input.Telefono)
+
 	nuevoCliente := Cliente{
 		Nombre:   input.Nombre,
 		Rut:      input.Rut,
@@ -67,9 +71,27 @@ func (ctrl *ClienteController) CreateClienteController(c *gin.Context) {
 
 	err := CreateCliente(ctrl.db, &nuevoCliente)
 	if err != nil {
+		errMsg := err.Error()
+		
+		if strings.Contains(errMsg, "rut") {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error":   "No se pudo registrar el cliente.",
+				"detalle": "El RUT ya se encuentra registrado en el sistema.",
+			})
+			return
+		}
+		
+		if strings.Contains(errMsg, "telefono") {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error":   "No se pudo registrar el cliente.",
+				"detalle": "El teléfono ya esta registrado en el sistema.",
+			})
+			return
+		}
+		
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "No se pudo registrar el cliente.",
-			"detalle": "El RUT ya se encuentra registrado en el sistema.",
+			"detalle": "Error interno al crear el cliente.",
 		})
 		return
 	}
@@ -100,7 +122,7 @@ func (ctrl *ClienteController) DeleteClienteByIDController(c *gin.Context) {
 type UpdateClienteInput struct {
 	Nombre   *string `json:"nombre"`
 	Rut      *string `json:"rut" binding:"omitempty,rut_valido"`
-	Telefono *string `json:"telefono"`
+	Telefono *string `json:"telefono" binding:"omitempty,telefono_valido"`
 }
 
 func (ctrl *ClienteController) UpdateClienteByIDController(c *gin.Context) {
@@ -121,6 +143,12 @@ func (ctrl *ClienteController) UpdateClienteByIDController(c *gin.Context) {
 		return
 	}
 
+	
+	if input.Telefono != nil {
+		telefonoNormalizado := normalizarTelefono(*input.Telefono)
+		input.Telefono = &telefonoNormalizado
+	}
+
 	err := UpdateClienteByID(ctrl.db, id, input)
 
 	if err != nil {
@@ -128,6 +156,24 @@ func (ctrl *ClienteController) UpdateClienteByIDController(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "El cliente a modificar no existe."})
 			return
 		}
+		
+		errMsg := err.Error()
+		if strings.Contains(errMsg, "rut") {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error":   "No se pudo actualizar el cliente.",
+				"detalle": "El RUT ya se encuentra registrado en el sistema.",
+			})
+			return
+		}
+		
+		if strings.Contains(errMsg, "telefono") {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error":   "No se pudo actualizar el cliente.",
+				"detalle": "El teléfono ya se encuentra registrado en el sistema.",
+			})
+			return
+		}
+		
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error interno al modificar el cliente."})
 		return
 	}
@@ -177,6 +223,21 @@ func (ctrl *ClienteController) GetClientesByNombreController(c *gin.Context) {
 	})
 }
 
+func normalizarTelefono(telefono string) string {
+	telefonoLimpio := strings.NewReplacer(
+		" ", "",
+		"-", "",
+		".", "",
+		"+", "",
+	).Replace(telefono)
+
+	if strings.HasPrefix(telefonoLimpio, "56") {
+		telefonoLimpio = telefonoLimpio[2:]
+	}
+
+	return telefonoLimpio
+}
+
 func ValidationErrorsFormat(err error) map[string]string {
 	var errs validator.ValidationErrors
 	mensajes := make(map[string]string)
@@ -186,11 +247,14 @@ func ValidationErrorsFormat(err error) map[string]string {
 			switch f.Tag() {
 			case "rut_valido":
 				mensajes[f.Field()] = "El RUT ingresado no es válido."
+			case "telefono_valido":
+				mensajes[f.Field()] = "El formato del teléfono no es válido"
 			case "required":
-				if f.Field() == "Telefono" {
-					mensajes[f.Field()] = "Se requiere un numero de teléfono para llamar."
+				fieldName := f.Field()
+				if fieldName == "Telefono" || fieldName == "telefono" {
+					mensajes[fieldName] = "Se requiere un numero de teléfono para llamar."
 				} else {
-					mensajes[f.Field()] = "Este campo es obligatorio."
+					mensajes[fieldName] = "Este campo es obligatorio."
 				}
 			default:
 				mensajes[f.Field()] = "El formato ingresado no es válido."
