@@ -102,3 +102,19 @@ func (ctrl *AuthController) Login(c *gin.Context) {
 		},
 	})
 }
+
+func (ctrl *AuthController) Logout(c *gin.Context) {
+	c.SetCookie(
+		"auth",
+		"",
+		-1,
+		"/",
+		"localhost",
+		false,
+		true,
+	)
+
+	c.JSON(http.StatusOK, gin.H{
+		"mensaje": "Sesión cerrada exitosamente.",
+	})
+}
