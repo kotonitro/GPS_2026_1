@@ -1,0 +1,56 @@
+@import 'tailwindcss';
+@plugin '@tailwindcss/forms';
+@plugin '@tailwindcss/typography';
+
+@theme {
+	/* Design system: eye-friendly cream/yellow-amber theme */
+	--color-bg-primary: #f5f4ef;
+	--color-bg-secondary: #e6e5dd;
+	--color-bg-card: #ffffff;
+	--color-text-primary: #0f1e36;
+	--color-text-secondary: #3c4f6b;
+	--color-text-muted: #6b7a90;
+	--color-accent: #d97706;
+	--color-accent-hover: #b45309;
+	--color-accent-light: #eab308;
+	--color-border-color: rgba(15, 30, 54, 0.08);
+	--color-border-color-hover: rgba(217, 119, 6, 0.3);
+
+	/* Animations */
+	--animate-fade-in: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+	--animate-modal-enter: modalEnter 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes fadeIn {
+	from {
+		opacity: 0;
+		transform: translateY(-10px) scale(0.95);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0) scale(1);
+	}
+}
+
+@keyframes modalEnter {
+	from {
+		opacity: 0;
+		transform: scale(0.95) translateY(10px);
+	}
+	to {
+		opacity: 1;
+		transform: scale(1) translateY(0);
+	}
+}
+
+/* Skeleton Loading utility */
+.skeleton-loader {
+	background: linear-gradient(90deg, rgba(15, 30, 54, 0.03) 25%, rgba(15, 30, 54, 0.08) 50%, rgba(15, 30, 54, 0.03) 75%);
+	background-size: 200% 100%;
+	animation: skeleton-loading 1.5s infinite;
+}
+
+@keyframes skeleton-loading {
+	0% { background-position: 200% 0; }
+	100% { background-position: -200% 0; }
+}
