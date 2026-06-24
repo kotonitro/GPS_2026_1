@@ -18,6 +18,15 @@ func (InitialAdmin) TableName() string {
 	return "empleados"
 }
 
+type InitialMetodoPago struct {
+	ID           string
+	NombreMetodo string
+}
+
+func (InitialMetodoPago) TableName() string {
+	return "metodo_pagos" 
+}
+
 func InitialSetup(db *gorm.DB) {
 	var count int64
 
@@ -42,5 +51,21 @@ func InitialSetup(db *gorm.DB) {
 		}
 
 		log.Println("Administrador inicial creado con éxito.")
+	}
+	var countMetodos int64
+	db.Model(&InitialMetodoPago{}).Count(&countMetodos)
+
+	if countMetodos == 0 {
+		metodosBasicos := []InitialMetodoPago{
+			{ID: "1", NombreMetodo: "Efectivo"},
+			{ID: "2", NombreMetodo: "Tarjeta"},
+		}
+
+		for _, metodo := range metodosBasicos {
+			if err := db.Create(&metodo).Error; err != nil {
+				log.Println("Error al crear método de pago base: ", err)
+			}
+		}
+		log.Println("Métodos de pago base creados con éxito.")
 	}
 }
