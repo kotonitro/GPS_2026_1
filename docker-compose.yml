@@ -29,6 +29,9 @@ services:
     depends_on:
       database:
         condition: service_healthy
+    volumes:
+      - ./backend:/app
+    command: sh -c "go install github.com/air-verse/air@latest && air"
     environment:
       - DB_HOST=${DB_HOST}
       - DB_USER=${DB_USER}
