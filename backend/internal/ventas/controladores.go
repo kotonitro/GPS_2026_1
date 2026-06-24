@@ -100,6 +100,9 @@ func (ctrl *VentasController) UpdateVenta(c *gin.Context) {
 
 func (ctrl *VentasController) DeleteVenta(c *gin.Context) {
 	id := c.Param("id")
-	EliminarVenta(ctrl.db, id)
-	c.JSON(http.StatusOK, gin.H{"mensaje": "Venta eliminada"})
+	if err := EliminarVenta(ctrl.db, id); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"Error": "No se pudo eliminar: " + err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"mensaje": "Venta eliminada"})
 }
