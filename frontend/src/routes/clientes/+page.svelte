@@ -286,7 +286,7 @@
 <div class="flex justify-between items-center mb-8 flex-wrap gap-4">
 	<div>
 		<h1 class="text-3xl font-bold tracking-tight text-text-primary">Gestión de Clientes</h1>
-		<p class="text-text-secondary text-sm mt-1">Visualiza, busca y administra la información de clientes registrados en el sistema.</p>
+		<p class="text-text-secondary text-sm mt-1">info clientes</p>
 	</div>
 	{#if auth.user?.rol === 'Admin'}
 		<button class="inline-flex items-center justify-center gap-2 font-semibold text-sm px-5 py-2.5 rounded-lg cursor-pointer bg-gradient-to-r from-accent-light to-accent text-white hover:shadow-glow hover:-translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200" onclick={openCreateModal} id="btn-nuevo-cliente">
@@ -299,20 +299,19 @@
 	{/if}
 </div>
 
-<!-- Search Panel -->
 <div class="bg-bg-card border border-border-color rounded-xl p-6 shadow-md hover:border-border-color-hover hover:shadow-lg transition-all duration-300 mb-6">
 	<form onsubmit={handleSearch} class="flex flex-wrap gap-4 items-center">
 		<div class="flex flex-1 min-w-[280px] border border-[rgba(15,30,54,0.15)] rounded-lg overflow-hidden bg-white focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/15">
-			<div class="border-r border-border-color">
-				<select class="border-none bg-transparent pr-2 pl-4 py-3 cursor-pointer h-full outline-none text-sm text-text-primary" bind:value={searchType} aria-label="Tipo de búsqueda">
-					<option value="nombre">Por Nombre</option>
-					<option value="rut">Por RUT</option>
+			<div class="border-r border-border-color flex items-center">
+				<select class="border-none bg-transparent pl-4 pr-10 py-3 cursor-pointer h-full w-auto outline-none text-sm text-text-primary appearance-none bg-no-repeat bg-[position:right_0.75rem_center] bg-[size:10px]" style="background-image: url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23666%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22><polyline points=%226 9 12 15 18 9%22></polyline></svg>');" bind:value={searchType} aria-label="Tipo de búsqueda">
+					<option value="nombre">por Nombre</option>
+					<option value="rut">por RUT</option>
 				</select>
 			</div>
 			<input
 				type="text"
 				class="flex-1 border-none bg-transparent px-4 py-3 outline-none text-sm text-text-primary"
-				placeholder={searchType === 'nombre' ? 'Ej: Juan Pérez...' : 'Ej: 12345678-9...'}
+				placeholder={searchType === 'nombre' ? 'ej:Juan Pérez...' : 'ej:12345678-9...'}
 				bind:value={searchQuery}
 				aria-label="Término de búsqueda"
 			/>
@@ -389,7 +388,7 @@
 			</svg>
 		</div>
 		<h3 class="text-lg font-semibold text-text-primary mb-2">No se encontraron clientes</h3>
-		<p class="text-text-secondary text-sm max-w-[400px]">Modifica el criterio de búsqueda o agrega un nuevo cliente al sistema.</p>
+		<p class="text-text-secondary text-sm max-w-[400px]">Agrega un nuevos clientes :D</p>
 	</div>
 {:else}
 	<div class="bg-bg-card border border-border-color rounded-xl overflow-hidden shadow-md">
@@ -469,7 +468,7 @@
 							type="text"
 							id="formNombre"
 							class="bg-white border border-[rgba(15,30,54,0.15)] rounded-lg px-4 py-3 text-text-primary text-sm outline-none transition-all duration-200 focus:border-accent focus:ring-2 focus:ring-accent/15 placeholder:text-text-muted/80 disabled:opacity-50 disabled:cursor-not-allowed"
-							placeholder="Ej: Juan Pérez Gómez"
+							placeholder="Ej:Juan Pérez Gómez"
 							bind:value={formNombre}
 							disabled={submitLoading}
 							required
@@ -485,7 +484,7 @@
 							type="text"
 							id="formRut"
 							class="bg-white border border-[rgba(15,30,54,0.15)] rounded-lg px-4 py-3 text-text-primary text-sm outline-none transition-all duration-200 focus:border-accent focus:ring-2 focus:ring-accent/15 placeholder:text-text-muted/80 disabled:opacity-50 disabled:cursor-not-allowed"
-							placeholder="Ej: 12.345.678-K"
+							placeholder="Ej:12.345.678-K"
 							value={formRut}
 							oninput={handleRutInput}
 							disabled={submitLoading || editingCliente !== null}
@@ -538,14 +537,14 @@
 				<button class="p-2 bg-text-primary/3 text-text-secondary rounded-lg border border-border-color cursor-pointer inline-flex items-center justify-center transition-all duration-200 hover:text-text-primary hover:bg-text-primary/7 hover:border-border-color-hover" onclick={() => showDeleteModal = false} aria-label="Cerrar modal">&times;</button>
 			</header>
 			<div class="p-6 text-text-primary">
-				<p>¿Estás seguro de que deseas eliminar al cliente <strong>{clienteToDelete.nombre}</strong> (RUT: {formatRutInput(clienteToDelete.rut)}) de forma permanente?</p>
-				<p class="mt-3 text-xs text-text-muted">Esta acción no se puede deshacer y puede afectar a los reportes de ventas vinculados.</p>
+				<p>¿Eliminar al cliente <strong>{clienteToDelete.nombre}</strong> de forma permanente?</p>
+				<p class="mt-3 text-xs text-text-muted">No se puede deshacer</p>
 			</div>
 			<footer class="p-4 px-6 bg-text-primary/2 border-t border-border-color flex justify-end gap-3">
 				<button type="button" class="inline-flex items-center justify-center gap-2 font-semibold text-sm px-5 py-2.5 rounded-lg cursor-pointer bg-bg-secondary text-text-primary border border-border-color hover:bg-text-primary/5 transition-all duration-200" onclick={() => showDeleteModal = false}>
 					Cancelar
 				</button>
-				<button type="button" class="inline-flex items-center justify-center gap-2 font-semibold text-sm px-5 py-2.5 rounded-lg cursor-pointer bg-danger-bg text-danger-color border border-red-500/15 hover:bg-danger-color hover:text-white transition-all duration-200" onclick={confirmDelete} id="btn-modal-confirm-delete">
+				<button type="button" class="inline-flex items-center justify-center gap-2 font-semibold text-sm px-5 py-2.5 rounded-lg cursor-pointer bg-danger-bg text-danger-color border border-red-500/15 hover:bg-red-600 hover:text-white hover:border-red-600 transition-all duration-200" onclick={confirmDelete} id="btn-modal-confirm-delete">
 					Eliminar Permanentemente
 				</button>
 			</footer>
