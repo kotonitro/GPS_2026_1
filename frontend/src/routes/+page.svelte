@@ -1,17 +1,23 @@
 <script lang="ts">
 	import { auth } from '$lib/authStore.svelte';
-	import { apiClientes } from '$lib/api';
+	import { apiClientes, apiPromociones } from '$lib/api';
 	import { onMount } from 'svelte';
 
 	let clientCount = $state(0);
+	let promocionesCount = $state(0);
 	let loading = $state(true);
 
 	onMount(async () => {
 		try {
 			if (auth.user) {
-				const res = await apiClientes.getAll();
-				clientCount = Array.isArray(res) ? res.length : 0;
+			const [resClientes, resPromos] = await Promise.all([
+								apiClientes.getAll(),
+								apiPromociones.getAll()
+			]);
+			clientCount = Array.isArray(resClientes) ? resClientes.length : 0;
+			promocionesCount = Array.isArray(resPromos) ? resPromos.length : 0;
 			}
+		
 		} catch (err) {
 			console.error('Error al obtener la informacion de clientes:', err);
 		} finally {
@@ -96,6 +102,17 @@
 		<div class="flex gap-3">
 			<a href="/clientes" class="inline-flex items-center justify-center gap-2 font-semibold text-sm px-5 py-2.5 rounded-lg cursor-pointer bg-gradient-to-r from-accent-light to-accent text-white transition-all duration-200 hover:-translate-y-[1px] hover:shadow-glow hover:text-white no-underline">
 				Ir a Clientes
+			</a>
+		</div>
+	</div>
+</div>
+
+<div class="max-w-[800px]">
+	<div class="bg-bg-card border border-border-color rounded-xl p-6 shadow-md hover:border-border-color-hover hover:shadow-lg transition-all duration-300">
+		<h2 class="text-xl font-bold text-text-primary mb-3">Gestión de Promociones</h2>
+		<div class="flex gap-3">
+			<a href="/promociones" class="inline-flex items-center justify-center gap-2 font-semibold text-sm px-5 py-2.5 rounded-lg cursor-pointer bg-gradient-to-r from-accent-light to-accent text-white transition-all duration-200 hover:-translate-y-[1px] hover:shadow-glow hover:text-white no-underline">
+				Ir a Promociones
 			</a>
 		</div>
 	</div>

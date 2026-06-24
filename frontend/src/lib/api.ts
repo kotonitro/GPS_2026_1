@@ -62,6 +62,30 @@ export const apiClientes = {
 	})
 };
 
+export const apiPromociones = {
+	getAll: () => fetchAPI('/promociones/'),
+	
+	getById: (id: string) => fetchAPI(`/promociones/${id}`),
+	
+	// Filtro por tipo que usamos en la tabla (NXM o DESCUENTO)
+	getByTipo: (tipo: string) => fetchAPI(`/promociones/tipo/${tipo}`),
+	
+	create: (data: { tipo: string; lleva: number; paga: number; descuento: number }) => fetchAPI('/promociones', {
+		method: 'POST',
+		body: JSON.stringify(data)
+	}),
+	
+	// Usamos Partial en TS o hacemos los campos opcionales (?) para permitir actualizaciones parciales
+	update: (id: string, data: { tipo?: string; lleva?: number; paga?: number; descuento?: number }) => fetchAPI(`/promociones/${id}`, {
+		method: 'PATCH',
+		body: JSON.stringify(data)
+	}),
+	
+	delete: (id: string) => fetchAPI(`/promociones/${id}`, {
+		method: 'DELETE'
+	})
+};
+
 export const apiAuth = {
 	login: (usuario: string, contrasena: string) => fetchAPI('/auth/login', {
 		method: 'POST',
