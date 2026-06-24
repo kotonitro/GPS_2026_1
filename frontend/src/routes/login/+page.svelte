@@ -43,26 +43,27 @@
 	<meta name="description" content="Página de acceso." />
 </svelte:head>
 
-<div class="login-wrapper">
-	<div class="glow-orb orb-1"></div>
-	<div class="glow-orb orb-2"></div>
+<div class="flex items-center justify-center min-h-screen relative p-5 overflow-hidden">
+	<!-- Glow Orbs -->
+	<div class="absolute rounded-full filter blur-[100px] z-0 opacity-10 w-[350px] h-[350px] bg-accent-light top-[15%] left-[20%]"></div>
+	<div class="absolute rounded-full filter blur-[100px] z-0 opacity-10 w-[300px] h-[300px] bg-accent bottom-[15%] right-[20%]"></div>
 
-	<div class="card login-card">
-		<div class="login-header">
-			<div class="logo-icon">
-				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+	<div class="w-full max-w-[420px] relative z-10 border border-border-color bg-white rounded-xl p-6 shadow-lg animate-fade-in">
+		<div class="text-center mb-7">
+			<div class="inline-flex items-center justify-center w-14 h-14 bg-accent/10 border border-accent/20 text-accent rounded-2xl mb-4">
+				<svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
 					<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
 					<circle cx="9" cy="7" r="4" />
 					<path d="M22 21v-2a4 4 0 0 0-3-3.87" />
 					<path d="M16 3.13a4 4 0 0 1 0 7.75" />
 				</svg>
 			</div>
-			<h1 id="login-title">GPSproject</h1>
-			<p>Ingresa tus datos</p>
+			<h1 id="login-title" class="text-2xl font-bold mb-1.5 tracking-tight text-text-primary">GPSproject</h1>
+			<p class="text-text-secondary text-sm">Ingresa tus datos</p>
 		</div>
 
 		{#if errorMsg}
-			<div class="alert alert-error" role="alert" id="login-error">
+			<div class="p-4 rounded-lg flex gap-3 text-sm mb-5 bg-danger-bg text-danger-color border border-red-500/15" role="alert" id="login-error">
 				<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 					<circle cx="12" cy="12" r="10" />
 					<line x1="12" y1="8" x2="12" y2="12" />
@@ -73,12 +74,12 @@
 		{/if}
 
 		<form onsubmit={handleLogin} aria-labelledby="login-title">
-			<div class="form-group">
-				<label class="form-label" for="usuario">Usuario</label>
+			<div class="flex flex-col gap-1.5 mb-5">
+				<label class="text-[0.85rem] font-semibold text-text-secondary" for="usuario">Usuario</label>
 				<input
 					type="text"
 					id="usuario"
-					class="form-input"
+					class="bg-white border border-[rgba(15,30,54,0.15)] rounded-lg px-4 py-3 text-text-primary text-sm outline-none transition-all duration-200 focus:border-accent focus:ring-2 focus:ring-accent/15 placeholder:text-text-muted/80 disabled:opacity-50 disabled:cursor-not-allowed"
 					placeholder="Ej: admin"
 					bind:value={usuario}
 					disabled={loading}
@@ -86,12 +87,12 @@
 				/>
 			</div>
 
-			<div class="form-group">
-				<label class="form-label" for="contrasena">Contraseña</label>
+			<div class="flex flex-col gap-1.5 mb-5">
+				<label class="text-[0.85rem] font-semibold text-text-secondary" for="contrasena">Contraseña</label>
 				<input
 					type="password"
 					id="contrasena"
-					class="form-input"
+					class="bg-white border border-[rgba(15,30,54,0.15)] rounded-lg px-4 py-3 text-text-primary text-sm outline-none transition-all duration-200 focus:border-accent focus:ring-2 focus:ring-accent/15 placeholder:text-text-muted/80 disabled:opacity-50 disabled:cursor-not-allowed"
 					placeholder="••••••••"
 					bind:value={contrasena}
 					disabled={loading}
@@ -99,9 +100,9 @@
 				/>
 			</div>
 
-			<button type="submit" class="btn btn-primary login-btn" disabled={loading} id="btn-login-submit">
+			<button type="submit" class="w-full mt-2.5 p-3 text-sm font-semibold text-white bg-gradient-to-r from-accent-light to-accent rounded-lg cursor-pointer hover:shadow-glow hover:-translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none transition-all duration-200" disabled={loading} id="btn-login-submit">
 				{#if loading}
-					<span class="spinner"></span> Procesando...
+					<span class="inline-block w-4 h-4 border-2 border-white/30 rounded-full border-t-white animate-spin"></span> Procesando...
 				{:else}
 					Ingresar
 				{/if}
@@ -109,122 +110,3 @@
 		</form>
 	</div>
 </div>
-
-<style>
-	.login-wrapper {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		min-height: 100vh;
-		position: relative;
-		padding: 20px;
-		overflow: hidden;
-	}
-
-	.glow-orb {
-		position: absolute;
-		border-radius: 50%;
-		filter: blur(100px);
-		z-index: 0;
-		opacity: 0.1;
-	}
-
-	.orb-1 {
-		width: 350px;
-		height: 350px;
-		background: #eab308;
-		top: 15%;
-		left: 20%;
-	}
-
-	.orb-2 {
-		width: 300px;
-		height: 300px;
-		background: #d97706;
-		bottom: 15%;
-		right: 20%;
-	}
-
-	.login-card {
-		width: 100%;
-		max-width: 420px;
-		position: relative;
-		z-index: 1;
-		border: 1px solid var(--border-color);
-		background: #ffffff;
-		box-shadow: var(--shadow-lg);
-		animation: card-appear 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-	}
-
-	.login-header {
-		text-align: center;
-		margin-bottom: 28px;
-	}
-
-	.logo-icon {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		width: 56px;
-		height: 56px;
-		background: rgba(217, 119, 6, 0.1);
-		border: 1.5px solid rgba(217, 119, 6, 0.2);
-		color: var(--accent-color);
-		border-radius: 14px;
-		margin-bottom: 16px;
-	}
-
-	.logo-icon svg {
-		width: 28px;
-		height: 28px;
-	}
-
-	.login-header h1 {
-		font-size: 1.6rem;
-		font-weight: 700;
-		margin-bottom: 6px;
-		letter-spacing: -0.025em;
-		color: var(--text-primary);
-	}
-
-	.login-header p {
-		color: var(--text-secondary);
-		font-size: 0.9rem;
-	}
-
-	.login-btn {
-		width: 100%;
-		margin-top: 10px;
-		padding: 12px;
-		font-size: 0.95rem;
-		background: var(--accent-gradient);
-		color: #ffffff;
-	}
-
-	.spinner {
-		display: inline-block;
-		width: 16px;
-		height: 16px;
-		border: 2px solid rgba(255, 255, 255, 0.3);
-		border-radius: 50%;
-		border-top-color: white;
-		animation: spin 0.8s linear infinite;
-	}
-
-	@keyframes spin {
-		to {
-			transform: rotate(360deg);
-		}
-	}
-
-	@keyframes card-appear {
-		from {
-			opacity: 0;
-			transform: translateY(20px) scale(0.98);
-		}
-		to {
-			opacity: 1;
-			transform: translateY(0) scale(1);
-		}
-	}
-</style>

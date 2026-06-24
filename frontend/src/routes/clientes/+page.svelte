@@ -92,7 +92,6 @@
 		const dv = clean.slice(-1);
 		let cuerpo = clean.slice(0, -1);
 		
-		// Añadir puntos al cuerpo si tiene suficiente longitud
 		if (cuerpo.length > 0) {
 			let formattedCuerpo = '';
 			let j = 0;
@@ -160,7 +159,7 @@
 	// Modales
 	function openCreateModal() {
 		if (auth.user?.rol !== 'Admin') {
-			toast.show('Acción denegada, requiere rol admin.', 'error');
+			toast.show('Acción denegada, requiere rol Administrador.', 'error');
 			return;
 		}
 		editingCliente = null;
@@ -173,7 +172,7 @@
 
 	function openEditModal(cliente: Cliente) {
 		if (auth.user?.rol !== 'Admin') {
-			toast.show('Acción denegada, requiere rol admin.', 'error');
+			toast.show('Acción denegada, requiere rol Administrador.', 'error');
 			return;
 		}
 		editingCliente = cliente;
@@ -186,7 +185,7 @@
 
 	function openDeleteModal(cliente: Cliente) {
 		if (auth.user?.rol !== 'Admin') {
-			toast.show('Acción denegada, requiere rol admin', 'error');
+			toast.show('Acción denegada, requiere rol Administrador.', 'error');
 			return;
 		}
 		clienteToDelete = cliente;
@@ -218,7 +217,7 @@
 			errRut = 'El RUT es obligatorio.';
 			isValid = false;
 		} else if (!validarRut(rawRut)) {
-			errRut = 'El RUT ingresado no es válido.';
+			errRut = 'El RUT ingresado no es válido para Chile.';
 			isValid = false;
 		}
 
@@ -284,13 +283,13 @@
 </svelte:head>
 
 <!-- Page Header -->
-<div class="page-header">
+<div class="flex justify-between items-center mb-8 flex-wrap gap-4">
 	<div>
-		<h1 class="page-title">Gestión de Clientes</h1>
-		<p class="page-subtitle">Admin info clientes</p>
+		<h1 class="text-3xl font-bold tracking-tight text-text-primary">Gestión de Clientes</h1>
+		<p class="text-text-secondary text-sm mt-1">Visualiza, busca y administra la información de clientes registrados en el sistema.</p>
 	</div>
 	{#if auth.user?.rol === 'Admin'}
-		<button class="btn btn-primary" onclick={openCreateModal} id="btn-nuevo-cliente">
+		<button class="inline-flex items-center justify-center gap-2 font-semibold text-sm px-5 py-2.5 rounded-lg cursor-pointer bg-gradient-to-r from-accent-light to-accent text-white hover:shadow-glow hover:-translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200" onclick={openCreateModal} id="btn-nuevo-cliente">
 			<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 				<line x1="12" y1="5" x2="12" y2="19"/>
 				<line x1="5" y1="12" x2="19" y2="12"/>
@@ -301,25 +300,25 @@
 </div>
 
 <!-- Search Panel -->
-<div class="card search-card">
-	<form onsubmit={handleSearch} class="search-form">
-		<div class="search-input-group">
-			<div class="select-wrapper">
-				<select class="form-input search-select" bind:value={searchType} aria-label="Tipo de búsqueda">
+<div class="bg-bg-card border border-border-color rounded-xl p-6 shadow-md hover:border-border-color-hover hover:shadow-lg transition-all duration-300 mb-6">
+	<form onsubmit={handleSearch} class="flex flex-wrap gap-4 items-center">
+		<div class="flex flex-1 min-w-[280px] border border-[rgba(15,30,54,0.15)] rounded-lg overflow-hidden bg-white focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/15">
+			<div class="border-r border-border-color">
+				<select class="border-none bg-transparent pr-2 pl-4 py-3 cursor-pointer h-full outline-none text-sm text-text-primary" bind:value={searchType} aria-label="Tipo de búsqueda">
 					<option value="nombre">Por Nombre</option>
 					<option value="rut">Por RUT</option>
 				</select>
 			</div>
 			<input
 				type="text"
-				class="form-input search-input"
+				class="flex-1 border-none bg-transparent px-4 py-3 outline-none text-sm text-text-primary"
 				placeholder={searchType === 'nombre' ? 'Ej: Juan Pérez...' : 'Ej: 12345678-9...'}
 				bind:value={searchQuery}
 				aria-label="Término de búsqueda"
 			/>
 		</div>
-		<div class="search-actions">
-			<button type="submit" class="btn btn-primary btn-search" id="btn-search-submit">
+		<div class="flex gap-2.5">
+			<button type="submit" class="inline-flex items-center justify-center gap-2 font-semibold text-sm px-5 py-2.5 rounded-lg cursor-pointer bg-gradient-to-r from-accent-light to-accent text-white hover:shadow-glow hover:-translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200" id="btn-search-submit">
 				<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
 					<circle cx="11" cy="11" r="8"/>
 					<line x1="21" y1="21" x2="16.65" y2="16.65"/>
@@ -327,7 +326,7 @@
 				<span>Buscar</span>
 			</button>
 			{#if searchQuery}
-				<button type="button" class="btn btn-secondary" onclick={clearSearch} id="btn-search-clear">
+				<button type="button" class="inline-flex items-center justify-center gap-2 font-semibold text-sm px-5 py-2.5 rounded-lg cursor-pointer bg-bg-secondary text-text-primary border border-border-color hover:bg-text-primary/5 transition-all duration-200" onclick={clearSearch} id="btn-search-clear">
 					Limpiar
 				</button>
 			{/if}
@@ -337,7 +336,7 @@
 
 <!-- Table View -->
 {#if errorMsg}
-	<div class="alert alert-error" role="alert">
+	<div class="p-4 rounded-lg flex gap-3 text-sm mb-5 bg-danger-bg text-danger-color border border-red-500/15" role="alert">
 		<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 			<circle cx="12" cy="12" r="10"/>
 			<line x1="12" y1="8" x2="12" y2="12"/>
@@ -348,29 +347,29 @@
 {/if}
 
 {#if loading}
-	<div class="table-container">
-		<table class="data-table">
+	<div class="bg-bg-card border border-border-color rounded-xl overflow-hidden shadow-md">
+		<table class="w-full border-collapse text-left">
 			<thead>
 				<tr>
-					<th>Nombre</th>
-					<th>RUT</th>
-					<th>Teléfono</th>
+					<th class="bg-text-primary/4 p-4 font-bold text-xs text-text-secondary uppercase tracking-wider border-b border-border-color">Nombre</th>
+					<th class="bg-text-primary/4 p-4 font-bold text-xs text-text-secondary uppercase tracking-wider border-b border-border-color">RUT</th>
+					<th class="bg-text-primary/4 p-4 font-bold text-xs text-text-secondary uppercase tracking-wider border-b border-border-color">Teléfono</th>
 					{#if auth.user?.rol === 'Admin'}
-						<th class="actions-header">Acciones</th>
+						<th class="bg-text-primary/4 p-4 font-bold text-xs text-text-secondary uppercase tracking-wider border-b border-border-color text-right w-[120px]">Acciones</th>
 					{/if}
 				</tr>
 			</thead>
 			<tbody>
 				{#each Array(5) as _, i}
 					<tr>
-						<td><div class="skeleton skeleton-text" style="width: 150px;"></div></td>
-						<td><div class="skeleton skeleton-text" style="width: 100px;"></div></td>
-						<td><div class="skeleton skeleton-text" style="width: 120px;"></div></td>
+						<td class="p-4 border-b border-border-color"><div class="skeleton-loader h-4 w-40 rounded"></div></td>
+						<td class="p-4 border-b border-border-color"><div class="skeleton-loader h-4 w-28 rounded"></div></td>
+						<td class="p-4 border-b border-border-color"><div class="skeleton-loader h-4 w-32 rounded"></div></td>
 						{#if auth.user?.rol === 'Admin'}
-							<td>
-								<div style="display: flex; gap: 8px;">
-									<div class="skeleton skeleton-btn" style="width: 32px; height: 32px; border-radius: 6px;"></div>
-									<div class="skeleton skeleton-btn" style="width: 32px; height: 32px; border-radius: 6px;"></div>
+							<td class="p-4 border-b border-border-color">
+								<div class="flex justify-end gap-2">
+									<div class="skeleton-loader w-8 h-8 rounded-lg"></div>
+									<div class="skeleton-loader w-8 h-8 rounded-lg"></div>
 								</div>
 							</td>
 						{/if}
@@ -380,8 +379,8 @@
 		</table>
 	</div>
 {:else if clientes.length === 0}
-	<div class="card empty-card">
-		<div class="empty-icon">
+	<div class="bg-bg-card border border-border-color rounded-xl p-16 text-center flex flex-col items-center justify-center shadow-md">
+		<div class="w-20 h-20 flex items-center justify-center text-text-muted bg-text-primary/3 rounded-full mb-5">
 			<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
 				<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
 				<circle cx="9" cy="7" r="4"/>
@@ -389,33 +388,33 @@
 				<line x1="22" y1="8" x2="17" y2="13"/>
 			</svg>
 		</div>
-		<h3>No se encontraron clientes</h3>
-		<p>Modifica el criterio de búsqueda o agrega un nuevo cliente al sistema.</p>
+		<h3 class="text-lg font-semibold text-text-primary mb-2">No se encontraron clientes</h3>
+		<p class="text-text-secondary text-sm max-w-[400px]">Modifica el criterio de búsqueda o agrega un nuevo cliente al sistema.</p>
 	</div>
 {:else}
-	<div class="table-container">
-		<table class="data-table">
+	<div class="bg-bg-card border border-border-color rounded-xl overflow-hidden shadow-md">
+		<table class="w-full border-collapse text-left">
 			<thead>
 				<tr>
-					<th>Nombre</th>
-					<th>RUT</th>
-					<th>Teléfono</th>
+					<th class="bg-text-primary/4 p-4 font-bold text-xs text-text-secondary uppercase tracking-wider border-b border-border-color">Nombre</th>
+					<th class="bg-text-primary/4 p-4 font-bold text-xs text-text-secondary uppercase tracking-wider border-b border-border-color">RUT</th>
+					<th class="bg-text-primary/4 p-4 font-bold text-xs text-text-secondary uppercase tracking-wider border-b border-border-color">Teléfono</th>
 					{#if auth.user?.rol === 'Admin'}
-						<th class="actions-header">Acciones</th>
+						<th class="bg-text-primary/4 p-4 font-bold text-xs text-text-secondary uppercase tracking-wider border-b border-border-color text-right w-[120px]">Acciones</th>
 					{/if}
 				</tr>
 			</thead>
 			<tbody>
 				{#each clientes as client (client.id_cliente)}
-					<tr>
-						<td class="client-name">{client.nombre}</td>
-						<td class="client-rut">{formatRutInput(client.rut)}</td>
-						<td class="client-tel">{client.telefono}</td>
+					<tr class="hover:bg-text-primary/[0.015] transition-colors">
+						<td class="p-4 border-b border-border-color font-semibold text-text-primary">{client.nombre}</td>
+						<td class="p-4 border-b border-border-color font-mono text-sm text-text-secondary">{formatRutInput(client.rut)}</td>
+						<td class="p-4 border-b border-border-color text-text-secondary">{client.telefono}</td>
 						{#if auth.user?.rol === 'Admin'}
-							<td>
-								<div class="actions-cell">
+							<td class="p-4 border-b border-border-color">
+								<div class="flex justify-end gap-2">
 									<button
-										class="btn-icon"
+										class="p-2 bg-text-primary/3 text-text-secondary rounded-lg border border-border-color cursor-pointer inline-flex items-center justify-center transition-all duration-200 hover:text-text-primary hover:bg-text-primary/7 hover:border-border-color-hover"
 										onclick={() => openEditModal(client)}
 										title="Editar cliente"
 										aria-label="Editar"
@@ -426,7 +425,7 @@
 										</svg>
 									</button>
 									<button
-										class="btn-icon btn-delete-icon"
+										class="p-2 bg-text-primary/3 text-text-secondary rounded-lg border border-border-color cursor-pointer inline-flex items-center justify-center transition-all duration-200 hover:text-danger-color hover:bg-danger-bg hover:border-red-500/20"
 										onclick={() => openDeleteModal(client)}
 										title="Eliminar cliente"
 										aria-label="Eliminar"
@@ -450,42 +449,42 @@
 
 <!-- Form Dialog Modal (Create / Edit) -->
 {#if showModal}
-	<div class="modal-backdrop" onclick={() => showModal = false} role="presentation">
-		<div class="modal-content" onclick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="modal-title">
-			<header class="modal-header">
-				<h2 id="modal-title">{editingCliente ? 'Editar Cliente' : 'Nuevo Cliente'}</h2>
-				<button class="btn-icon" onclick={() => showModal = false} aria-label="Cerrar modal">&times;</button>
+	<div class="fixed inset-0 bg-text-primary/40 backdrop-blur-[4px] flex items-center justify-center z-50 p-5" onclick={() => showModal = false} role="presentation">
+		<div class="bg-bg-card border border-border-color rounded-xl w-full max-w-[500px] shadow-lg animate-modal-enter overflow-hidden" onclick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="modal-title">
+			<header class="p-5 border-b border-border-color flex justify-between items-center">
+				<h2 id="modal-title" class="text-lg font-bold text-text-primary">{editingCliente ? 'Editar Cliente' : 'Nuevo Cliente'}</h2>
+				<button class="p-2 bg-text-primary/3 text-text-secondary rounded-lg border border-border-color cursor-pointer inline-flex items-center justify-center transition-all duration-200 hover:text-text-primary hover:bg-text-primary/7 hover:border-border-color-hover" onclick={() => showModal = false} aria-label="Cerrar modal">&times;</button>
 			</header>
 			<form onsubmit={handleSubmit}>
-				<div class="modal-body">
+				<div class="p-6">
 					{#if formGeneralError}
-						<div class="alert alert-error" role="alert">
+						<div class="p-4 rounded-lg flex gap-3 text-sm mb-5 bg-danger-bg text-danger-color border border-red-500/15" role="alert">
 							<span>{formGeneralError}</span>
 						</div>
 					{/if}
 
-					<div class="form-group">
-						<label class="form-label" for="formNombre">Nombre Completo</label>
+					<div class="flex flex-col gap-1.5 mb-5">
+						<label class="text-[0.85rem] font-semibold text-text-secondary" for="formNombre">Nombre Completo</label>
 						<input
 							type="text"
 							id="formNombre"
-							class="form-input"
+							class="bg-white border border-[rgba(15,30,54,0.15)] rounded-lg px-4 py-3 text-text-primary text-sm outline-none transition-all duration-200 focus:border-accent focus:ring-2 focus:ring-accent/15 placeholder:text-text-muted/80 disabled:opacity-50 disabled:cursor-not-allowed"
 							placeholder="Ej: Juan Pérez Gómez"
 							bind:value={formNombre}
 							disabled={submitLoading}
 							required
 						/>
 						{#if errNombre}
-							<span class="form-error">{errNombre}</span>
+							<span class="text-danger-color text-xs font-medium mt-1">{errNombre}</span>
 						{/if}
 					</div>
 
-					<div class="form-group">
-						<label class="form-label" for="formRut">RUT</label>
+					<div class="flex flex-col gap-1.5 mb-5">
+						<label class="text-[0.85rem] font-semibold text-text-secondary" for="formRut">RUT</label>
 						<input
 							type="text"
 							id="formRut"
-							class="form-input"
+							class="bg-white border border-[rgba(15,30,54,0.15)] rounded-lg px-4 py-3 text-text-primary text-sm outline-none transition-all duration-200 focus:border-accent focus:ring-2 focus:ring-accent/15 placeholder:text-text-muted/80 disabled:opacity-50 disabled:cursor-not-allowed"
 							placeholder="Ej: 12.345.678-K"
 							value={formRut}
 							oninput={handleRutInput}
@@ -493,31 +492,31 @@
 							required
 						/>
 						{#if errRut}
-							<span class="form-error">{errRut}</span>
+							<span class="text-danger-color text-xs font-medium mt-1">{errRut}</span>
 						{/if}
 					</div>
 
-					<div class="form-group">
-						<label class="form-label" for="formTelefono">Número Telefónico</label>
+					<div class="flex flex-col gap-1.5 mb-5">
+						<label class="text-[0.85rem] font-semibold text-text-secondary" for="formTelefono">Número Telefónico</label>
 						<input
 							type="text"
 							id="formTelefono"
-							class="form-input"
+							class="bg-white border border-[rgba(15,30,54,0.15)] rounded-lg px-4 py-3 text-text-primary text-sm outline-none transition-all duration-200 focus:border-accent focus:ring-2 focus:ring-accent/15 placeholder:text-text-muted/80 disabled:opacity-50 disabled:cursor-not-allowed"
 							placeholder="Ej: +56912345678"
 							bind:value={formTelefono}
 							disabled={submitLoading}
 							required
 						/>
 						{#if errTelefono}
-							<span class="form-error">{errTelefono}</span>
+							<span class="text-danger-color text-xs font-medium mt-1">{errTelefono}</span>
 						{/if}
 					</div>
 				</div>
-				<footer class="modal-footer">
-					<button type="button" class="btn btn-secondary" onclick={() => showModal = false} disabled={submitLoading}>
+				<footer class="p-4 px-6 bg-text-primary/2 border-t border-border-color flex justify-end gap-3">
+					<button type="button" class="inline-flex items-center justify-center gap-2 font-semibold text-sm px-5 py-2.5 rounded-lg cursor-pointer bg-bg-secondary text-text-primary border border-border-color hover:bg-text-primary/5 transition-all duration-200" onclick={() => showModal = false} disabled={submitLoading}>
 						Cancelar
 					</button>
-					<button type="submit" class="btn btn-primary" disabled={submitLoading} id="btn-modal-save">
+					<button type="submit" class="inline-flex items-center justify-center gap-2 font-semibold text-sm px-5 py-2.5 rounded-lg cursor-pointer bg-gradient-to-r from-accent-light to-accent text-white hover:shadow-glow hover:-translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200" disabled={submitLoading} id="btn-modal-save">
 						{#if submitLoading}
 							Procesando...
 						{:else}
@@ -532,154 +531,24 @@
 
 <!-- Delete Confirmation Modal -->
 {#if showDeleteModal && clienteToDelete}
-	<div class="modal-backdrop" onclick={() => showDeleteModal = false} role="presentation">
-		<div class="modal-content" onclick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="delete-modal-title">
-			<header class="modal-header">
-				<h2 id="delete-modal-title" style="color: var(--danger-color);">Confirmar Eliminación</h2>
-				<button class="btn-icon" onclick={() => showDeleteModal = false} aria-label="Cerrar modal">&times;</button>
+	<div class="fixed inset-0 bg-text-primary/40 backdrop-blur-[4px] flex items-center justify-center z-50 p-5" onclick={() => showDeleteModal = false} role="presentation">
+		<div class="bg-bg-card border border-border-color rounded-xl w-full max-w-[500px] shadow-lg animate-modal-enter overflow-hidden" onclick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="delete-modal-title">
+			<header class="p-5 border-b border-border-color flex justify-between items-center">
+				<h2 id="delete-modal-title" class="text-lg font-bold text-danger-color">Confirmar Eliminación</h2>
+				<button class="p-2 bg-text-primary/3 text-text-secondary rounded-lg border border-border-color cursor-pointer inline-flex items-center justify-center transition-all duration-200 hover:text-text-primary hover:bg-text-primary/7 hover:border-border-color-hover" onclick={() => showDeleteModal = false} aria-label="Cerrar modal">&times;</button>
 			</header>
-			<div class="modal-body">
-				<p>¿eliminar al cliente <strong>{clienteToDelete.nombre}</strong> de forma permanente?</p>
-				<p style="margin-top: 12px; font-size: 0.85rem; color: var(--text-muted);">No se puede deshacer, ademas se pierde informacion.</p>
+			<div class="p-6 text-text-primary">
+				<p>¿Estás seguro de que deseas eliminar al cliente <strong>{clienteToDelete.nombre}</strong> (RUT: {formatRutInput(clienteToDelete.rut)}) de forma permanente?</p>
+				<p class="mt-3 text-xs text-text-muted">Esta acción no se puede deshacer y puede afectar a los reportes de ventas vinculados.</p>
 			</div>
-			<footer class="modal-footer">
-				<button type="button" class="btn btn-secondary" onclick={() => showDeleteModal = false}>
+			<footer class="p-4 px-6 bg-text-primary/2 border-t border-border-color flex justify-end gap-3">
+				<button type="button" class="inline-flex items-center justify-center gap-2 font-semibold text-sm px-5 py-2.5 rounded-lg cursor-pointer bg-bg-secondary text-text-primary border border-border-color hover:bg-text-primary/5 transition-all duration-200" onclick={() => showDeleteModal = false}>
 					Cancelar
 				</button>
-				<button type="button" class="btn btn-danger" onclick={confirmDelete} id="btn-modal-confirm-delete">
+				<button type="button" class="inline-flex items-center justify-center gap-2 font-semibold text-sm px-5 py-2.5 rounded-lg cursor-pointer bg-danger-bg text-danger-color border border-red-500/15 hover:bg-danger-color hover:text-white transition-all duration-200" onclick={confirmDelete} id="btn-modal-confirm-delete">
 					Eliminar Permanentemente
 				</button>
 			</footer>
 		</div>
 	</div>
 {/if}
-
-<style>
-	.search-card {
-		margin-bottom: 24px;
-		background: var(--bg-card);
-	}
-
-	.search-form {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 16px;
-		align-items: center;
-	}
-
-	.search-input-group {
-		display: flex;
-		flex: 1;
-		min-width: 280px;
-		border: 1px solid rgba(15, 30, 54, 0.15);
-		border-radius: 8px;
-		overflow: hidden;
-		background: #ffffff;
-	}
-
-	.search-input-group:focus-within {
-		border-color: var(--accent-color);
-		box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.15);
-	}
-
-	.select-wrapper {
-		border-right: 1px solid var(--border-color);
-	}
-
-	.search-select {
-		border: none;
-		background: transparent;
-		padding-right: 8px;
-		cursor: pointer;
-		height: 100%;
-		border-radius: 0;
-		outline: none !important;
-		box-shadow: none !important;
-	}
-
-	.search-input {
-		flex: 1;
-		border: none;
-		background: transparent;
-		border-radius: 0;
-		outline: none !important;
-		box-shadow: none !important;
-	}
-
-	.search-actions {
-		display: flex;
-		gap: 10px;
-	}
-
-	.btn-search {
-		padding-left: 16px;
-		padding-right: 16px;
-	}
-
-	.empty-card {
-		padding: 60px 20px;
-		text-align: center;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		justify-content: center;
-		background: var(--bg-card);
-		border: 1px solid var(--border-color);
-	}
-
-	.empty-icon {
-		width: 80px;
-		height: 80px;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		color: var(--text-muted);
-		background: rgba(15, 30, 54, 0.03);
-		border-radius: 50%;
-		margin-bottom: 20px;
-	}
-
-	.empty-card h3 {
-		font-size: 1.2rem;
-		font-weight: 600;
-		margin-bottom: 8px;
-	}
-
-	.empty-card p {
-		color: var(--text-secondary);
-		font-size: 0.9rem;
-		max-width: 400px;
-	}
-
-	.client-name {
-		font-weight: 600;
-		color: var(--text-primary);
-	}
-
-	.client-rut {
-		font-family: monospace;
-		font-size: 0.9rem;
-		color: var(--text-secondary);
-	}
-
-	.client-tel {
-		color: var(--text-secondary);
-	}
-
-	.actions-header {
-		text-align: right;
-		width: 120px;
-	}
-
-	.actions-cell {
-		display: flex;
-		justify-content: flex-end;
-		gap: 8px;
-	}
-
-	.btn-delete-icon:hover {
-		color: var(--danger-color);
-		background: var(--danger-bg);
-		border-color: rgba(239, 68, 68, 0.2);
-	}
-</style>
