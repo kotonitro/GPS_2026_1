@@ -12,5 +12,6 @@ func RoutesConfig(api *gin.RouterGroup, db *gorm.DB, jwtSecret string) {
 	grupo := api.Group("auth")
 	{
 		grupo.POST("/login", ctrl.Login)
+		grupo.POST("/logout", ctrl.Logout)
 	}
 }
