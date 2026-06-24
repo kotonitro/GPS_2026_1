@@ -1,147 +1,105 @@
 package ventas
 
 import (
+	"errors"
 	"net/http"
-
+	"time"
+	"backend/internal/inventario"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
 
-func CrearVenta(c *gin.Context) {
+type VentasController struct {
+	db *gorm.DB
+}
+
+func NewVentasController(db *gorm.DB) *VentasController {
+	return &VentasController{db: db}
+}
+
+func (ctrl *VentasController) CrearVenta(c *gin.Context) {
 	var nuevaVenta Venta
 
 	if err := c.ShouldBindJSON(&nuevaVenta); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": "Datos inválidos"})
-		return
-	}
-	if nuevaVenta.MontoTotal <= 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": "El monto total de la venta debe ser mayor a cero"})
-		return
-	}
-	if nuevaVenta.MetodoID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": "El ID del método de pago no puede estar vacío"})
-		return
-	}
-	if nuevaVenta.EmpleadoID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": "El ID del empleado no puede estar vacío"})
-		return
-	}
-	if nuevaVenta.CajaID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": "El ID de la caja no puede estar vacío"})
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "Datos inválidos: " + err.Error()})
 		return
 	}
 
-	if len(nuevaVenta.Detalles) == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": "La venta debe contener al menos un producto en el detalle"})
+	// Extraer empleado del contexto
+	idEmpleado, existe := c.Get("id_empleado")
+	if !existe {
+		c.JSON(http.StatusUnauthorized, gin.H{"Error": "No se encontró sesión de empleado"})
 		return
 	}
+	nuevaVenta.EmpleadoID = idEmpleado.(string)
+	nuevaVenta.FechaEmision = time.Now()
 
-	for _, detalle := range nuevaVenta.Detalles {
-		if detalle.ProductoID == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"Error": "Hay un producto en la lista que no tiene un ID válido"})
-			return
+	err := ctrl.db.Transaction(func(tx *gorm.DB) error {
+		// 1. Validar y descontar stock
+		for _, detalle := range nuevaVenta.Detalles {
+			var producto inventario.Producto
+			if err := tx.First(&producto, "id = ?", detalle.ProductoID).Error; err != nil {
+				return errors.New("El producto " + detalle.ProductoID + " no existe")
+			}
+			
+			if producto.Stock < detalle.Cantidad {
+				return errors.New("Stock insuficiente para: " + producto.Nombre)
+			}
+			
+			producto.Stock -= detalle.Cantidad
+			if err := tx.Save(&producto).Error; err != nil {
+				return err
+			}
 		}
-		if detalle.Cantidad <= 0 {
-			c.JSON(http.StatusBadRequest, gin.H{"Error": "La cantidad de cada producto debe ser mayor a cero"})
-			return
-		}
-		if detalle.MontoFinal <= 0 {
-			c.JSON(http.StatusBadRequest, gin.H{"Error": "El monto final de cada detalle debe ser mayor a cero"})
-			return
-		}
-	}
-	dbInstance, _ := c.Get("db")
-	db := dbInstance.(*gorm.DB)
 
-	err := GuardarVenta(db, &nuevaVenta)
+		// 2. Guardar la venta
+		return tx.Create(&nuevaVenta).Error
+	})
+
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"Error": "No se pudo guardar la venta"})
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
-
+	ctrl.db.Preload("MetodoPago").First(&nuevaVenta, "id = ?", nuevaVenta.ID)
 	c.JSON(http.StatusCreated, gin.H{
-		"mensaje": "Venta agregada",
-		"venta":   nuevaVenta,
+    "mensaje": "Venta creada", 
+    "venta":   nuevaVenta,
 	})
 }
 
-func GetVentas(c *gin.Context) {
-	dbInstance, _ := c.Get("db")
-	db := dbInstance.(*gorm.DB)
-
-	ventas, err := ObtenerTodasVentas(db)
+func (ctrl *VentasController) GetVentas(c *gin.Context) {
+	ventas, err := ObtenerTodasVentas(ctrl.db)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"Error": "Error al obtener las ventas"})
+		c.JSON(http.StatusInternalServerError, gin.H{"Error": "Error al obtener ventas"})
 		return
 	}
-
 	c.JSON(http.StatusOK, ventas)
 }
 
-func GetVentaByID(c *gin.Context) {
+func (ctrl *VentasController) GetVentaByID(c *gin.Context) {
 	id := c.Param("id")
-
-	dbInstance, _ := c.Get("db")
-	db := dbInstance.(*gorm.DB)
-
-	venta, err := ObtenerVentaPorID(db, id)
+	venta, err := ObtenerVentaPorID(ctrl.db, id)
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"Error": "Venta no encontrada"})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"Error": "Error al buscar la venta"})
+		c.JSON(http.StatusNotFound, gin.H{"Error": "Venta no encontrada"})
 		return
 	}
-
 	c.JSON(http.StatusOK, venta)
 }
 
-func UpdateVenta(c *gin.Context) {
+func (ctrl *VentasController) UpdateVenta(c *gin.Context) {
 	id := c.Param("id")
-
-	dbInstance, _ := c.Get("db")
-	db := dbInstance.(*gorm.DB)
-
-	ventaExistente, err := ObtenerVentaPorID(db, id)
-	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"Error": "La venta que intenta actualizar no existe"})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"Error": "Error al buscar la venta"})
-		return
-	}
-
+	ventaExistente, _ := ObtenerVentaPorID(ctrl.db, id)
 	var datosNuevos Venta
 	if err := c.ShouldBindJSON(&datosNuevos); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": "Datos inválidos"})
 		return
 	}
-
-	if err := ActualizarVenta(db, ventaExistente, &datosNuevos); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"Error": "No se pudo actualizar la venta"})
-		return
-	}
-
-	ventaActualizada, _ := ObtenerVentaPorID(db, id)
-
-	c.JSON(http.StatusOK, gin.H{
-		"mensaje": "Venta actualizada exitosamente",
-		"venta":   ventaActualizada,
-	})
+	ActualizarVenta(ctrl.db, ventaExistente, &datosNuevos)
+	c.JSON(http.StatusOK, gin.H{"mensaje": "Venta actualizada"})
 }
 
-func DeleteVenta(c *gin.Context) {
+func (ctrl *VentasController) DeleteVenta(c *gin.Context) {
 	id := c.Param("id")
-
-	dbInstance, _ := c.Get("db")
-	db := dbInstance.(*gorm.DB)
-
-	if err := EliminarVenta(db, id); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"Error": "No se pudo eliminar la venta"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"mensaje": "Venta eliminada exitosamente"})
+	EliminarVenta(ctrl.db, id)
+	c.JSON(http.StatusOK, gin.H{"mensaje": "Venta eliminada"})
 }

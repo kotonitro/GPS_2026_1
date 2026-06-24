@@ -54,7 +54,7 @@ func main() {
 	clientes.RoutesConfig(api, db, cfg.JWTSecret)
 	empleados.RoutesConfig(api, db, cfg.JWTSecret)
 	inventario.RoutesConfig(api, db, cfg.JWTSecret)
-	ventas.ConfigurarRutas(api, cfg.JWTSecret)
+	ventas.RoutesConfig(api, db, cfg.JWTSecret)
 	promociones.RoutesConfig(api, db, cfg.JWTSecret)
 
 	r.Run(":8080")
