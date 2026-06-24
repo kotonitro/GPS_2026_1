@@ -15,6 +15,7 @@ type AppConfig struct {
 	DBName     string
 	DBPort     string
 	JWTSecret  string
+	FrontURL   string
 }
 
 func LoadConfig() *AppConfig {
@@ -30,6 +31,11 @@ func LoadConfig() *AppConfig {
 		DBName:     os.Getenv("DB_NAME"),
 		DBPort:     os.Getenv("DB_PORT"),
 		JWTSecret:  os.Getenv("JWT_SECRET"),
+		FrontURL:   os.Getenv("FRONT_URL"),
+	}
+
+	if config.FrontURL == "" {
+		config.FrontURL = "http://localhost:5173"
 	}
 
 	if config.DBHost == "" || config.DBUser == "" || config.DBPassword == "" || config.DBName == "" || config.DBPort == "" {

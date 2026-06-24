@@ -7,16 +7,24 @@ import (
 	"gorm.io/gorm"
 )
 
-func CrearProducto(c *gin.Context) {
+// 1. Creamos el Struct y el Constructor
+type InventarioController struct {
+	db *gorm.DB
+}
+
+func NewInventarioController(db *gorm.DB) *InventarioController {
+	return &InventarioController{db: db}
+}
+
+// 2. Convertimos tus funciones en métodos (ctrl *InventarioController)
+func (ctrl *InventarioController) CrearProducto(c *gin.Context) {
 	var nuevoProducto Producto
 
-	// 1. Lee el JSON
 	if err := c.ShouldBindJSON(&nuevoProducto); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": "Datos inválidos"})
 		return
 	}
 
-	//------------- validaciones--------------
 	if nuevoProducto.Stock < 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": "El stock no puede ser negativo"})
 		return
@@ -25,48 +33,33 @@ func CrearProducto(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": "El precio debe ser mayor a cero"})
 		return
 	}
-	// ---------------------------------------
 
-	// 2. Extrae la conexión a la base de datos
-	dbInstance, _ := c.Get("db")
-	db := dbInstance.(*gorm.DB)
-
-	// 3. Llamado al repositorio
-	err := GuardarProducto(db, &nuevoProducto)
+	// ¡Usamos ctrl.db en lugar de c.Get("db")!
+	err := GuardarProducto(ctrl.db, &nuevoProducto)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"Error": "No se pudo guardar el producto"})
 		return
 	}
 
-	// 4. Entrega mensaje
 	c.JSON(http.StatusCreated, gin.H{
 		"mensaje":  "Producto agregado",
 		"producto": nuevoProducto,
 	})
 }
 
-// GetProductos maneja la solicitud para obtener todos los productos.
-func GetProductos(c *gin.Context) {
-	dbInstance, _ := c.Get("db")
-	db := dbInstance.(*gorm.DB)
-
-	productos, err := ObtenerTodosProductos(db)
+func (ctrl *InventarioController) GetProductos(c *gin.Context) {
+	productos, err := ObtenerTodosProductos(ctrl.db)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"Error": "Error al obtener los productos"})
 		return
 	}
-
 	c.JSON(http.StatusOK, productos)
 }
 
-// GetProductoByID maneja la solicitud para obtener un producto por su ID.
-func GetProductoByID(c *gin.Context) {
+func (ctrl *InventarioController) GetProductoByID(c *gin.Context) {
 	id := c.Param("id")
 
-	dbInstance, _ := c.Get("db")
-	db := dbInstance.(*gorm.DB)
-
-	producto, err := ObtenerProductoPorID(db, id)
+	producto, err := ObtenerProductoPorID(ctrl.db, id)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.JSON(http.StatusNotFound, gin.H{"Error": "Producto no encontrado"})
@@ -75,17 +68,13 @@ func GetProductoByID(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"Error": "Error al buscar el producto"})
 		return
 	}
-
 	c.JSON(http.StatusOK, producto)
 }
 
-func GetProductoByCodigo(c *gin.Context) {
+func (ctrl *InventarioController) GetProductoByCodigo(c *gin.Context) {
 	codigo := c.Param("codigo")
 
-	dbInstance, _ := c.Get("db")
-	db := dbInstance.(*gorm.DB)
-
-	producto, err := ObtenerProductoPorCodigo(db, codigo)
+	producto, err := ObtenerProductoPorCodigo(ctrl.db, codigo)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.JSON(http.StatusNotFound, gin.H{"Error": "Producto no encontrado"})
@@ -94,31 +83,18 @@ func GetProductoByCodigo(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"Error": "Error al buscar el producto"})
 		return
 	}
-
 	c.JSON(http.StatusOK, producto)
 }
 
-// UpdateProducto maneja la petición PUT para modificar el inventario
-func UpdateProducto(c *gin.Context) {
-	// 1. Obtener el UUID
+func (ctrl *InventarioController) UpdateProducto(c *gin.Context) {
 	id := c.Param("id")
 
-	// 2. Extraer la base de datos del contexto
-	dbInstance, existe := c.Get("db")
-	if !existe {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error interno del servidor"})
-		return
-	}
-	db := dbInstance.(*gorm.DB)
-
-	// 3.Buscar el producto existente en la BD primero
 	var productoExistente Producto
-	if err := db.First(&productoExistente, "id = ?", id).Error; err != nil {
+	if err := ctrl.db.First(&productoExistente, "id = ?", id).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "El producto que intentas actualizar no existe"})
 		return
 	}
 
-	// 4. Leer el JSON del frontend con los datos nuevos
 	var datosNuevos Producto
 	if err := c.ShouldBindJSON(&datosNuevos); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "El formato de los datos es incorrecto"})
@@ -134,8 +110,7 @@ func UpdateProducto(c *gin.Context) {
 		return
 	}
 
-	// 5. Llamar al Repositorio
-	if err := ActualizarProducto(db, &productoExistente, &datosNuevos); err != nil {
+	if err := ActualizarProducto(ctrl.db, &productoExistente, &datosNuevos); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "No se pudieron guardar los cambios en la base de datos"})
 		return
 	}
@@ -146,24 +121,19 @@ func UpdateProducto(c *gin.Context) {
 	})
 }
 
-// DeleteProducto maneja la solicitud para eliminar un producto.
-func DeleteProducto(c *gin.Context) {
+func (ctrl *InventarioController) DeleteProducto(c *gin.Context) {
 	id := c.Param("id")
 
-	dbInstance, _ := c.Get("db")
-	db := dbInstance.(*gorm.DB)
-
-	if err := EliminarProducto(db, id); err != nil {
+	if err := EliminarProducto(ctrl.db, id); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"Error": "No se pudo eliminar el producto"})
 		return
 	}
-
 	c.JSON(http.StatusOK, gin.H{"mensaje": "Producto eliminado exitosamente"})
 }
 
 // ---- CATEGORIAS ----
 
-func CrearCategoria(c *gin.Context) {
+func (ctrl *InventarioController) CrearCategoria(c *gin.Context) {
 	var nuevaCategoria Categoria
 
 	if err := c.ShouldBindJSON(&nuevaCategoria); err != nil {
@@ -171,10 +141,7 @@ func CrearCategoria(c *gin.Context) {
 		return
 	}
 
-	dbInstance, _ := c.Get("db")
-	db := dbInstance.(*gorm.DB)
-
-	err := GuardarCategoria(db, &nuevaCategoria)
+	err := GuardarCategoria(ctrl.db, &nuevaCategoria)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"Error": "No se pudo guardar la categoría"})
 		return
@@ -186,25 +153,17 @@ func CrearCategoria(c *gin.Context) {
 	})
 }
 
-func GetCategorias(c *gin.Context) {
-	dbInstance, _ := c.Get("db")
-	db := dbInstance.(*gorm.DB)
-
-	categorias, err := ObtenerTodasCategorias(db)
+func (ctrl *InventarioController) GetCategorias(c *gin.Context) {
+	categorias, err := ObtenerTodasCategorias(ctrl.db)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"Error": "Error al obtener las categorías"})
 		return
 	}
-
 	c.JSON(http.StatusOK, categorias)
 }
 
-// UpdateCategoria maneja la petición PUT para modificar una categoría
-func UpdateCategoria(c *gin.Context) {
+func (ctrl *InventarioController) UpdateCategoria(c *gin.Context) {
 	id := c.Param("id")
-
-	dbInstance, _ := c.Get("db")
-	db := dbInstance.(*gorm.DB)
 
 	var datosNuevos Categoria
 	if err := c.ShouldBindJSON(&datosNuevos); err != nil {
@@ -212,26 +171,19 @@ func UpdateCategoria(c *gin.Context) {
 		return
 	}
 
-	if err := ActualizarCategoria(db, id, &datosNuevos); err != nil {
+	if err := ActualizarCategoria(ctrl.db, id, &datosNuevos); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"Error": "No se pudo actualizar la categoría"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"mensaje": "Categoría actualizada exitosamente",
-	})
+	c.JSON(http.StatusOK, gin.H{"mensaje": "Categoría actualizada exitosamente"})
 }
 
-// borrar una categoría
-func DeleteCategoria(c *gin.Context) {
+func (ctrl *InventarioController) DeleteCategoria(c *gin.Context) {
 	id := c.Param("id")
 
-	dbInstance, _ := c.Get("db")
-	db := dbInstance.(*gorm.DB)
-
-	err := EliminarCategoria(db, id)
+	err := EliminarCategoria(ctrl.db, id)
 	if err != nil {
-		// Aplicamos integridad referencial
 		c.JSON(http.StatusConflict, gin.H{
 			"Error": "No puedes eliminar esta categoría porque hay productos que la están usando. Reasigna los productos primero.",
 		})

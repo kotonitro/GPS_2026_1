@@ -10,7 +10,7 @@ type Venta struct {
 	FechaEmision   time.Time `json:"fecha_emision"`
 	Pago           float64   `json:"pago"`
 	Vuelto         float64   `json:"vuelto"`
-	Precio         float64   `json:"precio"`
+	MontoTotal     float64   `json:"monto_total"`
 	MontoDescuento float64   `json:"monto_descuento"`
 	EstadoSync     string    `json:"estado_sync"`
 

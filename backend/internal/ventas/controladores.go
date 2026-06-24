@@ -14,7 +14,42 @@ func CrearVenta(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": "Datos inválidos"})
 		return
 	}
+	if nuevaVenta.MontoTotal <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "El monto total de la venta debe ser mayor a cero"})
+		return
+	}
+	if nuevaVenta.MetodoID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "El ID del método de pago no puede estar vacío"})
+		return
+	}
+	if nuevaVenta.EmpleadoID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "El ID del empleado no puede estar vacío"})
+		return
+	}
+	if nuevaVenta.CajaID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "El ID de la caja no puede estar vacío"})
+		return
+	}
 
+	if len(nuevaVenta.Detalles) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "La venta debe contener al menos un producto en el detalle"})
+		return
+	}
+
+	for _, detalle := range nuevaVenta.Detalles {
+		if detalle.ProductoID == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"Error": "Hay un producto en la lista que no tiene un ID válido"})
+			return
+		}
+		if detalle.Cantidad <= 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"Error": "La cantidad de cada producto debe ser mayor a cero"})
+			return
+		}
+		if detalle.MontoFinal <= 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"Error": "El monto final de cada detalle debe ser mayor a cero"})
+			return
+		}
+	}
 	dbInstance, _ := c.Get("db")
 	db := dbInstance.(*gorm.DB)
 

@@ -1,25 +1,42 @@
 package inventario
 
-import "github.com/gin-gonic/gin"
+import (
+	"backend/internal/auth"
 
-// ConfigurarRutas registra todos los endpoints del módulo de inventario
-func ConfigurarRutas(api *gin.RouterGroup) {
+	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
+)
+
+// RoutesConfig reemplaza a la antigua función ConfigurarRutas
+func RoutesConfig(api *gin.RouterGroup, db *gorm.DB, jwtSecret string) {
+
+	// 1. Instanciamos tu nuevo controlador pasándole la base de datos
+	ctrl := NewInventarioController(db)
+
 	grupo := api.Group("/inventario")
+
+	// 2. Middleware: Exige que el usuario haya iniciado sesión (Token JWT válido)
+	grupo.Use(auth.AuthMiddleware(jwtSecret))
 	{
-		// Rutas para categorías
-		grupo.POST("/categorias", CrearCategoria)
-		grupo.GET("/categorias", GetCategorias)
-		grupo.PUT("/categorias/:id", UpdateCategoria)
-		grupo.DELETE("/categorias/:id", DeleteCategoria)
+		// Rutas de lectura (Cualquier empleado cajero o admin puede ver productos)
+		grupo.GET("/categorias", ctrl.GetCategorias)
+		grupo.GET("/productos", ctrl.GetProductos)
+		grupo.GET("/productos/:id", ctrl.GetProductoByID)
+		grupo.GET("/productos/codigo/:codigo", ctrl.GetProductoByCodigo)
 
-		// Rutas para el CRUD de Productos
-		grupo.POST("/productos", CrearProducto)
-		grupo.GET("/productos", GetProductos)
-		grupo.GET("/productos/:id", GetProductoByID)
-		grupo.PUT("/productos/:id", UpdateProducto)
-		grupo.DELETE("/productos/:id", DeleteProducto)
-		// obtener producto por código de barras
-		grupo.GET("/productos/codigo/:codigo", GetProductoByCodigo)
+		// 3. Subgrupo de Administrador: Solo los 'Admin' pueden crear, editar o borrar
+		adminGroup := grupo.Group("")
+		adminGroup.Use(auth.RoleMiddleware("Admin"))
+		{
+			// CRUD Categorías
+			adminGroup.POST("/categorias", ctrl.CrearCategoria)
+			adminGroup.PUT("/categorias/:id", ctrl.UpdateCategoria)
+			adminGroup.DELETE("/categorias/:id", ctrl.DeleteCategoria)
 
+			// CRUD Productos
+			adminGroup.POST("/productos", ctrl.CrearProducto)
+			adminGroup.PUT("/productos/:id", ctrl.UpdateProducto)
+			adminGroup.DELETE("/productos/:id", ctrl.DeleteProducto)
+		}
 	}
 }
