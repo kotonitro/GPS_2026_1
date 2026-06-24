@@ -1,4 +1,5 @@
 services:
+
   # Base de datos
   database:
     image: postgres:17.10-alpine
@@ -28,13 +29,33 @@ services:
     depends_on:
       database:
         condition: service_healthy
+    volumes:
+      - ./backend:/app
+    command: sh -c "go install github.com/air-verse/air@latest && air"
     environment:
-      - DB_HOST=database
+      - DB_HOST=${DB_HOST}
       - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
       - DB_NAME=${DB_NAME}
       - DB_PORT=${DB_PORT}
       - JWT_SECRET=${JWT_SECRET}
-      
+      - FRONT_URL=${FRONT_URL}
+  
+  # Frontend
+  frontend:
+      build:
+        context: ./frontend
+        dockerfile: Dockerfile
+      container_name: svelte_frontend
+      ports:
+        - "5173:5173"
+      volumes:
+        - ./frontend:/app
+        - /app/node_modules
+      environment:
+        - VITE_API_URL=${VITE_API_URL}
+      depends_on:
+        - backend
+
 volumes:
   pg_data:

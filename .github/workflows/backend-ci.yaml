@@ -10,8 +10,23 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-    container: debian:bookworm
     
+    # --- LA MAGIA: Levantamos una BD temporal para los tests ---
+    services:
+      postgres:
+        image: postgres:17.10-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: admin123
+          POSTGRES_DB: pos_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+          
     defaults:
       run:
         working-directory: ./backend 
@@ -20,15 +35,12 @@ jobs:
     - name: Checkout del código
       uses: actions/checkout@v4
 
-    - name: Instalar dependencias de Debian
-      run: apt-get update && apt-get install -y curl git build-essential
-
     - name: Configurar Go
       uses: actions/setup-go@v5
       with:
         go-version: '1.22'
 
-    - name: Instalar dependencias de Go (Gin, Gorm, etc.)
+    - name: Instalar dependencias de Go
       run: go mod tidy
 
     # --- REVISIÓN ESTRICTA (NIVEL 2) ---
