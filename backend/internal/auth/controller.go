@@ -103,7 +103,6 @@ func (ctrl *AuthController) Login(c *gin.Context) {
 	})
 }
 
-
 func (ctrl *AuthController) Logout(c *gin.Context) {
 	c.SetCookie(
 		"auth",
