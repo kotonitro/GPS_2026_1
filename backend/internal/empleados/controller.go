@@ -49,10 +49,12 @@ func (ctrl *EmpleadoController) GetEmpleadoByIDController(c *gin.Context) {
 
 type CreateEmpleadoInput struct {
 	Rut        string  `json:"rut" binding:"required,rut_valido"`
+	Nombre     string  `json:"nombre" binding:"required`
 	Usuario    string  `json:"usuario" binding:"required"`
-	Contrasena string  `json:"contrasena" binding:"required,contrasena_segura"`
+	Contrasena string  `json:"-" binding:"required,contrasena_segura"`
 	Telefono   *string `json:"telefono"`
 	Rol        string  `json:"rol" binding:"required"`
+	Activo     bool    `json:"activo"`
 }
 
 func (ctrl *EmpleadoController) CreateEmpleadoController(c *gin.Context) {
@@ -74,10 +76,12 @@ func (ctrl *EmpleadoController) CreateEmpleadoController(c *gin.Context) {
 
 	nuevoEmpleado := Empleado{
 		Rut:        input.Rut,
+		Nombre:     input.Nombre,
 		Usuario:    input.Usuario,
 		Contrasena: string(hashContrasena),
 		Telefono:   input.Telefono,
 		Rol:        input.Rol,
+		Activo:     input.Activo,
 	}
 
 	err = CreateEmpleado(ctrl.db, &nuevoEmpleado)
@@ -114,10 +118,12 @@ func (ctrl *EmpleadoController) DeleteEmpleadoByIDController(c *gin.Context) {
 }
 
 type UpdateEmpleadoInput struct {
+	Nombre     *string `json:"nombre"`
 	Usuario    *string `json:"usuario"`
-	Contrasena *string `json:"contrasena" binding:"omitempty,contrasena_segura"`
+	Contrasena *string `json:"-" binding:"contrasena_segura"`
 	Telefono   *string `json:"telefono"`
 	Rol        *string `json:"rol"`
+	Activo     *bool   `json:"activo"`
 }
 
 func (ctrl *EmpleadoController) UpdateEmpleadoByIDController(c *gin.Context) {
@@ -131,7 +137,7 @@ func (ctrl *EmpleadoController) UpdateEmpleadoByIDController(c *gin.Context) {
 		return
 	}
 
-	if input.Usuario == nil && input.Contrasena == nil && input.Telefono == nil && input.Rol == nil {
+	if input.Nombre == nil && input.Usuario == nil && input.Contrasena == nil && input.Telefono == nil && input.Rol == nil && input.Activo == nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Se requiere al menos un campo válido para modificar.",
 		})
