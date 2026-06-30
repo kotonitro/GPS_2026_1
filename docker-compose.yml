@@ -39,6 +39,7 @@ services:
       - DB_NAME=${DB_NAME}
       - DB_PORT=${DB_PORT}
       - JWT_SECRET=${JWT_SECRET}
+      - COOKIE_DOMAIN=${COOKIE_DOMAIN}
       - FRONT_URL=${FRONT_URL}
   
   # Frontend

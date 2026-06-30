@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { apiFetch } from '$lib/api';
+	import { goto } from '$app/navigation';
+	import { login } from '$lib/api';
 
 	let usuario = $state('');
 	let contrasena = $state('');
@@ -12,13 +13,9 @@
 		mensajeExito = '';
 
 		try {
-			const respuesta = await apiFetch('/auth/login', {
-				method: 'POST',
-				body: JSON.stringify({ usuario, contrasena })
-			});
+			await login(usuario, contrasena);
 
-			mensajeExito = `¡Bienvenido, ${respuesta.empleado?.usuario || 'admin'}!`;
-			console.log('Datos recibidos:', respuesta);
+			goto('/dashboard');
 		} catch (error: any) {
 			mensajeError = error.message;
 		}

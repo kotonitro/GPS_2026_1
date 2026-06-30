@@ -2,14 +2,16 @@ package ventas
 
 import (
 	"backend/internal/auth"
+
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
-func ConfigurarRutas(api *gin.RouterGroup, jwtSecret string) {
+func ConfigurarRutas(api *gin.RouterGroup, db *gorm.DB, authMiddleware gin.HandlerFunc) {
 
 	rutasVentas := api.Group("/ventas")
 
-	rutasVentas.Use(auth.AuthMiddleware(jwtSecret))
+	rutasVentas.Use(authMiddleware)
 	{
 		rutasVentas.POST("", CrearVenta)
 		rutasVentas.GET("", GetVentas)

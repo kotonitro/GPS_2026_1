@@ -49,9 +49,9 @@ func (ctrl *EmpleadoController) GetEmpleadoByIDController(c *gin.Context) {
 
 type CreateEmpleadoInput struct {
 	Rut        string  `json:"rut" binding:"required,rut_valido"`
-	Nombre     string  `json:"nombre" binding:"required`
+	Nombre     string  `json:"nombre" binding:"required"`
 	Usuario    string  `json:"usuario" binding:"required"`
-	Contrasena string  `json:"-" binding:"required,contrasena_segura"`
+	Contrasena string  `json:"contrasena" binding:"required,contrasena_segura"`
 	Telefono   *string `json:"telefono"`
 	Rol        string  `json:"rol" binding:"required"`
 	Activo     bool    `json:"activo"`
@@ -120,7 +120,7 @@ func (ctrl *EmpleadoController) DeleteEmpleadoByIDController(c *gin.Context) {
 type UpdateEmpleadoInput struct {
 	Nombre     *string `json:"nombre"`
 	Usuario    *string `json:"usuario"`
-	Contrasena *string `json:"-" binding:"contrasena_segura"`
+	Contrasena *string `json:"contrasena" binding:"omitempty,contrasena_segura"`
 	Telefono   *string `json:"telefono"`
 	Rol        *string `json:"rol"`
 	Activo     *bool   `json:"activo"`

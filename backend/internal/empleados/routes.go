@@ -7,12 +7,12 @@ import (
 	"gorm.io/gorm"
 )
 
-func RoutesConfig(api *gin.RouterGroup, db *gorm.DB, jwtSecret string) {
+func RoutesConfig(api *gin.RouterGroup, db *gorm.DB, authMiddleware gin.HandlerFunc) {
 
 	ctrl := NewEmpleadoController(db)
 
 	authGroup := api.Group("empleados")
-	authGroup.Use(auth.AuthMiddleware(jwtSecret))
+	authGroup.Use(authMiddleware)
 	{
 		authGroup.GET("/", ctrl.GetEmpleadosController)
 		authGroup.GET("/:id", ctrl.GetEmpleadoByIDController)
