@@ -2,12 +2,18 @@
 	import { page } from '$app/stores';
 
 	const status = $page.status || 404;
-	const mensaje = $page.error?.message || 'Página no encontrada';
+	const mensaje =
+		status === 404
+			? 'Página no encontrada'
+			: 'Error interno';
 </script>
 
-<div style="text-align: center; margin-top: 20vh; font-family: sans-serif;">
-	<h1 style="font-size: 8rem; margin: 0;">{status}</h1>
-	<h2>{mensaje}</h2>
+<div class="text-center mt-[20vh]">
+	<h1 class="text-[8rem] m-0 text-primario font-bold">{status}</h1>
+
+	<h2 class="text-xl mt-2">{mensaje}</h2>
+
 	<br />
-	<a href="/" style="color: blue; text-decoration: underline;">Volver al inicio</a>
+
+	<a href="/" class="text-primario underline hover:text-primario-hover">Volver al inicio</a>
 </div>

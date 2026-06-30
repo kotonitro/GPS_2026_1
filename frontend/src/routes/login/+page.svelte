@@ -25,34 +25,41 @@
 	}
 </script>
 
-<div style="max-width: 300px; margin: 50px auto; font-family: sans-serif;">
-	<h2>Iniciar Sesión</h2>
+<div class="max-w-sm mx-auto mt-20 p-6 bg-white rounded-lg shadow-md">
+	<h2 class="text-2xl font-bold text-primario text-center mb-6">Iniciar Sesión</h2>
 
 	{#if mensajeError}
-		<p style="color: red; font-weight: bold;">{mensajeError}</p>
+		<p class="text-error font-bold text-center mb-4">{mensajeError}</p>
 	{/if}
 
 	{#if mensajeExito}
-		<p style="color: green; font-weight: bold;">{mensajeExito}</p>
+		<p class="text-exito font-bold text-center mb-4">{mensajeExito}</p>
 	{/if}
 
-	<form
-		on:submit|preventDefault={handleLogin}
-		style="display: flex; flex-direction: column; gap: 15px; mt-4"
-	>
+	<form on:submit|preventDefault={handleLogin} class="flex flex-col gap-4">
 		<div>
-			<label style="display: block; margin-bottom: 5px;">Usuario:</label>
-			<input type="text" bind:value={usuario} required style="width: 100%; padding: 8px;" />
+			<label class="block text-sm font-semibold mb-1">Usuario:</label>
+			<input
+				type="text"
+				bind:value={usuario}
+				required
+				class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:border-primario focus:ring-1 focus:ring-primario"
+			/>
 		</div>
 
 		<div>
-			<label style="display: block; margin-bottom: 5px;">Contraseña:</label>
-			<input type="password" bind:value={contrasena} required style="width: 100%; padding: 8px;" />
+			<label class="block text-sm font-semibold mb-1">Contraseña:</label>
+			<input
+				type="password"
+				bind:value={contrasena}
+				required
+				class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:border-primario focus:ring-1 focus:ring-primario"
+			/>
 		</div>
 
 		<button
 			type="submit"
-			style="padding: 10px; cursor: pointer; background: #007bff; color: white; border: none;"
+			class="w-full bg-primario hover:bg-primario-hover text-white font-bold py-2 px-4 rounded-md transition-colors mt-2"
 		>
 			Entrar
 		</button>

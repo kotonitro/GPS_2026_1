@@ -1,3 +1,21 @@
 @import 'tailwindcss';
 @plugin '@tailwindcss/forms';
 @plugin '@tailwindcss/typography';
+
+@theme {
+	--color-primario: #b45309;
+	--color-primario-hover: #92400e;
+	--color-secundario: #fef08a;
+	--color-exito: #16a34a;
+	--color-error: #dc2626;
+}
+
+@layer base {
+	body {
+		background-color: #fcfaf2;
+		color: #1e1e24;
+		font-family: var(--font-sans);
+		margin: 0;
+		padding: 0;
+	}
+}
