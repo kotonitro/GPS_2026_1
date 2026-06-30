@@ -118,3 +118,35 @@ func (ctrl *AuthController) Logout(c *gin.Context) {
 		"mensaje": "Sesión cerrada exitosamente.",
 	})
 }
+
+type EmpleadoResponse struct {
+	ID      string `json:"id_empleado"`
+	Usuario string `json:"usuario"`
+	Rol     string `json:"rol"`
+}
+
+func (ctrl *AuthController) Me(c *gin.Context) {
+	userID, exists := c.Get("id_empleado")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Sesión no encontrada o no autorizada."})
+		return
+	}
+
+	var perfil EmpleadoResponse
+
+	err := ctrl.db.Model(&EmpleadoAuth{}).
+		Select("id, usuario, rol").
+		Where("id = ?", userID).
+		First(&perfil).Error
+
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "El empleado ya no existe en el sistema."})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error interno al obtener los datos del empleado."})
+		return
+	}
+
+	c.JSON(http.StatusOK, perfil)
+}

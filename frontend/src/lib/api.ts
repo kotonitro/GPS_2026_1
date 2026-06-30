@@ -1,5 +1,12 @@
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 
+export interface Empleado {
+    id: string;
+	rut: string;
+    usuario: string;
+    rol: string;
+}
+
 export async function apiFetch(endpoint: string, options: RequestInit = {}) {
 	const headers = {
 		'Content-Type': 'application/json',
@@ -18,4 +25,15 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}) {
 	}
 
 	return response.json();
+}
+
+export async function login(rut: string, contrasena: string): Promise<Empleado> {
+    return apiFetch('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ rut, contrasena })
+    });
+}
+
+export async function checkSession(): Promise<Empleado> {
+    return apiFetch('/auth/me');
 }

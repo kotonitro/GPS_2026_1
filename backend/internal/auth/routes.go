@@ -9,9 +9,16 @@ func RoutesConfig(api *gin.RouterGroup, db *gorm.DB, jwtSecret string) {
 
 	ctrl := NewAuthController(db, jwtSecret)
 
-	grupo := api.Group("auth")
+	group := api.Group("auth")
 	{
-		grupo.POST("/login", ctrl.Login)
-		grupo.POST("/logout", ctrl.Logout)
+		group.POST("/login", ctrl.Login)
+
+		authGroup := group.Group("")
+		authGroup.Use(AuthMiddleware(jwtSecret))
+		{
+			authGroup.POST("/logout", ctrl.Logout)
+			authGroup.GET("/me", ctrl.Me)
+		}
+
 	}
 }

@@ -11,13 +11,13 @@ func RoutesConfig(api *gin.RouterGroup, db *gorm.DB, jwtSecret string) {
 
 	ctrl := NewEmpleadoController(db)
 
-	group := api.Group("empleados")
-	group.Use(auth.AuthMiddleware(jwtSecret))
+	authGroup := api.Group("empleados")
+	authGroup.Use(auth.AuthMiddleware(jwtSecret))
 	{
-		group.GET("/", ctrl.GetEmpleadosController)
-		group.GET("/:id", ctrl.GetEmpleadoByIDController)
+		authGroup.GET("/", ctrl.GetEmpleadosController)
+		authGroup.GET("/:id", ctrl.GetEmpleadoByIDController)
 
-		adminGroup := group.Group("")
+		adminGroup := authGroup.Group("")
 		adminGroup.Use(auth.RoleMiddleware("Admin"))
 		{
 			adminGroup.POST("", ctrl.CreateEmpleadoController)
