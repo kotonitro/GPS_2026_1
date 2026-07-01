@@ -137,18 +137,18 @@ type EmpleadoResponse struct {
 }
 
 func (ctrl *AuthController) Me(c *gin.Context) {
-	userID, exists := c.Get("id_empleado")
+	ID, exists := c.Get("id_empleado")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Sesión no encontrada o no autorizada."})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Sesión no encontrada."})
 		return
 	}
 
-	var perfil EmpleadoResponse
+	var sesion EmpleadoResponse
 
 	err := ctrl.db.Model(&EmpleadoAuth{}).
 		Select("id, usuario, rol").
-		Where("id = ?", userID).
-		First(&perfil).Error
+		Where("id = ?", ID).
+		First(&sesion).Error
 
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -159,5 +159,5 @@ func (ctrl *AuthController) Me(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, perfil)
+	c.JSON(http.StatusOK, sesion)
 }

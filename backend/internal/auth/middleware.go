@@ -40,6 +40,15 @@ func (ctrl *AuthController) AuthMiddleware() gin.HandlerFunc {
 			}
 
 			if err := ctrl.db.Table("empleados").Select("rol, activo").Where("id = ?", claims.ID).First(&estado).Error; err != nil {
+				c.SetCookie(
+					"auth",
+					"",
+					-1,
+					"/",
+					ctrl.domain,
+					false,
+					true,
+				)
 				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Esta cuenta de empleado ya no existe en el sistema."})
 				return
 			}
