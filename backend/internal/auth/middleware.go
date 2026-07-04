@@ -8,13 +8,13 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-func AuthMiddleware(jwtSecret string) gin.HandlerFunc {
+func (ctrl *AuthController) AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		tokenString, err := c.Cookie("auth")
 		if err != nil {
 
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Acceso denegado, no ha iniciado sesión."})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Acceso denegado, debes iniciar sesión."})
 			return
 		}
 
@@ -23,7 +23,7 @@ func AuthMiddleware(jwtSecret string) gin.HandlerFunc {
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 				return nil, fmt.Errorf("algoritmo de firma inesperado: %v", token.Header["alg"])
 			}
-			return []byte(jwtSecret), nil
+			return []byte(ctrl.jwtSecret), nil
 		})
 
 		if err != nil || !token.Valid {
@@ -33,11 +33,48 @@ func AuthMiddleware(jwtSecret string) gin.HandlerFunc {
 
 		if claims, ok := token.Claims.(*JWTClaims); ok {
 			c.Set("id_empleado", claims.ID)
-			c.Set("rol", claims.Rol)
+
+			var estado struct {
+				Rol    string
+				Activo bool
+			}
+
+			if err := ctrl.db.Table("empleados").Select("rol, activo").Where("id = ?", claims.ID).First(&estado).Error; err != nil {
+				c.SetCookie(
+					"auth",
+					"",
+					-1,
+					"/",
+					ctrl.domain,
+					false,
+					true,
+				)
+				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Esta cuenta de empleado ya no existe en el sistema."})
+				return
+			}
+
+			if !estado.Activo {
+				c.SetCookie(
+					"auth",
+					"",
+					-1,
+					"/",
+					ctrl.domain,
+					false,
+					true,
+				)
+
+				c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Esta cuenta de empleado esta desactivada."})
+				return
+			}
+
+			c.Set("rol", estado.Rol)
+
 		} else {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Acceso denegado, datos de identidad corruptos."})
 			return
 		}
+
 		c.Next()
 	}
 }
