@@ -2,6 +2,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 
 export interface Empleado {
     id: string;
+	nombre: string,
     usuario: string;
     rol: string;
 }
@@ -33,9 +34,16 @@ export async function login(usuario: string, contrasena: string): Promise<Emplea
     });
 }
 
+export async function logout(): Promise<void> {
+    return apiFetch('/auth/logout', {
+        method: 'POST'
+    });
+}
+
 export async function checkSession(): Promise<Empleado> {
     return apiFetch('/auth/me');
 }
+
 //promociones 
 export async function obtenerPromociones() {
 	return apiFetch('/promociones/');
@@ -57,3 +65,21 @@ export async function eliminarPromocion(id: string) {
 export async function  obtenerProductos() {
 	return apiFetch('/inventario/productos');
 }
+
+export const apiClientes = {
+	getAll: () => apiFetch('/clientes/'),
+	getById: (id: string) => apiFetch(`/clientes/${id}`),
+	getByRut: (rut: string) => apiFetch(`/clientes/rut/${rut}`),
+	searchByNombre: (nombre: string) => apiFetch(`/clientes/search/nombre?nombre=${encodeURIComponent(nombre)}`),
+	create: (data: { nombre: string; rut: string; telefono: string }) => apiFetch('/clientes', {
+		method: 'POST',
+		body: JSON.stringify(data)
+	}),
+	update: (id: string, data: { nombre?: string; rut?: string; telefono?: string }) => apiFetch(`/clientes/${id}`, {
+		method: 'PATCH',
+		body: JSON.stringify(data)
+	}),
+	delete: (id: string) => apiFetch(`/clientes/${id}`, {
+		method: 'DELETE'
+	})
+};
