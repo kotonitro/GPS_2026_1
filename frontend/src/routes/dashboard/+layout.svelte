@@ -47,7 +47,7 @@
 {:else}
 	<div class="flex h-screen w-screen overflow-hidden">
 		<aside
-			class="flex h-full w-[260px] flex-col justify-between border-r border-[#2a241f] bg-[#1a1512] px-5 py-6 text-[#a39b93]"
+			class="flex h-full w-[240px] flex-col justify-between border-r border-[#2a241f] bg-[#1a1512] px-5 py-6 text-[#a39b93]"
 		>
 			<div class="flex flex-col gap-8">
 				<div class="flex items-center gap-3 px-2">
@@ -60,14 +60,11 @@
 					</div>
 				</div>
 
-				<!-- Navegación -->
 				<nav class="flex flex-col gap-1">
-					<!-- SECCIÓN PRINCIPAL -->
 					<span class="mb-1 mt-2 px-3 text-xs font-bold uppercase tracking-wider text-[#7a7268]">
 						Principal
 					</span>
 
-					<!-- Item Activo (Dashboard) -->
 					<a
 						href="/dashboard"
 						class="relative flex items-center gap-3 rounded-xl border border-[#4a3a28] bg-[#382a1b] p-3 text-primario transition-colors"
@@ -77,7 +74,6 @@
 						<span class="absolute right-4 h-1.5 w-1.5 rounded-full bg-primario"></span>
 					</a>
 
-					<!-- Items Comunes (Visibles para todos) -->
 					<a
 						href="/dashboard/ventas"
 						class="flex items-center gap-3 rounded-xl p-3 transition-colors hover:bg-[#241e1a] hover:text-white"
@@ -107,7 +103,6 @@
 						<span class="font-medium">Promociones</span>
 					</a>
 
-					<!-- SECCIÓN DE ADMINISTRACIÓN (Protegida) -->
 					{#if empleadoActual?.rol === 'Admin'}
 						<div class="mt-4 border-t border-[#2a241f] pt-4">
 							<span
@@ -140,7 +135,7 @@
 					<div
 						class="flex h-10 w-10 items-center justify-center rounded-full bg-primario text-sm font-bold text-white"
 					>
-						{empleadoActual?.usuario?.substring(0, 2).toUpperCase() || 'US'}
+						{empleadoActual?.usuario?.substring(0, 2).toUpperCase() || 'EM'}
 					</div>
 					<div class="flex flex-col">
 						<span class="text-sm font-semibold capitalize text-white"
