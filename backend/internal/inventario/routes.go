@@ -8,7 +8,7 @@ import (
 )
 
 // RoutesConfig reemplaza a la antigua función ConfigurarRutas
-func RoutesConfig(api *gin.RouterGroup, db *gorm.DB, jwtSecret string) {
+func RoutesConfig(api *gin.RouterGroup, db *gorm.DB, authMiddleware gin.HandlerFunc) {
 
 	// 1. Instanciamos tu nuevo controlador pasándole la base de datos
 	ctrl := NewInventarioController(db)
@@ -16,7 +16,7 @@ func RoutesConfig(api *gin.RouterGroup, db *gorm.DB, jwtSecret string) {
 	grupo := api.Group("/inventario")
 
 	// 2. Middleware: Exige que el usuario haya iniciado sesión (Token JWT válido)
-	grupo.Use(auth.AuthMiddleware(jwtSecret))
+	grupo.Use(authMiddleware)
 	{
 		// Rutas de lectura (Cualquier empleado cajero o admin puede ver productos)
 		grupo.GET("/categorias", ctrl.GetCategorias)

@@ -49,6 +49,7 @@ func (ctrl *CajaController) GetCajaByIDController(c *gin.Context) {
 type CreateCajaInput struct {
 	Nombre       string `json:"nombre" binding:"required"`
 	Ubicacion    string `json:"ubicacion" binding:"required"`
+	Activo       bool   `json:"activo"`
 	SaldoInicial uint   `json:"saldo_inicial"`
 	SaldoFinal   uint   `json:"saldo_final"`
 }
@@ -66,6 +67,7 @@ func (ctrl *CajaController) CreateCajaController(c *gin.Context) {
 	nuevaCaja := Caja{
 		Nombre:       input.Nombre,
 		Ubicacion:    input.Ubicacion,
+		Activo:       input.Activo,
 		SaldoInicial: input.SaldoInicial,
 		SaldoFinal:   input.SaldoFinal,
 	}
@@ -108,6 +110,7 @@ type UpdateCajaInput struct {
 	Ubicacion    *string `json:"ubicacion"`
 	SaldoInicial *uint   `json:"saldo_inicial"`
 	SaldoFinal   *uint   `json:"saldo_final"`
+	Activo       *bool   `json:"activo"`
 }
 
 func (ctrl *CajaController) UpdateCajaByIDController(c *gin.Context) {
@@ -121,7 +124,7 @@ func (ctrl *CajaController) UpdateCajaByIDController(c *gin.Context) {
 		return
 	}
 
-	if input.Ubicacion == nil && input.SaldoInicial == nil && input.SaldoFinal == nil {
+	if input.Nombre == nil && input.Ubicacion == nil && input.Activo == nil && input.SaldoInicial == nil && input.SaldoFinal == nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Se requiere al menos un campo válido para modificar.",
 		})

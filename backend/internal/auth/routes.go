@@ -2,16 +2,20 @@ package auth
 
 import (
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
 
-func RoutesConfig(api *gin.RouterGroup, db *gorm.DB, jwtSecret string) {
+func RoutesConfig(api *gin.RouterGroup, ctrl *AuthController, authMiddleware gin.HandlerFunc) {
 
-	ctrl := NewAuthController(db, jwtSecret)
-
-	grupo := api.Group("auth")
+	group := api.Group("auth")
 	{
-		grupo.POST("/login", ctrl.Login)
-		grupo.POST("/logout", ctrl.Logout)
+		group.POST("/login", ctrl.Login)
+
+		authGroup := group.Group("")
+		authGroup.Use(authMiddleware)
+		{
+			authGroup.POST("/logout", ctrl.Logout)
+			authGroup.GET("/me", ctrl.Me)
+		}
+
 	}
 }
