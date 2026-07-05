@@ -9,13 +9,14 @@ import (
 )
 
 type AppConfig struct {
-	DBHost     string
-	DBUser     string
-	DBPassword string
-	DBName     string
-	DBPort     string
-	JWTSecret  string
-	FrontURL   string
+	DBHost       string
+	DBUser       string
+	DBPassword   string
+	DBName       string
+	DBPort       string
+	JWTSecret    string
+	CookieDomain string
+	FrontURL     string
 }
 
 func LoadConfig() *AppConfig {
@@ -25,17 +26,22 @@ func LoadConfig() *AppConfig {
 	}
 
 	config := &AppConfig{
-		DBHost:     os.Getenv("DB_HOST"),
-		DBUser:     os.Getenv("DB_USER"),
-		DBPassword: os.Getenv("DB_PASSWORD"),
-		DBName:     os.Getenv("DB_NAME"),
-		DBPort:     os.Getenv("DB_PORT"),
-		JWTSecret:  os.Getenv("JWT_SECRET"),
-		FrontURL:   os.Getenv("FRONT_URL"),
+		DBHost:       os.Getenv("DB_HOST"),
+		DBUser:       os.Getenv("DB_USER"),
+		DBPassword:   os.Getenv("DB_PASSWORD"),
+		DBName:       os.Getenv("DB_NAME"),
+		DBPort:       os.Getenv("DB_PORT"),
+		JWTSecret:    os.Getenv("JWT_SECRET"),
+		CookieDomain: os.Getenv("COOKIE_DOMAIN"),
+		FrontURL:     os.Getenv("FRONT_URL"),
 	}
 
 	if config.FrontURL == "" {
 		config.FrontURL = "http://localhost:5173"
+	}
+
+	if config.CookieDomain == "" {
+		config.CookieDomain = "localhost"
 	}
 
 	if config.DBHost == "" || config.DBUser == "" || config.DBPassword == "" || config.DBName == "" || config.DBPort == "" {

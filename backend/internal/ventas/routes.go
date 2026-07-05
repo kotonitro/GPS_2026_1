@@ -2,6 +2,7 @@ package ventas
 
 import (
 	"backend/internal/auth"
+
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )

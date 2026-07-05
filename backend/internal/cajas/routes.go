@@ -7,17 +7,17 @@ import (
 	"gorm.io/gorm"
 )
 
-func RoutesConfig(api *gin.RouterGroup, db *gorm.DB, jwtSecret string) {
+func RoutesConfig(api *gin.RouterGroup, db *gorm.DB, authMiddleware gin.HandlerFunc) {
 
 	ctrl := NewCajaController(db)
 
-	group := api.Group("cajas")
-	group.Use(auth.AuthMiddleware(jwtSecret))
+	authGroup := api.Group("cajas")
+	authGroup.Use(authMiddleware)
 	{
-		group.GET("/", ctrl.GetCajasController)
-		group.GET("/:id", ctrl.GetCajaByIDController)
+		authGroup.GET("/", ctrl.GetCajasController)
+		authGroup.GET("/:id", ctrl.GetCajaByIDController)
 
-		adminGroup := group.Group("")
+		adminGroup := authGroup.Group("")
 		adminGroup.Use(auth.RoleMiddleware("Admin"))
 		{
 			adminGroup.POST("", ctrl.CreateCajaController)

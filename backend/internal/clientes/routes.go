@@ -7,11 +7,11 @@ import (
 	"gorm.io/gorm"
 )
 
-func RoutesConfig(api *gin.RouterGroup, db *gorm.DB, jwtSecret string) {
+func RoutesConfig(api *gin.RouterGroup, db *gorm.DB, authMiddleware gin.HandlerFunc) {
 	ctrl := NewClienteController(db)
 
 	group := api.Group("clientes")
-	group.Use(auth.AuthMiddleware(jwtSecret))
+	group.Use(authMiddleware)
 	{
 		group.GET("/", ctrl.GetClientesController)
 		group.GET("/:id", ctrl.GetClienteByIDController)

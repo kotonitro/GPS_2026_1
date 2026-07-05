@@ -2,55 +2,76 @@
 @plugin '@tailwindcss/forms';
 @plugin '@tailwindcss/typography';
 
+:root {
+	--bg-primary: #fcfaf2; 
+	--bg-secondary: #f3efe0;
+	--bg-card: #ffffff;
+	--text-primary: #1e1e24; 
+	--text-secondary: #5c554e;
+	--text-muted: #8c8276;
+	--border-color: rgba(42, 36, 31, 0.08);
+	--border-color-hover: rgba(42, 36, 31, 0.15);
+	
+	--primario: #b45309;
+	--primario-hover: #92400e;
+	--secundario: #fef08a;
+	--exito: #16a34a;
+	--error: #dc2626;
+	--danger-bg: rgba(220, 38, 38, 0.05);
+	--danger-color: #dc2626;
+    --accent: #d97706;
+    --accent-light: #f59e0b;
+}
+
+:root.dark {
+	--bg-primary: #0f0d0c; 
+	--bg-secondary: #1a1614;
+	--bg-card: #211c19;
+	--text-primary: #f5ece3; 
+	--text-secondary: #c5b8ad;
+	--text-muted: #95877c;
+	--border-color: rgba(245, 236, 227, 0.08);
+	--border-color-hover: rgba(245, 236, 227, 0.15);
+	
+	--primario: #f59e0b; 
+	--primario-hover: #d97706;
+	--secundario: #fef08a;
+	--exito: #22c55e;
+	--error: #ef4444;
+	--danger-bg: rgba(239, 68, 68, 0.1);
+	--danger-color: #ef4444;
+    --accent: #f59e0b;
+    --accent-light: #fbbf24;
+}
+
 @theme {
-	/* Design system: eye-friendly cream/yellow-amber theme */
-	--color-bg-primary: #f5f4ef;
-	--color-bg-secondary: #e6e5dd;
-	--color-bg-card: #ffffff;
-	--color-text-primary: #0f1e36;
-	--color-text-secondary: #3c4f6b;
-	--color-text-muted: #6b7a90;
-	--color-accent: #d97706;
-	--color-accent-hover: #b45309;
-	--color-accent-light: #eab308;
-	--color-border-color: rgba(15, 30, 54, 0.08);
-	--color-border-color-hover: rgba(217, 119, 6, 0.3);
-
-	/* Animations */
-	--animate-fade-in: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-	--animate-modal-enter: modalEnter 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+	--color-bg-primary: var(--bg-primary);
+	--color-bg-secondary: var(--bg-secondary);
+	--color-bg-card: var(--bg-card);
+	--color-text-primary: var(--text-primary);
+	--color-text-secondary: var(--text-secondary);
+	--color-text-muted: var(--text-muted);
+	--color-border-color: var(--border-color);
+	--color-border-color-hover: var(--border-color-hover);
+	
+	--color-primario: var(--primario);
+	--color-primario-hover: var(--primario-hover);
+	--color-secundario: var(--secundario);
+	--color-exito: var(--exito);
+	--color-error: var(--error);
+	--color-danger-bg: var(--danger-bg);
+	--color-danger-color: var(--danger-color);
+    --color-accent: var(--accent);
+    --color-accent-light: var(--accent-light);
 }
 
-@keyframes fadeIn {
-	from {
-		opacity: 0;
-		transform: translateY(-10px) scale(0.95);
+@layer base {
+	body {
+		background-color: var(--bg-primary);
+		color: var(--text-primary);
+		font-family: var(--font-sans);
+		margin: 0;
+		padding: 0;
+		transition: background-color 0.3s ease, color 0.3s ease;
 	}
-	to {
-		opacity: 1;
-		transform: translateY(0) scale(1);
-	}
-}
-
-@keyframes modalEnter {
-	from {
-		opacity: 0;
-		transform: scale(0.95) translateY(10px);
-	}
-	to {
-		opacity: 1;
-		transform: scale(1) translateY(0);
-	}
-}
-
-/* Skeleton Loading utility */
-.skeleton-loader {
-	background: linear-gradient(90deg, rgba(15, 30, 54, 0.03) 25%, rgba(15, 30, 54, 0.08) 50%, rgba(15, 30, 54, 0.03) 75%);
-	background-size: 200% 100%;
-	animation: skeleton-loading 1.5s infinite;
-}
-
-@keyframes skeleton-loading {
-	0% { background-position: 200% 0; }
-	100% { background-position: -200% 0; }
 }

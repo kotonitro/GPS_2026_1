@@ -9,6 +9,7 @@ import (
 
 type InitialAdmin struct {
 	Rut        string
+	Nombre     string
 	Usuario    string
 	Contrasena string
 	Rol        string
@@ -41,6 +42,7 @@ func InitialSetup(db *gorm.DB) {
 
 		admin := InitialAdmin{
 			Rut:        "11111111-1",
+			Nombre:     "Administrador",
 			Usuario:    "admin",
 			Contrasena: string(hashContrasena),
 			Rol:        "Admin",

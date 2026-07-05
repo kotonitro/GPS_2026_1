@@ -37,7 +37,7 @@ func main() {
 
 	//CORS
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{cfg.FrontURL, "http://localhost:5173", "http://localhost:5174", "http://localhost:5175"},
+		AllowOrigins:     []string{cfg.FrontURL, "http://localhost:5173", "http://127.0.0.1:5173"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
@@ -48,7 +48,12 @@ func main() {
 	// api
 	api := r.Group("/api")
 
+	// auth middleware
+	authCtrl := auth.NewAuthController(db, cfg.JWTSecret, cfg.CookieDomain)
+	authMiddleware := authCtrl.AuthMiddleware()
+
 	// rutas
+<<<<<<< HEAD
 	auth.RoutesConfig(api, db, cfg.JWTSecret)
 	cajas.RoutesConfig(api, db, cfg.JWTSecret)
 	clientes.RoutesConfig(api, db, cfg.JWTSecret)
@@ -56,6 +61,15 @@ func main() {
 	inventario.RoutesConfig(api, db, cfg.JWTSecret)
 	ventas.RoutesConfig(api, db, cfg.JWTSecret)
 	promociones.RoutesConfig(api, db, cfg.JWTSecret)
+=======
+	auth.RoutesConfig(api, authCtrl, authMiddleware)
+	cajas.RoutesConfig(api, db, authMiddleware)
+	clientes.RoutesConfig(api, db, authMiddleware)
+	empleados.RoutesConfig(api, db, authMiddleware)
+	inventario.RoutesConfig(api, db, authMiddleware)
+	ventas.ConfigurarRutas(api, db, authMiddleware)
+	promociones.RoutesConfig(api, db, authMiddleware)
+>>>>>>> aba6e48137fcb1be736ac95e0893b263815bfa3c
 
 	r.Run(":8080")
 }
