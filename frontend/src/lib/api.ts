@@ -43,3 +43,21 @@ export async function logout(): Promise<void> {
 export async function checkSession(): Promise<Empleado> {
     return apiFetch('/auth/me');
 }
+
+export const apiClientes = {
+	getAll: () => apiFetch('/clientes/'),
+	getById: (id: string) => apiFetch(`/clientes/${id}`),
+	getByRut: (rut: string) => apiFetch(`/clientes/rut/${rut}`),
+	searchByNombre: (nombre: string) => apiFetch(`/clientes/search/nombre?nombre=${encodeURIComponent(nombre)}`),
+	create: (data: { nombre: string; rut: string; telefono: string }) => apiFetch('/clientes', {
+		method: 'POST',
+		body: JSON.stringify(data)
+	}),
+	update: (id: string, data: { nombre?: string; rut?: string; telefono?: string }) => apiFetch(`/clientes/${id}`, {
+		method: 'PATCH',
+		body: JSON.stringify(data)
+	}),
+	delete: (id: string) => apiFetch(`/clientes/${id}`, {
+		method: 'DELETE'
+	})
+};
