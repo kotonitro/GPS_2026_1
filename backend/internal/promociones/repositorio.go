@@ -10,7 +10,7 @@ func GuardarPromocion(db *gorm.DB, promocion *Promocion) error {
 // Muestra todas las promociones de la bdd
 func ObtenerTodasLasPromociones(db *gorm.DB) ([]Promocion, error) {
 	var promociones []Promocion
-	result := db.Find(&promociones)
+	result := db.Preload("Producto").Find(&promociones)
 	return promociones, result.Error
 }
 

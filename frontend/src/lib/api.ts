@@ -36,3 +36,24 @@ export async function login(usuario: string, contrasena: string): Promise<Emplea
 export async function checkSession(): Promise<Empleado> {
     return apiFetch('/auth/me');
 }
+//promociones 
+export async function obtenerPromociones() {
+	return apiFetch('/promociones/');
+}
+
+export async function crearPromocion(data: any) {
+	return apiFetch('/promociones', {
+		method: 'POST',
+		body: JSON.stringify(data)
+	});
+}
+
+export async function eliminarPromocion(id: string) {
+	return apiFetch(`/promociones/${id}`, {
+		method: 'DELETE'
+	});
+}
+
+export async function  obtenerProductos() {
+	return apiFetch('/inventario/productos');
+}
