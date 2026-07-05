@@ -33,7 +33,7 @@ func InitialSetup(db *gorm.DB) {
 
 		admin := InitialAdmin{
 			Rut:        "11111111-1",
-			Nombre:     "Admin",
+			Nombre:     "Administrador",
 			Usuario:    "admin",
 			Contrasena: string(hashContrasena),
 			Rol:        "Admin",

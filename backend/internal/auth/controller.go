@@ -43,9 +43,7 @@ type LoginInput struct {
 }
 
 type JWTClaims struct {
-	ID     string `json:"id_empleado"`
-	Nombre string `json:"nombre"`
-	Rol    string `json:"rol"`
+	ID string `json:"id_empleado"`
 	jwt.RegisteredClaims
 }
 
@@ -77,9 +75,7 @@ func (ctrl *AuthController) Login(c *gin.Context) {
 
 	tiempoExpiracion := time.Now().Add(24 * time.Hour)
 	claims := JWTClaims{
-		ID:     empleado.ID,
-		Nombre: empleado.Nombre,
-		Rol:    empleado.Rol,
+		ID: empleado.ID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(tiempoExpiracion),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -133,6 +129,7 @@ func (ctrl *AuthController) Logout(c *gin.Context) {
 type EmpleadoResponse struct {
 	ID      string `json:"id_empleado"`
 	Usuario string `json:"usuario"`
+	Nombre  string `json:"nombre"`
 	Rol     string `json:"rol"`
 }
 
@@ -146,7 +143,7 @@ func (ctrl *AuthController) Me(c *gin.Context) {
 	var sesion EmpleadoResponse
 
 	err := ctrl.db.Model(&EmpleadoAuth{}).
-		Select("id, usuario, rol").
+		Select("id, usuario, nombre, rol").
 		Where("id = ?", ID).
 		First(&sesion).Error
 

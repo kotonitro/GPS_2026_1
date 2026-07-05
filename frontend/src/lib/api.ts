@@ -2,6 +2,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 
 export interface Empleado {
     id: string;
+	nombre: string,
     usuario: string;
     rol: string;
 }
@@ -30,6 +31,12 @@ export async function login(usuario: string, contrasena: string): Promise<Emplea
     return apiFetch('/auth/login', {
         method: 'POST',
         body: JSON.stringify({ usuario, contrasena })
+    });
+}
+
+export async function logout(): Promise<void> {
+    return apiFetch('/auth/logout', {
+        method: 'POST'
     });
 }
 
