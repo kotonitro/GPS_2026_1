@@ -46,9 +46,11 @@ func (ctrl *ClienteController) GetClienteByIDController(c *gin.Context) {
 }
 
 type CreateClienteInput struct {
-	Nombre   string `json:"nombre" binding:"required"`
-	Rut      string `json:"rut" binding:"required,rut_valido"`
-	Telefono string `json:"telefono" binding:"required,telefono_valido"`
+	Nombre      string   `json:"nombre" binding:"required"`
+	Rut         string   `json:"rut" binding:"required,rut_valido"`
+	Telefono    string   `json:"telefono" binding:"required,telefono_valido"`
+	FiadoActual *float64 `json:"fiado_actual"`
+	FiadoMaximo *float64 `json:"fiado_maximo"`
 }
 
 func (ctrl *ClienteController) CreateClienteController(c *gin.Context) {
@@ -66,6 +68,23 @@ func (ctrl *ClienteController) CreateClienteController(c *gin.Context) {
 		Nombre:   input.Nombre,
 		Rut:      input.Rut,
 		Telefono: input.Telefono,
+	}
+
+	if input.FiadoMaximo != nil {
+		nuevoCliente.FiadoMaximo = *input.FiadoMaximo
+	} else {
+		nuevoCliente.FiadoMaximo = 20000.0
+	}
+
+	if input.FiadoActual != nil {
+		if *input.FiadoActual > nuevoCliente.FiadoMaximo {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error":   "No se pudo registrar el cliente.",
+				"detalle": "El saldo de fiado no puede superar el límite máximo de $20.000.",
+			})
+			return
+		}
+		nuevoCliente.FiadoActual = *input.FiadoActual
 	}
 
 	err := CreateCliente(ctrl.db, &nuevoCliente)
@@ -119,9 +138,11 @@ func (ctrl *ClienteController) DeleteClienteByIDController(c *gin.Context) {
 }
 
 type UpdateClienteInput struct {
-	Nombre   *string `json:"nombre"`
-	Rut      *string `json:"rut" binding:"omitempty,rut_valido"`
-	Telefono *string `json:"telefono" binding:"omitempty,telefono_valido"`
+	Nombre      *string  `json:"nombre"`
+	Rut         *string  `json:"rut" binding:"omitempty,rut_valido"`
+	Telefono    *string  `json:"telefono" binding:"omitempty,telefono_valido"`
+	FiadoActual *float64 `json:"fiado_actual"`
+	FiadoMaximo *float64 `json:"fiado_maximo"`
 }
 
 func (ctrl *ClienteController) UpdateClienteByIDController(c *gin.Context) {
@@ -135,11 +156,36 @@ func (ctrl *ClienteController) UpdateClienteByIDController(c *gin.Context) {
 		return
 	}
 
-	if input.Nombre == nil && input.Rut == nil && input.Telefono == nil {
+	if input.Nombre == nil && input.Rut == nil && input.Telefono == nil && input.FiadoActual == nil && input.FiadoMaximo == nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Se requiere al menos un campo válido para modificar.",
 		})
 		return
+	}
+
+	clienteActual, err := GetClienteByID(ctrl.db, id)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "El cliente a modificar no existe."})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error interno al buscar el cliente."})
+		return
+	}
+
+	fiadoMaximo := clienteActual.FiadoMaximo
+	if input.FiadoMaximo != nil {
+		fiadoMaximo = *input.FiadoMaximo
+	}
+
+	if input.FiadoActual != nil {
+		if *input.FiadoActual > fiadoMaximo {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error":   "No se pudo actualizar el cliente.",
+				"detalle": "El saldo de fiado no puede superar el límite máximo.",
+			})
+			return
+		}
 	}
 
 	if input.Telefono != nil {
@@ -147,14 +193,9 @@ func (ctrl *ClienteController) UpdateClienteByIDController(c *gin.Context) {
 		input.Telefono = &telefonoNormalizado
 	}
 
-	err := UpdateClienteByID(ctrl.db, id, input)
+	err = UpdateClienteByID(ctrl.db, id, input)
 
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "El cliente a modificar no existe."})
-			return
-		}
-
 		errMsg := err.Error()
 		if strings.Contains(errMsg, "rut") {
 			c.JSON(http.StatusInternalServerError, gin.H{
