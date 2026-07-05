@@ -3,7 +3,7 @@
 	import { onMount } from 'svelte';
 	import { apiClientes } from '$lib/api';
 
-	// Mock Data for Dashboard Visualization (Mixed with real for Fiados)
+
 	let ventasHoy = $state(3830);
 	let clientesAtendidos = $state(47);
 	let fiadosPendientes = $state(0);
@@ -64,9 +64,9 @@
 	<title>Dashboard General - GPSproject</title>
 </svelte:head>
 
-<!-- Metrics Cards -->
+
 <div class="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-	<!-- Card 1 -->
+	
 	<div class="flex flex-col justify-center rounded-xl border border-border-color bg-bg-card p-6 shadow-sm transition-all hover:border-border-color-hover">
 		<div class="flex items-center justify-between mb-4">
 			<div class="flex h-10 w-10 items-center justify-center rounded-lg bg-primario/10 text-primario">
@@ -78,7 +78,7 @@
 		<p class="mt-1 text-xs font-bold uppercase tracking-wider text-text-secondary">Ventas Hoy</p>
 	</div>
 
-	<!-- Card 2 -->
+	
 	<div class="flex flex-col justify-center rounded-xl border border-border-color bg-bg-card p-6 shadow-sm transition-all hover:border-border-color-hover">
 		<div class="flex items-center justify-between mb-4">
 			<div class="flex h-10 w-10 items-center justify-center rounded-lg bg-exito/10 text-exito">
@@ -90,7 +90,7 @@
 		<p class="mt-1 text-xs font-bold uppercase tracking-wider text-text-secondary">Clientes Atendidos</p>
 	</div>
 
-	<!-- Card 3 -->
+	
 	<div class="flex flex-col justify-center rounded-xl border border-border-color bg-bg-card p-6 shadow-sm transition-all hover:border-border-color-hover">
 		<div class="flex items-center justify-between mb-4">
 			<div class="flex h-10 w-10 items-center justify-center rounded-lg bg-danger-color/10 text-danger-color">
@@ -102,7 +102,7 @@
 		<p class="mt-1 text-xs font-bold uppercase tracking-wider text-text-secondary">Fiados Pendientes</p>
 	</div>
 
-	<!-- Card 4 -->
+	
 	<div class="flex flex-col justify-center rounded-xl border border-border-color bg-bg-card p-6 shadow-sm transition-all hover:border-border-color-hover">
 		<div class="flex items-center justify-between mb-4">
 			<div class="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-500/10 text-orange-500">
@@ -116,7 +116,7 @@
 </div>
 
 <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-	<!-- Últimas Ventas -->
+	
 	<div class="flex flex-col rounded-xl border border-border-color bg-bg-card shadow-md">
 		<div class="border-b border-border-color p-5">
 			<h2 class="flex items-center gap-2 text-lg font-bold text-text-primary">
@@ -140,7 +140,7 @@
 		</div>
 	</div>
 
-	<!-- Promociones Activas -->
+	
 	<div class="flex flex-col rounded-xl border border-border-color bg-bg-card shadow-md">
 		<div class="border-b border-border-color p-5">
 			<h2 class="flex items-center gap-2 text-lg font-bold text-text-primary">

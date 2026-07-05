@@ -10,6 +10,8 @@ type Promocion struct {
 	Lleva     int     `json:"lleva"` //N
 	Paga      int     `json:"paga"`  //M
 	Descuento float64 `json:"descuento"`
+	ProductoID string   `json:"producto_id"`
+	Producto   inventario.Producto `gorm:"foreignKey:ProductoID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"-"`
 }
 
 type DetallePromocion struct {

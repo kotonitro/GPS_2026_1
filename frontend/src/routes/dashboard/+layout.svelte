@@ -47,7 +47,7 @@
 
 	onMount(async () => {
 		try {
-			// Leer preferencia de tema o del sistema
+			
 			if (typeof window !== 'undefined') {
 				const savedTheme = localStorage.getItem('theme');
 				if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
@@ -64,7 +64,7 @@
 			}).format(new Date());
 
 			empleadoActual = await checkSession();
-			auth.login(empleadoActual as any); // Update global store
+			auth.login(empleadoActual as any); 
 			
 			try {
 				const res = await apiClientes.getAll();
@@ -318,7 +318,7 @@
 						{/if}
 					</button>
 					{#if isNotificationsOpen}
-						<!-- Fixed overlay to close dropdown on click outside -->
+					
 						<div class="fixed inset-0 z-40" onclick={() => isNotificationsOpen = false} role="presentation"></div>
 						
 						<div class="absolute right-0 mt-2 w-80 rounded-xl border border-border-color bg-bg-card shadow-xl z-50 animate-modal-enter">
@@ -350,7 +350,7 @@
 		</main>
 	</div>
 
-	<!-- Toasts Container -->
+	
 	<div class="fixed right-5 top-5 z-[9999] flex flex-col gap-3 pointer-events-none">
 		{#each toast.toasts as t (t.id)}
 			<div class="pointer-events-auto flex w-80 items-center gap-3 rounded-xl border bg-bg-card p-4 shadow-lg animate-modal-enter {t.type === 'success' ? 'border-green-500/20 text-exito' : 'border-red-500/20 text-danger-color'}">
