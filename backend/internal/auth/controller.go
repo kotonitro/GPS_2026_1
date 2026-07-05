@@ -88,7 +88,7 @@ func (ctrl *AuthController) Login(c *gin.Context) {
 		tokenString,
 		int(24*time.Hour.Seconds()),
 		"/",
-		"localhost",
+		"",
 		false,
 		true,
 	)
@@ -109,7 +109,7 @@ func (ctrl *AuthController) Logout(c *gin.Context) {
 		"",
 		-1,
 		"/",
-		"localhost",
+		"",
 		false,
 		true,
 	)
