@@ -48,14 +48,18 @@ func main() {
 	// api
 	api := r.Group("/api")
 
+	// auth middleware
+	authCtrl := auth.NewAuthController(db, cfg.JWTSecret, cfg.CookieDomain)
+	authMiddleware := authCtrl.AuthMiddleware()
+
 	// rutas
-	auth.RoutesConfig(api, db, cfg.JWTSecret)
-	cajas.RoutesConfig(api, db, cfg.JWTSecret)
-	clientes.RoutesConfig(api, db, cfg.JWTSecret)
-	empleados.RoutesConfig(api, db, cfg.JWTSecret)
-	inventario.RoutesConfig(api, db, cfg.JWTSecret)
-	ventas.ConfigurarRutas(api, cfg.JWTSecret)
-	promociones.RoutesConfig(api, db, cfg.JWTSecret)
+	auth.RoutesConfig(api, authCtrl, authMiddleware)
+	cajas.RoutesConfig(api, db, authMiddleware)
+	clientes.RoutesConfig(api, db, authMiddleware)
+	empleados.RoutesConfig(api, db, authMiddleware)
+	inventario.RoutesConfig(api, db, authMiddleware)
+	ventas.ConfigurarRutas(api, db, authMiddleware)
+	promociones.RoutesConfig(api, db, authMiddleware)
 
 	r.Run(":8080")
 }

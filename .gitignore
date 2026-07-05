@@ -1,67 +1,30 @@
-# ==========================================
-# 1. SEGURIDAD 
-# ==========================================
-# Nunca subas variables de entorno ni claves secretas
-.env
-.env.*
-*.pem
-*.key
-*.cert
-secrets/
-
-# ==========================================
-# 2. BACKEND (Go)
-# ==========================================
-# Binarios compilados
-/backend/backend
-/backend/main
-/backend/*.exe
-/backend/*.exe~
-/backend/*.dll
-/backend/*.so
-/backend/*.dylib
-/backend/bin/
-/backend/tmp/
-
-# Caché de pruebas de Go y dependencias locales
-/backend/vendor/
-/backend/go-build/
-
-# ==========================================
-# 3. FRONTEND (Svelte / Node.js)
-# ==========================================
-# Dependencias pesadas de NPM (¡Nunca se suben!)
-/frontend/node_modules/
-/frontend/npm-debug.log
-/frontend/yarn-error.log
-
-# Carpetas de construcción de SvelteKit
-/frontend/.svelte-kit/
-/frontend/build/
-/frontend/dist/
-
-# ==========================================
-# 4. DOCKER Y BASE DE DATOS
-# ==========================================
-# Si en tu docker-compose mapeaste los datos de PostgreSQL a una carpeta local, 
-# ignórala para no subir los gigas de la base de datos de prueba a GitHub.
-/pgdata/
-/db-data/
-/postgres-data/
-
-# ==========================================
-# 5. ENTORNO DE TRABAJO (OS e IDE)
-# ==========================================
-# Configuraciones locales de Visual Studio Code
+# VSCode
 .vscode/
 
-# Archivos basura generados por distribuciones Linux, macOS y Windows
+# ENV
+.env
+.env.*
+!.env.example
+!.env.test
+
+# BACKEND
+tmp/
+
+# FRONTEND
+node_modules/
+
+# Output
+.output
+.vercel
+.netlify
+.wrangler
+.svelte-kit
+build/
+
+# OS
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
 Thumbs.db
-*~
-*.swp
+
+# Vite
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
