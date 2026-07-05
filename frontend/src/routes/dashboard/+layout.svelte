@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
 	import { checkSession, logout } from '$lib/api';
 	import '../layout.css';
 	import {
@@ -38,6 +39,13 @@
 			goto('/login');
 		}
 	}
+
+	function isActive(path: string) {
+		if (path === '/dashboard') {
+			return $page.url.pathname === '/dashboard';
+		}
+		return $page.url.pathname.startsWith(path);
+	}
 </script>
 
 {#if verificando}
@@ -67,40 +75,77 @@
 
 					<a
 						href="/dashboard"
-						class="relative flex items-center gap-3 rounded-xl border border-[#4a3a28] bg-[#382a1b] p-3 text-primario transition-colors"
+						class="relative flex items-center gap-3 rounded-xl border p-3 transition-colors {isActive(
+							'/dashboard'
+						)
+							? 'border-[#4a3a28] bg-[#382a1b] text-primario'
+							: 'border-transparent hover:bg-[#241e1a] hover:text-white'}"
 					>
 						<LayoutDashboard size={20} />
 						<span class="font-medium">Dashboard</span>
-						<span class="absolute right-4 h-1.5 w-1.5 rounded-full bg-primario"></span>
+						{#if isActive('/dashboard')}
+							<span class="absolute right-4 h-1.5 w-1.5 rounded-full bg-primario"></span>
+						{/if}
 					</a>
 
 					<a
 						href="/dashboard/ventas"
-						class="flex items-center gap-3 rounded-xl p-3 transition-colors hover:bg-[#241e1a] hover:text-white"
+						class="relative flex items-center gap-3 rounded-xl border p-3 transition-colors {isActive(
+							'/dashboard/ventas'
+						)
+							? 'border-[#4a3a28] bg-[#382a1b] text-primario'
+							: 'border-transparent hover:bg-[#241e1a] hover:text-white'}"
 					>
 						<ShoppingCart size={20} />
 						<span class="font-medium">Ventas</span>
+						{#if isActive('/dashboard/ventas')}
+							<span class="absolute right-4 h-1.5 w-1.5 rounded-full bg-primario"></span>
+						{/if}
 					</a>
+
 					<a
 						href="/dashboard/productos"
-						class="flex items-center gap-3 rounded-xl p-3 transition-colors hover:bg-[#241e1a] hover:text-white"
+						class="relative flex items-center gap-3 rounded-xl border p-3 transition-colors {isActive(
+							'/dashboard/productos'
+						)
+							? 'border-[#4a3a28] bg-[#382a1b] text-primario'
+							: 'border-transparent hover:bg-[#241e1a] hover:text-white'}"
 					>
 						<Package size={20} />
 						<span class="font-medium">Productos</span>
+						{#if isActive('/dashboard/productos')}
+							<span class="absolute right-4 h-1.5 w-1.5 rounded-full bg-primario"></span>
+						{/if}
 					</a>
+
 					<a
 						href="/dashboard/clientes"
-						class="flex items-center gap-3 rounded-xl p-3 transition-colors hover:bg-[#241e1a] hover:text-white"
+						class="relative flex items-center gap-3 rounded-xl border p-3 transition-colors {isActive(
+							'/dashboard/clientes'
+						)
+							? 'border-[#4a3a28] bg-[#382a1b] text-primario'
+							: 'border-transparent hover:bg-[#241e1a] hover:text-white'}"
 					>
 						<Users size={20} />
 						<span class="font-medium">Clientes</span>
+						{#if isActive('/dashboard/clientes')}
+							<span class="absolute right-4 h-1.5 w-1.5 rounded-full bg-primario"></span>
+						{/if}
 					</a>
+
 					<a
 						href="/dashboard/promociones"
-						class="flex items-center gap-3 rounded-xl p-3 transition-colors hover:bg-[#241e1a] hover:text-white"
+						class="relative flex items-center gap-3 rounded-xl border p-3 transition-colors {isActive(
+							'/dashboard/promociones'
+						)
+							? 'border-[#4a3a28] bg-[#382a1b] text-primario'
+							: 'border-transparent hover:bg-[#241e1a] hover:text-white'}"
 					>
 						<Tag size={20} />
 						<span class="font-medium">Promociones</span>
+						{#if isActive('/dashboard/promociones')}
+							<span class="absolute right-4 h-1.5 w-1.5 rounded-full bg-primario"></span>
+						{/if}
 					</a>
 
 					{#if empleadoActual?.rol === 'Admin'}
@@ -114,17 +159,32 @@
 
 						<a
 							href="/dashboard/empleados"
-							class="flex items-center gap-3 rounded-xl p-3 transition-colors hover:bg-[#241e1a] hover:text-white"
+							class="relative flex items-center gap-3 rounded-xl border p-3 transition-colors {isActive(
+								'/dashboard/empleados'
+							)
+								? 'border-[#4a3a28] bg-[#382a1b] text-primario'
+								: 'border-transparent hover:bg-[#241e1a] hover:text-white'}"
 						>
 							<UserCog size={20} />
 							<span class="font-medium">Empleados</span>
+							{#if isActive('/dashboard/empleados')}
+								<span class="absolute right-4 h-1.5 w-1.5 rounded-full bg-primario"></span>
+							{/if}
 						</a>
+
 						<a
 							href="/dashboard/cajas"
-							class="flex items-center gap-3 rounded-xl p-3 transition-colors hover:bg-[#241e1a] hover:text-white"
+							class="relative flex items-center gap-3 rounded-xl border p-3 transition-colors {isActive(
+								'/dashboard/cajas'
+							)
+								? 'border-[#4a3a28] bg-[#382a1b] text-primario'
+								: 'border-transparent hover:bg-[#241e1a] hover:text-white'}"
 						>
 							<Wallet size={20} />
 							<span class="font-medium">Cajas</span>
+							{#if isActive('/dashboard/cajas')}
+								<span class="absolute right-4 h-1.5 w-1.5 rounded-full bg-primario"></span>
+							{/if}
 						</a>
 					{/if}
 				</nav>
@@ -138,7 +198,7 @@
 						{empleadoActual?.usuario?.substring(0, 2).toUpperCase() || 'EM'}
 					</div>
 					<div class="flex flex-col">
-						<span class="text-sm font-semibold capitalize text-white"
+						<span class="text-sm font-semibold text-white"
 							>{empleadoActual?.nombre || 'Nombre'}</span
 						>
 						<span class="text-xs">{empleadoActual?.rol || 'Rol'}</span>
@@ -147,7 +207,7 @@
 
 				<button
 					onclick={handleLogout}
-					class="flex items-center gap-3 px-2 text-left text-sm font-medium transition-colors hover:text-white"
+					class="flex items-center gap-3 px-2 text-left text-sm font-medium hover:text-white"
 				>
 					<LogOut size={20} /> Cerrar sesión
 				</button>
