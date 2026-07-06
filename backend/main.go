@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/gin-contrib/cors"
-	
 	"github.com/gin-gonic/gin"
 )
 
@@ -61,26 +60,6 @@ func main() {
 	inventario.RoutesConfig(api, db, authMiddleware)
 	ventas.ConfigurarRutas(api, db, authMiddleware)
 	promociones.RoutesConfig(api, db, authMiddleware)
-	// Rutas de la api
-
-	rutasClientes := r.Group("/clientes")
-	{
-		rutasClientes.POST("", clientes.CreateCliente)
-		rutasClientes.GET("", clientes.GetClientes)
-		rutasClientes.GET("/:id", clientes.GetClienteByID)
-		rutasClientes.PUT("/:id", clientes.UpdateCliente)
-		rutasClientes.DELETE("/:id", clientes.DeleteCliente)
-	}
-
-	rutasInventario := r.Group("/inventario")
-	{
-		rutasInventario.POST("/productos", inventario.CrearProducto)
-	}
-	
-	rutasVentas := r.Group("/ventas")
-	{
-		rutasVentas.POST("", ventas.CrearVenta)
-	}
 
 	r.Run(":8080")
 }

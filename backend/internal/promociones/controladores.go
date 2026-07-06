@@ -4,7 +4,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 	"net/http"
-	"time"
 )
 
 // PromocionController maneja las peticiones web
@@ -23,8 +22,6 @@ type CreatePromocionInput struct {
 	Lleva     int     `json:"lleva"`
 	Paga      int     `json:"paga"`
 	Descuento float64 `json:"descuento"`
-	FechaInicio *time.Time `json:"fecha_inicio"`
-	FechaFin    *time.Time `json:"fecha_fin"`
 }
 
 type UpdatePromocionInput struct {
@@ -32,8 +29,6 @@ type UpdatePromocionInput struct {
 	Lleva     *int     `json:"lleva"`
 	Paga      *int     `json:"paga"`
 	Descuento *float64 `json:"descuento"`
-	FechaInicio *time.Time `json:"fecha_inicio"`
-	FechaFin    *time.Time `json:"fecha_fin"`
 }
 
 func (ctrl *PromocionController) CreatePromocionController(c *gin.Context) {
@@ -66,8 +61,6 @@ func (ctrl *PromocionController) CreatePromocionController(c *gin.Context) {
 		Lleva:     input.Lleva,
 		Paga:      input.Paga,
 		Descuento: input.Descuento,
-		FechaInicio: input.FechaInicio, 
-		FechaFin:    input.FechaFin,
 	}
 
 	err := GuardarPromocion(ctrl.db, &nuevaPromocion)
