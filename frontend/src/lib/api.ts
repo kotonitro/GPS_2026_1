@@ -137,7 +137,7 @@ export const apiVentas = {
 };
 
 export const apiCajas = {
-	getAll: () => apiFetch('/cajas/')
+	getAll: () => apiFetch('/cajas')
 };
 
 export const apiCategorias = {
