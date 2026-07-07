@@ -2,9 +2,29 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 
 export interface Empleado {
     id: string;
-	nombre: string,
+	nombre: string;
     usuario: string;
     rol: string;
+}
+
+export interface Categoria {
+    id_categoria: string;
+    nombre_categoria: string;
+    descripcion?: string;
+}
+
+export interface Producto {
+    id_producto: string;
+    nombre: string;
+    descripcion: string;
+    stock: number;
+    stock_minimo: number;
+    precio: number;
+    marca: string;
+    codigo_barras: string;
+    estado: boolean;
+    id_categoria: string;
+    categoria?: Categoria;
 }
 
 export async function apiFetch(endpoint: string, options: RequestInit = {}) {
@@ -60,4 +80,24 @@ export const apiClientes = {
 	delete: (id: string) => apiFetch(`/clientes/${id}`, {
 		method: 'DELETE'
 	})
+};
+
+export const apiCategorias = {
+    getAll: () => apiFetch('/inventario/categorias')
+};
+
+export const apiProductos = {
+    getAll: () => apiFetch('/inventario/productos'),
+    getById: (id: string) => apiFetch(`/inventario/productos/${id}`),
+    create: (data: Partial<Producto>) => apiFetch('/inventario/productos', {
+        method: 'POST',
+        body: JSON.stringify(data)
+    }),
+    update: (id: string, data: Partial<Producto>) => apiFetch(`/inventario/productos/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data)
+    }),
+    delete: (id: string) => apiFetch(`/inventario/productos/${id}`, {
+        method: 'DELETE'
+    })
 };

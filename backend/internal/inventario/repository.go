@@ -39,7 +39,16 @@ func ObtenerProductoPorCodigo(db *gorm.DB, codigo string) (*Producto, error) {
 
 // ActualizarProducto actualiza los datos de un producto en la base de datos.
 func ActualizarProducto(db *gorm.DB, productoExistente *Producto, datosNuevos *Producto) error {
-	return db.Model(productoExistente).Updates(datosNuevos).Error
+	return db.Model(productoExistente).Updates(map[string]interface{}{
+		"nombre":        datosNuevos.Nombre,
+		"descripcion":   datosNuevos.Descripcion,
+		"stock":         datosNuevos.Stock,
+		"stock_minimo":  datosNuevos.StockMinimo,
+		"precio":        datosNuevos.Precio,
+		"marca":         datosNuevos.Marca,
+		"codigo_barras": datosNuevos.CodigoBarras,
+		"categoria_id":  datosNuevos.CategoriaID,
+	}).Error
 }
 
 // Desactivamos un producto en la base de datos, marcándolo como descontinuado
