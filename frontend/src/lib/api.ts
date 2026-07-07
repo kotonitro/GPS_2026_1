@@ -161,3 +161,11 @@ export const apiRoles = {
     update: (id: string, data: any) => apiFetch(`/empleados/roles/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
     delete: (id: string) => apiFetch(`/empleados/roles/${id}`, { method: 'DELETE' })
 };
+
+export const apiCajas = {
+    getAll: () => apiFetch('/cajas'),
+    getById: (id: string) => apiFetch(`/cajas/${id}`),
+    create: (data: any) => apiFetch('/cajas', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: string, data: any) => apiFetch(`/cajas/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    delete: (id: string) => apiFetch(`/cajas/${id}`, { method: 'DELETE' })
+};
