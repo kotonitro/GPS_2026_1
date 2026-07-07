@@ -18,7 +18,7 @@ func RoutesConfig(api *gin.RouterGroup, db *gorm.DB, authMiddleware gin.HandlerF
 		authGroup.GET("/:id", ctrl.GetCajaByIDController)
 
 		adminGroup := authGroup.Group("")
-		adminGroup.Use(auth.RoleMiddleware("Admin"))
+		adminGroup.Use(auth.AdminMiddleware())
 		{
 			adminGroup.POST("", ctrl.CreateCajaController)
 			adminGroup.DELETE("/:id", ctrl.DeleteCajaByIDController)

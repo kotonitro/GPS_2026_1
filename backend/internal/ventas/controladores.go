@@ -11,14 +11,6 @@ import (
 	"gorm.io/gorm"
 )
 
-type VentasController struct {
-	db *gorm.DB
-}
-
-func NewVentasController(db *gorm.DB) *VentasController {
-	return &VentasController{db: db}
-}
-
 func calcularDescuentoItem(cantidad int, precio float64, promo promociones.Promocion) float64 {
 	switch promo.Tipo {
 	case "NXM":
@@ -40,7 +32,7 @@ func calcularDescuentoItem(cantidad int, precio float64, promo promociones.Promo
 	return 0
 }
 
-func (ctrl *VentasController) CrearVenta(c *gin.Context) {
+func CrearVenta(c *gin.Context) {
 	var nuevaVenta Venta
 
 	if err := c.ShouldBindJSON(&nuevaVenta); err != nil {
@@ -57,7 +49,11 @@ func (ctrl *VentasController) CrearVenta(c *gin.Context) {
 	nuevaVenta.EmpleadoID = idEmpleado.(string)
 	nuevaVenta.FechaEmision = time.Now()
 
-	err := ctrl.db.Transaction(func(tx *gorm.DB) error {
+	// Obtener la base de datos desde el contexto (arquitectura dev)
+	dbInstance, _ := c.Get("db")
+	db := dbInstance.(*gorm.DB)
+
+	err := db.Transaction(func(tx *gorm.DB) error {
 		// Cargar todas las promociones activas
 		var activePromos []promociones.Promocion
 		now := time.Now()
@@ -115,49 +111,93 @@ func (ctrl *VentasController) CrearVenta(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
-	ctrl.db.Preload("MetodoPago").First(&nuevaVenta, "id = ?", nuevaVenta.ID)
+
+	// Preload MetodoPago para consistencia en la respuesta
+	db.Preload("MetodoPago").First(&nuevaVenta, "id = ?", nuevaVenta.ID)
+
 	c.JSON(http.StatusCreated, gin.H{
-    "mensaje": "Venta creada", 
-    "venta":   nuevaVenta,
+		"mensaje": "Venta creada",
+		"venta":   nuevaVenta,
 	})
 }
 
-func (ctrl *VentasController) GetVentas(c *gin.Context) {
-	ventas, err := ObtenerTodasVentas(ctrl.db)
+func GetVentas(c *gin.Context) {
+	dbInstance, _ := c.Get("db")
+	db := dbInstance.(*gorm.DB)
+
+	ventas, err := ObtenerTodasVentas(db)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"Error": "Error al obtener ventas"})
+		c.JSON(http.StatusInternalServerError, gin.H{"Error": "Error al obtener las ventas"})
 		return
 	}
+
 	c.JSON(http.StatusOK, ventas)
 }
 
-func (ctrl *VentasController) GetVentaByID(c *gin.Context) {
+func GetVentaByID(c *gin.Context) {
 	id := c.Param("id")
-	venta, err := ObtenerVentaPorID(ctrl.db, id)
+
+	dbInstance, _ := c.Get("db")
+	db := dbInstance.(*gorm.DB)
+
+	venta, err := ObtenerVentaPorID(db, id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"Error": "Venta no encontrada"})
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"Error": "Venta no encontrada"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"Error": "Error al buscar la venta"})
 		return
 	}
+
 	c.JSON(http.StatusOK, venta)
 }
 
-func (ctrl *VentasController) UpdateVenta(c *gin.Context) {
+func UpdateVenta(c *gin.Context) {
 	id := c.Param("id")
-	ventaExistente, _ := ObtenerVentaPorID(ctrl.db, id)
+
+	dbInstance, _ := c.Get("db")
+	db := dbInstance.(*gorm.DB)
+
+	ventaExistente, err := ObtenerVentaPorID(db, id)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"Error": "La venta que intenta actualizar no existe"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"Error": "Error al buscar la venta"})
+		return
+	}
+
 	var datosNuevos Venta
 	if err := c.ShouldBindJSON(&datosNuevos); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": "Datos inválidos"})
 		return
 	}
-	ActualizarVenta(ctrl.db, ventaExistente, &datosNuevos)
-	c.JSON(http.StatusOK, gin.H{"mensaje": "Venta actualizada"})
+
+	if err := ActualizarVenta(db, ventaExistente, &datosNuevos); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"Error": "No se pudo actualizar la venta"})
+		return
+	}
+
+	ventaActualizada, _ := ObtenerVentaPorID(db, id)
+
+	c.JSON(http.StatusOK, gin.H{
+		"mensaje": "Venta actualizada exitosamente",
+		"venta":   ventaActualizada,
+	})
 }
 
-func (ctrl *VentasController) DeleteVenta(c *gin.Context) {
+func DeleteVenta(c *gin.Context) {
 	id := c.Param("id")
-	if err := EliminarVenta(ctrl.db, id); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"Error": "No se pudo eliminar: " + err.Error()})
-			return
-		}
-		c.JSON(http.StatusOK, gin.H{"mensaje": "Venta eliminada"})
+
+	dbInstance, _ := c.Get("db")
+	db := dbInstance.(*gorm.DB)
+
+	if err := EliminarVenta(db, id); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"Error": "No se pudo eliminar la venta"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"mensaje": "Venta eliminada exitosamente"})
 }

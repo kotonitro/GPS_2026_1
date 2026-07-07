@@ -16,7 +16,7 @@ type Caja struct {
 	UpdatedAt    time.Time `json:"updated_at"`
 }
 
-type RegistroTurnos struct {
+type RegistroTurno struct {
 	ID         string `gorm:"primaryKey;type:uuid;default:gen_random_uuid()" json:"id_registro"`
 	CajaID     string `gorm:"type:uuid;not null" json:"id_caja"`
 	EmpleadoID string `gorm:"type:uuid;not null" json:"id_empleado"`
