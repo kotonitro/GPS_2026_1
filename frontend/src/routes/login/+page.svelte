@@ -34,7 +34,7 @@
 </script>
 
 <svelte:head>
-	<title>Iniciar Sesión - GPS_2026_1</title>
+	<title>Iniciar Sesión - MinimarketGo</title>
 </svelte:head>
 
 <div class="flex min-h-screen w-full bg-bg-primary">
@@ -65,7 +65,7 @@
 					<Store size={28} />
 				</div>
 				<div class="flex flex-col">
-					<span class="tracking-tight text-2xl font-bold text-text-primary">GPS_2026_1</span>
+					<span class="tracking-tight text-2xl font-bold text-text-primary">MinimarketGo</span>
 					<span class="tracking-wider text-xs font-semibold uppercase text-accent">Gestión comercial</span>
 				</div>
 			</div>
