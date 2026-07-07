@@ -18,7 +18,7 @@ func ConfigurarRutas(api *gin.RouterGroup, db *gorm.DB, authMiddleware gin.Handl
 		rutasVentas.GET("/:id", GetVentaByID)
 
 		rutasAdmin := rutasVentas.Group("")
-		rutasAdmin.Use(auth.RoleMiddleware("Admin"))
+		rutasAdmin.Use(auth.AdminMiddleware())
 		{
 			rutasAdmin.PUT("/:id", UpdateVenta)
 			rutasAdmin.DELETE("/:id", DeleteVenta)

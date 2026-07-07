@@ -55,15 +55,15 @@ func UpdateCajaByID(db *gorm.DB, id string, data UpdateCajaInput) error {
 	return nil
 }
 
-func GetRegistros(db *gorm.DB) ([]RegistroTurnos, error) {
-	var registros []RegistroTurnos
+func GetRegistros(db *gorm.DB) ([]RegistroTurno, error) {
+	var registros []RegistroTurno
 
 	result := db.Find(&registros)
 	return registros, result.Error
 }
 
-func GetRegistroByID(db *gorm.DB, id string) (*RegistroTurnos, error) {
-	var registro RegistroTurnos
+func GetRegistroByID(db *gorm.DB, id string) (*RegistroTurno, error) {
+	var registro RegistroTurno
 
 	result := db.First(&registro, "id = ?", id)
 	if result.Error != nil {
@@ -73,7 +73,7 @@ func GetRegistroByID(db *gorm.DB, id string) (*RegistroTurnos, error) {
 	return &registro, nil
 }
 
-func CreateRegistro(db *gorm.DB, registro *RegistroTurnos) error {
+func CreateRegistro(db *gorm.DB, registro *RegistroTurno) error {
 
 	resultado := db.Create(registro)
 
@@ -81,7 +81,7 @@ func CreateRegistro(db *gorm.DB, registro *RegistroTurnos) error {
 }
 
 func DeleteRegistroByID(db *gorm.DB, id string) error {
-	var registro RegistroTurnos
+	var registro RegistroTurno
 
 	if err := db.First(&registro, "id = ?", id).Error; err != nil {
 		return err
@@ -95,7 +95,7 @@ func DeleteRegistroByID(db *gorm.DB, id string) error {
 }
 
 func UpdateRegistroByID(db *gorm.DB, id string, data UpdateRegistroInput) error {
-	var registro RegistroTurnos
+	var registro RegistroTurno
 
 	if err := db.First(&registro, "id = ?", id).Error; err != nil {
 		return err
