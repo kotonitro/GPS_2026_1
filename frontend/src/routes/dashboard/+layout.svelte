@@ -328,7 +328,7 @@
 
 		<main class="flex-1 overflow-y-auto bg-bg-primary">
 			<header
-				class="flex items-center justify-between border-b border-border-color bg-bg-card px-8 py-5"
+				class="sticky top-0 z-30 flex items-center justify-between border-b border-border-color bg-bg-card px-8 py-4"
 			>
 				<div>
 					<h1 class="text-xl font-bold text-text-primary">{pageTitle}</h1>
