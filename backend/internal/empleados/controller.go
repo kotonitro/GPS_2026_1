@@ -101,15 +101,37 @@ func (ctrl *EmpleadoController) CreateEmpleadoController(c *gin.Context) {
 }
 
 func (ctrl *EmpleadoController) DeleteEmpleadoByIDController(c *gin.Context) {
-	id := c.Param("id")
+	idObj := c.Param("id")
 
-	err := DeleteEmpleadoByID(ctrl.db, id)
+	idSolCtx, existe := c.Get("id_empleado")
+	if !existe {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "No se pudo identificar al administrador de la sesión."})
+		return
+	}
+	idSol := idSolCtx.(string)
 
+	if idSol == idObj {
+		c.JSON(http.StatusForbidden, gin.H{"error": "No puedes eliminar tu propia cuenta de administrador."})
+		return
+	}
+
+	empleadoObj, err := GetEmpleadoByID(ctrl.db, idObj)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.JSON(http.StatusNotFound, gin.H{"error": "El empleado que intenta eliminar no existe."})
 			return
 		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error interno al verificar la identidad del empleado."})
+		return
+	}
+
+	if empleadoObj.Rol == "Admin" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "No puedes eliminar a otro administrador."})
+		return
+	}
+
+	err = DeleteEmpleadoByID(ctrl.db, idObj)
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error interno al eliminar el empleado."})
 		return
 	}
@@ -127,7 +149,7 @@ type UpdateEmpleadoInput struct {
 }
 
 func (ctrl *EmpleadoController) UpdateEmpleadoByIDController(c *gin.Context) {
-	id := c.Param("id")
+	idObj := c.Param("id")
 
 	var input UpdateEmpleadoInput
 
@@ -144,6 +166,40 @@ func (ctrl *EmpleadoController) UpdateEmpleadoByIDController(c *gin.Context) {
 		return
 	}
 
+	idSolCtx, existe := c.Get("id_empleado")
+	if !existe {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "No se pudo identificar al administrador de la sesión."})
+		return
+	}
+	idSol := idSolCtx.(string)
+
+	empleadoObj, err := GetEmpleadoByID(ctrl.db, idObj)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"Error": "El empleado a modificar no existe."})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"Error": "Error interno al verificar el empleado."})
+		return
+	}
+
+	if empleadoObj.Rol == "Admin" {
+		if idSol != idObj {
+			c.JSON(http.StatusForbidden, gin.H{"error": "No tienes permisos para modificar los datos de otro administrador."})
+			return
+		} else {
+			if input.Activo != nil && !*input.Activo {
+				c.JSON(http.StatusForbidden, gin.H{"error": "No puedes desactivar tu propia cuenta."})
+				return
+			}
+
+			if input.Rol != nil && *input.Rol != "Admin" {
+				c.JSON(http.StatusForbidden, gin.H{"error": "No puedes revocar tus propios privilegios de administrador."})
+				return
+			}
+		}
+	}
+
 	if input.Contrasena != nil {
 		hashContrasena, err := bcrypt.GenerateFromPassword([]byte(*input.Contrasena), bcrypt.DefaultCost)
 
@@ -156,13 +212,8 @@ func (ctrl *EmpleadoController) UpdateEmpleadoByIDController(c *gin.Context) {
 		input.Contrasena = &hashString
 	}
 
-	err := UpdateEmpleadoByID(ctrl.db, id, input)
-
+	err = UpdateEmpleadoByID(ctrl.db, idObj, input)
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"Error": "El empleado a modificar no existe."})
-			return
-		}
 		c.JSON(http.StatusInternalServerError, gin.H{"Error": "Error interno al modificar el empleado."})
 		return
 	}
