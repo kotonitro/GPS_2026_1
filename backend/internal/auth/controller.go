@@ -16,6 +16,7 @@ type EmpleadoAuth struct {
 	Usuario    string
 	Contrasena string
 	Rol        string
+	EsAdmin    bool
 	Activo     bool
 }
 
@@ -57,8 +58,18 @@ func (ctrl *AuthController) Login(c *gin.Context) {
 
 	var empleado EmpleadoAuth
 
-	if err := ctrl.db.Where("usuario = ?", input.Usuario).First(&empleado).Error; err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Credenciales inválidas."})
+	err := ctrl.db.Table("empleados").
+		Select("empleados.id, empleados.nombre, empleados.usuario, empleados.contrasena, empleados.activo, roles.nombre as rol, roles.es_admin").
+		Joins("JOIN roles ON empleados.rol_id = roles.id").
+		Where("empleados.usuario = ?", input.Usuario).
+		First(&empleado).Error
+
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Credenciales inválidas."})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error interno del servidor."})
 		return
 	}
 
@@ -67,7 +78,7 @@ func (ctrl *AuthController) Login(c *gin.Context) {
 		return
 	}
 
-	err := bcrypt.CompareHashAndPassword([]byte(empleado.Contrasena), []byte(input.Contrasena))
+	err = bcrypt.CompareHashAndPassword([]byte(empleado.Contrasena), []byte(input.Contrasena))
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Credenciales inválidas."})
 		return
@@ -105,7 +116,9 @@ func (ctrl *AuthController) Login(c *gin.Context) {
 		"empleado": gin.H{
 			"id_empleado": empleado.ID,
 			"usuario":     empleado.Usuario,
+			"nombre":      empleado.Nombre,
 			"rol":         empleado.Rol,
+			"es_admin":    empleado.EsAdmin,
 		},
 	})
 }
@@ -131,6 +144,7 @@ type EmpleadoResponse struct {
 	Usuario string `json:"usuario"`
 	Nombre  string `json:"nombre"`
 	Rol     string `json:"rol"`
+	EsAdmin bool   `json:"es_admin"`
 }
 
 func (ctrl *AuthController) Me(c *gin.Context) {
@@ -142,9 +156,10 @@ func (ctrl *AuthController) Me(c *gin.Context) {
 
 	var sesion EmpleadoResponse
 
-	err := ctrl.db.Model(&EmpleadoAuth{}).
-		Select("id, usuario, nombre, rol").
-		Where("id = ?", ID).
+	err := ctrl.db.Table("empleados").
+		Select("empleados.id, empleados.usuario, empleados.nombre, roles.nombre as rol, roles.es_admin").
+		Joins("JOIN roles ON empleados.rol_id = roles.id").
+		Where("empleados.id = ?", ID).
 		First(&sesion).Error
 
 	if err != nil {

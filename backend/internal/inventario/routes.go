@@ -26,7 +26,7 @@ func RoutesConfig(api *gin.RouterGroup, db *gorm.DB, authMiddleware gin.HandlerF
 
 		// 3. Subgrupo de Administrador: Solo los 'Admin' pueden crear, editar o borrar
 		adminGroup := grupo.Group("")
-		adminGroup.Use(auth.RoleMiddleware("Admin"))
+		adminGroup.Use(auth.AdminMiddleware())
 		{
 			// CRUD Categorías
 			adminGroup.POST("/categorias", ctrl.CrearCategoria)

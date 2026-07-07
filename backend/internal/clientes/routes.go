@@ -19,7 +19,7 @@ func RoutesConfig(api *gin.RouterGroup, db *gorm.DB, authMiddleware gin.HandlerF
 		group.GET("/search/nombre", ctrl.GetClientesByNombreController)
 
 		adminGroup := group.Group("")
-		adminGroup.Use(auth.RoleMiddleware("Admin"))
+		adminGroup.Use(auth.AdminMiddleware())
 		{
 			adminGroup.POST("", ctrl.CreateClienteController)
 			adminGroup.PATCH("/:id", ctrl.UpdateClienteByIDController)

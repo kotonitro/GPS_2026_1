@@ -1,10 +1,12 @@
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 
 export interface Empleado {
-    id: string;
-	nombre: string;
+    id?: string;
+    id_empleado?: string;
+    nombre: string;
     usuario: string;
     rol: string;
+    es_admin: boolean;
 }
 
 export interface Categoria {
@@ -135,4 +137,35 @@ export const apiProductos = {
     delete: (id: string) => apiFetch(`/inventario/productos/${id}`, {
         method: 'DELETE'
     })
+};
+
+export const apiEmpleados = {
+    getAll: () => apiFetch('/empleados'),
+    getById: (id: string) => apiFetch(`/empleados/${id}`),
+    create: (data: Partial<Producto>) => apiFetch('/empleados', {
+        method: 'POST',
+        body: JSON.stringify(data)
+    }),
+    update: (id: string, data: Partial<Producto>) => apiFetch(`/empleados/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data)
+    }),
+    delete: (id: string) => apiFetch(`/empleados/${id}`, {
+        method: 'DELETE'
+    })
+};
+
+export const apiRoles = {
+    getAll: () => apiFetch('/empleados/roles'),
+    create: (data: any) => apiFetch('/empleados/roles', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: string, data: any) => apiFetch(`/empleados/roles/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    delete: (id: string) => apiFetch(`/empleados/roles/${id}`, { method: 'DELETE' })
+};
+
+export const apiCajas = {
+    getAll: () => apiFetch('/cajas'),
+    getById: (id: string) => apiFetch(`/cajas/${id}`),
+    create: (data: any) => apiFetch('/cajas', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: string, data: any) => apiFetch(`/cajas/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    delete: (id: string) => apiFetch(`/cajas/${id}`, { method: 'DELETE' })
 };

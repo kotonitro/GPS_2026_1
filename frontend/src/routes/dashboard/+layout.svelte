@@ -19,13 +19,19 @@
 		Sun,
 		Moon,
 		Bell,
-		ClipboardList
+		ClipboardList,
+		Shield
 	} from '@lucide/svelte';
 
 	let { children } = $props();
 
 	let verificando = $state(true);
-	let empleadoActual = $state<{ nombre: string; usuario: string; rol: string } | null>(null);
+	let empleadoActual = $state<{
+		nombre: string;
+		usuario: string;
+		rol: string;
+		es_admin: boolean;
+	} | null>(null);
 	let isDark = $state(false);
 
 	let isNotificationsOpen = $state(false);
@@ -42,7 +48,9 @@
 		if (path.startsWith('/dashboard/clientes')) return 'Clientes';
 		if (path.startsWith('/dashboard/promociones')) return 'Promociones';
 		if (path.startsWith('/dashboard/empleados')) return 'Empleados';
+		if (path.startsWith('/dashboard/roles')) return 'Roles';
 		if (path.startsWith('/dashboard/cajas')) return 'Cajas';
+		if (path.startsWith('/dashboard/turnos')) return 'Registro turnos';
 		return 'Dashboard';
 	});
 
@@ -231,7 +239,7 @@
 						{/if}
 					</a>
 
-					{#if empleadoActual?.rol === 'Admin'}
+					{#if empleadoActual?.es_admin}
 						<div class="mt-4 border-t border-[#2a241f] pt-4">
 							<span
 								class="mb-2 block px-3 text-xs font-bold uppercase tracking-wider text-[#7a7268]"
@@ -251,6 +259,21 @@
 							<UserCog size={20} />
 							<span class="font-medium">Empleados</span>
 							{#if isActive('/dashboard/empleados')}
+								<span class="absolute right-4 h-1.5 w-1.5 rounded-full bg-primario"></span>
+							{/if}
+						</a>
+
+						<a
+							href="/dashboard/roles"
+							class="relative flex items-center gap-3 rounded-xl border p-3 transition-colors {isActive(
+								'/dashboard/roles'
+							)
+								? 'border-[#4a3a28] bg-[#382a1b] text-primario'
+								: 'border-transparent hover:bg-[#241e1a] hover:text-white'}"
+						>
+							<Shield size={20} />
+							<span class="font-medium">Roles</span>
+							{#if isActive('/dashboard/roles')}
 								<span class="absolute right-4 h-1.5 w-1.5 rounded-full bg-primario"></span>
 							{/if}
 						</a>
@@ -279,7 +302,7 @@
 								: 'border-transparent hover:bg-[#241e1a] hover:text-white'}"
 						>
 							<ClipboardList size={20} />
-							<span class="font-medium">Turnos</span>
+							<span class="font-medium">Registro turnos</span>
 							{#if isActive('/dashboard/turnos')}
 								<span class="absolute right-4 h-1.5 w-1.5 rounded-full bg-primario"></span>
 							{/if}

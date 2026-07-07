@@ -212,7 +212,7 @@ func (ctrl *CajaController) CreateRegistroController(c *gin.Context) {
 		return
 	}
 
-	nuevoRegistro := RegistroTurnos{
+	nuevoRegistro := RegistroTurno{
 		CajaID:      input.CajaID,
 		EmpleadoID:  input.EmpleadoID,
 		FechaInicio: input.FechaInicio,
@@ -228,8 +228,8 @@ func (ctrl *CajaController) CreateRegistroController(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, gin.H{
-		"mensaje": "Registro creado exitosamente.",
-		"id_caja": nuevoRegistro.ID,
+		"mensaje":     "Registro creado exitosamente.",
+		"id_registro": nuevoRegistro.ID,
 	})
 
 }
