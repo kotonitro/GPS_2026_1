@@ -45,6 +45,7 @@ func ActualizarProducto(db *gorm.DB, productoExistente *Producto, datosNuevos *P
 		"stock":         datosNuevos.Stock,
 		"stock_minimo":  datosNuevos.StockMinimo,
 		"precio":        datosNuevos.Precio,
+		"unidad":        datosNuevos.Unidad,
 		"marca":         datosNuevos.Marca,
 		"codigo_barras": datosNuevos.CodigoBarras,
 		"categoria_id":  datosNuevos.CategoriaID,

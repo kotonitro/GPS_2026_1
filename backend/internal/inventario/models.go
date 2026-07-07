@@ -13,6 +13,7 @@ type Producto struct {
 	Precio       float64   `json:"precio"`
 	Marca        string    `json:"marca"`
 	CodigoBarras string    `json:"codigo_barras"`
+	Unidad       string    `gorm:"default:'unidades'" json:"unidad"`
 	Estado       bool      `gorm:"default:true" json:"estado"` //true=Activo, false=Descontinuado
 	CategoriaID  string    `json:"id_categoria"`
 	Categoria    Categoria `gorm:"foreignKey:CategoriaID" json:"categoria,omitempty"`

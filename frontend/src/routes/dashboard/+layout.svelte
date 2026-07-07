@@ -139,7 +139,7 @@
 						<Store size={22} strokeWidth={2.5} />
 					</div>
 					<div class="flex flex-col">
-						<h2 class="text-lg font-semibold leading-tight text-white">GPS_2026_1</h2>
+						<h2 class="text-lg font-semibold leading-tight text-white">MinimarketGo</h2>
 						<p class="text-xs font-medium text-primario">Gestión comercial</p>
 					</div>
 				</div>
@@ -331,12 +331,10 @@
 								{:else if notificaciones.length === 0}
 									<div class="p-4 text-center text-sm text-text-muted">No hay notificaciones.</div>
 								{:else}
-									{#each notificaciones as notif}
-										<div class="mb-2 rounded-lg border border-red-500/15 bg-danger-bg p-3 text-sm">
-											<p class="font-semibold text-danger-color">{notif.nombre}</p>
-											<p class="text-xs text-danger-color/80 mt-0.5">Ha alcanzado el límite de fiado y debe pagar.</p>
-										</div>
-									{/each}
+									<div class="mb-2 rounded-lg border border-red-500/15 bg-danger-bg p-3 text-sm">
+										<p class="font-semibold text-danger-color">{notificaciones.length} persona{notificaciones.length === 1 ? '' : 's'}</p>
+										<p class="text-xs text-danger-color/80 mt-0.5">han llegado al límite de fiado, dar aviso.</p>
+									</div>
 								{/if}
 							</div>
 						</div>

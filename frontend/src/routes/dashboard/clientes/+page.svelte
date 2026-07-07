@@ -21,17 +21,29 @@
 
 	// Búsqueda Cliente-side
 	let searchQuery = $state('');
+    let selectedEstado = $state('Todos');
 
 	let filteredClientes = $derived.by(() => {
-		if (!searchQuery.trim()) return clientes;
-		const query = searchQuery.toLowerCase().trim();
-		const cleanQuery = query.replace(/[^0-9kK]/g, '');
+		let result = clientes;
+        
+        if (selectedEstado === 'Con deuda') {
+            result = result.filter(c => (c.fiado_actual || 0) > 0 && (c.fiado_actual || 0) < (c.fiado_maximo || 20000));
+        } else if (selectedEstado === 'Al límite') {
+            result = result.filter(c => (c.fiado_actual || 0) >= (c.fiado_maximo || 20000));
+        }
 
-		return clientes.filter((c) => {
-			const matchNombre = c.nombre.toLowerCase().includes(query);
-			const matchRut = cleanQuery ? c.rut.toLowerCase().replace(/[^0-9kK]/g, '').includes(cleanQuery) : false;
-			return matchNombre || matchRut;
-		});
+		if (searchQuery.trim()) {
+			const query = searchQuery.toLowerCase().trim();
+			const cleanQuery = query.replace(/[^0-9kK]/g, '');
+
+			result = result.filter((c) => {
+				const matchNombre = c.nombre.toLowerCase().includes(query);
+				const matchRut = cleanQuery ? c.rut.toLowerCase().replace(/[^0-9kK]/g, '').includes(cleanQuery) : false;
+				return matchNombre || matchRut;
+			});
+		}
+        
+        return result;
 	});
 
 	// Estadísticas
@@ -317,7 +329,7 @@
 </script>
 
 <svelte:head>
-	<title>Clientes - GPSproject</title>
+	<title>Clientes - MinimarketGo</title>
 	<meta name="description" content="Gestión de saldo de clientes (Fiados)" />
 </svelte:head>
 
@@ -359,30 +371,43 @@
 </div>
 
 <!-- Search Panel -->
-<div class="mb-6 rounded-xl border border-border-color bg-bg-card p-6 shadow-md transition-all duration-300 hover:border-border-color-hover hover:shadow-lg">
-	<div class="flex flex-wrap items-center gap-4">
-		<div class="flex min-w-[280px] flex-1 overflow-hidden rounded-lg border border-[rgba(15,30,54,0.15)] bg-white focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/15 dark:bg-bg-primary">
+<div class="mb-6 w-full md:w-fit rounded-xl border border-border-color bg-bg-card p-6 shadow-md transition-all duration-300 hover:border-border-color-hover hover:shadow-lg">
+	<div class="flex flex-col sm:flex-row items-center gap-4">
+		<div class="flex min-w-[280px] w-full sm:w-80 overflow-hidden rounded-lg border border-[rgba(15,30,54,0.15)] bg-white focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/15 dark:bg-bg-primary">
 			<div class="flex items-center justify-center pl-4 pr-2 text-text-muted">
 				<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
 			</div>
 			<input
 				type="text"
-				class="flex-1 border-none bg-transparent px-2 py-3 text-sm text-text-primary outline-none"
+				class="flex-1 border-none bg-transparent px-2 py-3 text-sm text-text-primary outline-none focus:ring-0"
 				placeholder="Buscar cliente..."
 				bind:value={searchQuery}
 				aria-label="Término de búsqueda"
 			/>
 		</div>
-		<div class="flex gap-2.5">
-			{#if searchQuery}
-				<button
-					type="button"
-					class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-border-color bg-bg-secondary px-5 py-2.5 text-sm font-semibold text-text-primary transition-all duration-200 hover:bg-text-primary/5"
-					onclick={clearSearch}
-				>
-					Limpiar
-				</button>
-			{/if}
+		<div class="flex gap-4 w-full sm:w-auto">
+            <!-- Status Filter -->
+            <select 
+                bind:value={selectedEstado}
+                class="w-full sm:w-48 rounded-lg border border-[rgba(15,30,54,0.15)] bg-white px-4 py-3 text-sm font-medium text-text-primary outline-none transition-all focus:border-accent focus:ring-2 focus:ring-accent/15 dark:bg-bg-primary"
+            >
+                <option value="Todos">Todos los estados</option>
+                <option value="Con deuda">Con deuda</option>
+                <option value="Al límite">Al límite</option>
+            </select>
+
+			<button
+				type="button"
+				title="Limpiar filtros"
+				class="flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-lg border border-border-color bg-bg-secondary text-text-muted transition-all duration-200 hover:bg-text-primary/10 hover:text-text-primary focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/15 disabled:cursor-not-allowed disabled:opacity-30"
+				onclick={() => { searchQuery = ''; selectedEstado = 'Todos'; }}
+				disabled={!searchQuery && selectedEstado === 'Todos'}
+			>
+				<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<line x1="18" y1="6" x2="6" y2="18"></line>
+					<line x1="6" y1="6" x2="18" y2="18"></line>
+				</svg>
+			</button>
 		</div>
 	</div>
 </div>
@@ -526,7 +551,7 @@
 				<h2 class="text-lg font-bold text-text-primary">{editingCliente ? 'Editar Cliente' : 'Nuevo Cliente'}</h2>
 				<button class="inline-flex cursor-pointer items-center justify-center rounded-lg border border-border-color bg-text-primary/3 p-2 text-text-secondary transition-all duration-200 hover:border-border-color-hover hover:bg-text-primary/7 hover:text-text-primary" onclick={() => (showModal = false)}>&times;</button>
 			</header>
-			<form onsubmit={handleSubmit}>
+			<form onsubmit={handleSubmit} autocomplete="off">
 				<div class="p-6">
 					{#if formGeneralError}
 						<div class="mb-5 flex gap-3 rounded-lg border border-red-500/15 bg-danger-bg p-4 text-sm text-danger-color" role="alert">
@@ -536,7 +561,7 @@
 					
 					<div class="mb-5 flex flex-col gap-1.5">
 						<label class="text-[0.85rem] font-semibold text-text-secondary" for="formNombre">Nombre Completo</label>
-						<input type="text" id="formNombre" class="rounded-lg border border-[rgba(15,30,54,0.15)] bg-white px-4 py-3 text-sm text-text-primary outline-none transition-all duration-200 focus:border-accent focus:ring-2 focus:ring-accent/15 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-bg-primary" placeholder="Ej: Juan Pérez Gómez" bind:value={formNombre} onblur={handleNombreBlur} disabled={submitLoading} required />
+						<input type="text" id="formNombre" autocomplete="off" class="rounded-lg border border-[rgba(15,30,54,0.15)] bg-white px-4 py-3 text-sm text-text-primary outline-none transition-all duration-200 focus:border-accent focus:ring-2 focus:ring-accent/15 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-bg-primary" placeholder="Ej: Juan Pérez Gómez" bind:value={formNombre} onblur={handleNombreBlur} disabled={submitLoading} required />
 						{#if errNombre}<span class="mt-1 text-xs font-medium text-danger-color">{errNombre}</span>{/if}
 					</div>
 

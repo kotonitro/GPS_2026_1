@@ -1,14 +1,14 @@
 <script lang="ts">
 	import { ShoppingCart, Users, Wallet, Package, AlertCircle } from '@lucide/svelte';
 	import { onMount } from 'svelte';
-	import { apiClientes } from '$lib/api';
+	import { apiClientes, apiProductos } from '$lib/api';
 
 
 	let ventasHoy = $state(3830);
 	let clientesAtendidos = $state(47);
 	let fiadosPendientes = $state(0);
 	let clientesDeudores = $state(0);
-	let productosAgotados = $state(2);
+	let productosAgotados = $state(0);
 
 	onMount(async () => {
 		try {
@@ -28,6 +28,22 @@
 			clientesDeudores = countDeudores;
 		} catch (error) {
 			console.error('Error al cargar clientes para el dashboard:', error);
+		}
+
+		try {
+			const resProductos = await apiProductos.getAll();
+			const productos = Array.isArray(resProductos) ? resProductos : [];
+			let countAgotados = 0;
+			
+			for (const p of productos) {
+				if (p.stock <= (p.stock_minimo || 0)) {
+					countAgotados++;
+				}
+			}
+			
+			productosAgotados = countAgotados;
+		} catch (error) {
+			console.error('Error al cargar productos para el dashboard:', error);
 		}
 	});
 
@@ -111,7 +127,7 @@
 			<span class="rounded-full bg-danger-color/10 px-2 py-0.5 text-xs font-bold text-danger-color">~ requieren restock</span>
 		</div>
 		<h3 class="text-3xl font-bold text-text-primary">{productosAgotados}</h3>
-		<p class="mt-1 text-xs font-bold uppercase tracking-wider text-text-secondary">Productos Agotados</p>
+		<p class="mt-1 text-xs font-bold uppercase tracking-wider text-text-secondary">Agotados / Bajo Stock</p>
 	</div>
 </div>
 

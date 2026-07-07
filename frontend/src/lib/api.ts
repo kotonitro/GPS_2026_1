@@ -21,6 +21,7 @@ export interface Producto {
     stock_minimo: number;
     precio: number;
     marca: string;
+    unidad: string;
     codigo_barras: string;
     estado: boolean;
     id_categoria: string;
@@ -113,7 +114,11 @@ export const apiClientes = {
 };
 
 export const apiCategorias = {
-    getAll: () => apiFetch('/inventario/categorias')
+    getAll: () => apiFetch('/inventario/categorias'),
+    create: (data: { nombre_categoria: string }) => apiFetch('/inventario/categorias', {
+        method: 'POST',
+        body: JSON.stringify(data)
+    })
 };
 
 export const apiProductos = {
