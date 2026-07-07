@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
-	import { apiFetch, apiClientes, apiVentas, apiCajas } from '$lib/api';
+	import { apiFetch, apiClientes, apiVentas, apiCajas, obtenerPromociones } from '$lib/api';
 	import { auth } from '$lib/authStore.svelte';
 	import { toast } from '$lib/toastStore.svelte';
 	import {
@@ -20,8 +20,10 @@
 		AlertCircle,
 		Keyboard,
 		Laptop,
-		Sparkles
+		Sparkles,
+		Camera
 	} from '@lucide/svelte';
+	import Scanner from '$lib/components/Scanner.svelte';
 
 	interface Producto {
 		id_producto: string;
@@ -79,6 +81,17 @@
 		};
 	}
 
+	interface Promocion {
+		id_promocion: string;
+		tipo: string;
+		lleva: number;
+		paga: number;
+		descuento: number;
+		producto_id: string;
+		fecha_inicio: string | null;
+		fecha_fin: string | null;
+	}
+
 	// State variables
 	let activeTab = $state<'pos' | 'history'>('pos');
 	let loading = $state(true);
@@ -87,6 +100,7 @@
 	// Data from API
 	let productos = $state<Producto[]>([]);
 	let clientes = $state<Cliente[]>([]);
+	let promociones = $state<Promocion[]>([]);
 	let cajas = $state<Caja[]>([]);
 	let ventas = $state<Venta[]>([]);
 
@@ -101,6 +115,7 @@
 	let showCajaConfigModal = $state(false);
 	let showManualCodeModal = $state(false);
 	let manualBarcodeValue = $state('');
+	let modoEscaneo = $state(false);
 
 	// Cart Items
 	interface CartItem {
@@ -135,9 +150,65 @@
 		});
 	});
 
+	function isPromotionActive(p: Promocion): boolean {
+		const now = new Date();
+		if (p.fecha_inicio) {
+			const start = new Date(p.fecha_inicio);
+			if (now < start) return false;
+		}
+		if (p.fecha_fin) {
+			const end = new Date(p.fecha_fin);
+			if (now > end) return false;
+		}
+		return true;
+	}
+
+	function calculateItemDiscount(item: CartItem, promo: Promocion): number {
+		const price = item.producto.precio;
+		const qty = item.cantidad;
+
+		if (promo.tipo === 'NXM') {
+			if (promo.lleva > 0 && promo.paga > 0 && promo.lleva > promo.paga) {
+				const sets = Math.floor(qty / promo.lleva);
+				const discountQty = sets * (promo.lleva - promo.paga);
+				return discountQty * price;
+			}
+		} else if (promo.tipo === 'porcentaje') {
+			if (promo.descuento > 0) {
+				return Math.round(qty * price * (promo.descuento / 100));
+			}
+		} else if (promo.tipo === 'precio_fijo') {
+			if (promo.descuento > 0 && price > promo.descuento) {
+				const unitDiscount = price - promo.descuento;
+				return qty * unitDiscount;
+			}
+		}
+		return 0;
+	}
+
+	function getBestDiscountForItem(item: CartItem): { discount: number; promo: Promocion | null } {
+		const activePromos = promociones.filter(
+			(p) => p.producto_id === item.producto.id_producto && isPromotionActive(p)
+		);
+		let maxDiscount = 0;
+		let bestPromo: Promocion | null = null;
+
+		for (const promo of activePromos) {
+			const disc = calculateItemDiscount(item, promo);
+			if (disc > maxDiscount) {
+				maxDiscount = disc;
+				bestPromo = promo;
+			}
+		}
+
+		return { discount: maxDiscount, promo: bestPromo };
+	}
+
 	// Totals computations
 	let subtotal = $derived(cart.reduce((acc, item) => acc + item.producto.precio * item.cantidad, 0));
-	let discountAmount = $derived(Math.round(subtotal * (discountPercent / 100)));
+	let discountAmount = $derived(
+		cart.reduce((acc, item) => acc + getBestDiscountForItem(item).discount, 0)
+	);
 	let total = $derived(Math.max(subtotal - discountAmount, 0));
 	let change = $derived(
 		selectedMetodoId === '11111111-1111-1111-1111-111111111111' && typeof cashReceived === 'number'
@@ -228,17 +299,19 @@
 	async function loadData() {
 		loading = true;
 		try {
-			const [resProducts, resClients, resCajas, resSales] = await Promise.all([
+			const [resProducts, resClients, resCajas, resSales, resPromociones] = await Promise.all([
 				apiFetch('/inventario/productos').catch(() => []),
 				apiClientes.getAll().catch(() => []),
 				apiCajas.getAll().catch(() => []),
-				apiVentas.getAll().catch(() => [])
+				apiVentas.getAll().catch(() => []),
+				obtenerPromociones().catch(() => [])
 			]);
 
 			productos = Array.isArray(resProducts) ? resProducts : [];
 			clientes = Array.isArray(resClients) ? resClients : [];
 			cajas = Array.isArray(resCajas) ? resCajas.filter((c) => c.activo) : [];
 			ventas = Array.isArray(resSales) ? resSales : [];
+			promociones = Array.isArray(resPromociones) ? resPromociones : [];
 
 			// Detect Caja using Local Storage
 			detectCaja();
@@ -304,6 +377,11 @@
 		processBarcodeScan(code);
 		manualBarcodeValue = '';
 		showManualCodeModal = false;
+	}
+
+	function manejarEscaneo(codigo: string) {
+		modoEscaneo = false;
+		processBarcodeScan(codigo);
 	}
 
 	function addToCart(producto: Producto) {
@@ -384,11 +462,14 @@
 
 		submitting = true;
 		
-		const detallesPayload = cart.map((item) => ({
-			id_producto: item.producto.id_producto,
-			cantidad: item.cantidad,
-			monto_final: item.producto.precio * item.cantidad
-		}));
+		const detallesPayload = cart.map((item) => {
+			const { discount } = getBestDiscountForItem(item);
+			return {
+				id_producto: item.producto.id_producto,
+				cantidad: item.cantidad,
+				monto_final: item.producto.precio * item.cantidad - discount
+			};
+		});
 
 		const metodoIdForBackend = selectedMetodoId === 'fiado' 
 			? '11111111-1111-1111-1111-111111111111' 
@@ -532,15 +613,23 @@
 					</div>
 				{/if}
 
-				<!-- Manual Code Backup Button -->
-				<div class="mt-4">
+				<!-- Manual Code & Camera Scan Buttons -->
+				<div class="mt-4 flex flex-wrap gap-3">
 					<button
 						type="button"
 						onclick={() => (showManualCodeModal = true)}
 						class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-border-color bg-bg-card px-4 py-2.5 text-xs font-semibold text-text-secondary transition-all hover:bg-text-primary/5"
 					>
 						<Keyboard size={14} />
-						<span>Ingresar Código a Mano (Etiqueta dañada)</span>
+						<span>Ingresar Código a Mano</span>
+					</button>
+					<button
+						type="button"
+						onclick={() => (modoEscaneo = true)}
+						class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-border-color bg-bg-card px-4 py-2.5 text-xs font-semibold text-text-secondary transition-all hover:bg-text-primary/5"
+					>
+						<Camera size={14} />
+						<span>Escanear con Cámara</span>
 					</button>
 				</div>
 			</div>
@@ -569,6 +658,7 @@
 							</div>
 						{:else}
 							{#each cart as item (item.producto.id_producto)}
+								{@const { discount, promo } = getBestDiscountForItem(item)}
 								<div class="flex items-center justify-between gap-3 p-2 rounded-lg bg-text-primary/[0.015] border border-border-color/50">
 									<div class="flex-1">
 										<p class="text-sm font-semibold text-text-primary line-clamp-1">{item.producto.nombre}</p>
@@ -596,9 +686,25 @@
 
 									<!-- Item Total & Delete -->
 									<div class="text-right flex items-center gap-3">
-										<span class="text-sm font-bold text-text-primary min-w-[70px]">
-											{formatCurrency(item.producto.precio * item.cantidad)}
-										</span>
+										<div class="flex flex-col min-w-[80px]">
+											{#if discount > 0}
+												<span class="text-xs text-text-muted line-through">
+													{formatCurrency(item.producto.precio * item.cantidad)}
+												</span>
+												<span class="text-sm font-bold text-danger-color">
+													{formatCurrency(item.producto.precio * item.cantidad - discount)}
+												</span>
+												{#if promo}
+													<span class="text-[9px] text-accent font-bold">
+														{promo.tipo === 'NXM' ? `${promo.lleva}x${promo.paga}` : promo.tipo === 'porcentaje' ? `-${promo.descuento}%` : 'Promo'}
+													</span>
+												{/if}
+											{:else}
+												<span class="text-sm font-bold text-text-primary">
+													{formatCurrency(item.producto.precio * item.cantidad)}
+												</span>
+											{/if}
+										</div>
 										<button
 											type="button"
 											onclick={() => removeFromCart(item.producto.id_producto)}
@@ -694,24 +800,15 @@
 							</div>
 						{/if}
 
-						<!-- Discount -->
-						<div class="flex items-center justify-between gap-4 border-t border-border-color pt-4">
-							<span class="text-xs font-bold uppercase tracking-wider text-text-secondary flex items-center gap-1">
-								<Percent size={14} />
-								<span>Descuento (%)</span>
-							</span>
-							<input type="number" min="0" max="100" placeholder="0" bind:value={discountPercent} class="w-20 text-center rounded-lg border border-border-color bg-bg-card p-1.5 text-sm text-text-primary outline-none focus:border-accent" />
-						</div>
-
 						<!-- Checkout Summary -->
 						<div class="border-t border-border-color pt-4 flex flex-col gap-1">
 							<div class="flex justify-between text-xs text-text-secondary">
 								<span>Subtotal:</span>
 								<span>{formatCurrency(subtotal)}</span>
 							</div>
-							{#if discountPercent > 0}
+							{#if discountAmount > 0}
 								<div class="flex justify-between text-xs text-danger-color">
-									<span>Descuento ({discountPercent}%):</span>
+									<span>Descuento por Promoción:</span>
 									<span>-{formatCurrency(discountAmount)}</span>
 								</div>
 							{/if}
@@ -994,6 +1091,21 @@
 					<button type="submit" class="px-4 py-2 rounded-lg bg-primario text-white text-xs font-bold hover:bg-primario-hover shadow-sm">Agregar Producto</button>
 				</footer>
 			</form>
+		</div>
+	</div>
+{/if}
+
+<!-- Scanner Modal -->
+{#if modoEscaneo}
+	<div class="fixed inset-0 z-[110] flex items-center justify-center bg-black/50 p-5 backdrop-blur-sm" onclick={() => (modoEscaneo = false)} role="presentation">
+		<div class="w-full max-w-[460px] overflow-hidden rounded-xl border border-border-color bg-bg-card shadow-2xl animate-modal-enter" onclick={(e) => e.stopPropagation()} role="dialog">
+			<header class="flex items-center justify-between border-b border-border-color p-4">
+				<h3 class="font-bold text-text-primary text-sm">Escanear Código de Barras</h3>
+				<button class="text-text-muted hover:text-text-primary text-lg" onclick={() => (modoEscaneo = false)}>&times;</button>
+			</header>
+			<div class="p-6 flex flex-col items-center justify-center">
+				<Scanner onScan={manejarEscaneo} onClose={() => (modoEscaneo = false)} />
+			</div>
 		</div>
 	</div>
 {/if}
