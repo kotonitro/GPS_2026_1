@@ -156,5 +156,8 @@ export const apiEmpleados = {
 };
 
 export const apiRoles = {
-    getAll: () => apiFetch('/empleados/roles'), 
+    getAll: () => apiFetch('/empleados/roles'),
+    create: (data: any) => apiFetch('/empleados/roles', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: string, data: any) => apiFetch(`/empleados/roles/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    delete: (id: string) => apiFetch(`/empleados/roles/${id}`, { method: 'DELETE' })
 };
