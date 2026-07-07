@@ -53,23 +53,15 @@ func main() {
 	authMiddleware := authCtrl.AuthMiddleware()
 
 	// rutas
-<<<<<<< HEAD
-	auth.RoutesConfig(api, db, cfg.JWTSecret)
-	cajas.RoutesConfig(api, db, cfg.JWTSecret)
-	clientes.RoutesConfig(api, db, cfg.JWTSecret)
-	empleados.RoutesConfig(api, db, cfg.JWTSecret)
-	inventario.RoutesConfig(api, db, cfg.JWTSecret)
-	ventas.RoutesConfig(api, db, cfg.JWTSecret)
-	promociones.RoutesConfig(api, db, cfg.JWTSecret)
-=======
+
 	auth.RoutesConfig(api, authCtrl, authMiddleware)
 	cajas.RoutesConfig(api, db, authMiddleware)
 	clientes.RoutesConfig(api, db, authMiddleware)
 	empleados.RoutesConfig(api, db, authMiddleware)
 	inventario.RoutesConfig(api, db, authMiddleware)
-	ventas.ConfigurarRutas(api, db, authMiddleware)
+	ventas.RoutesConfig(api, db, authMiddleware)
 	promociones.RoutesConfig(api, db, authMiddleware)
->>>>>>> aba6e48137fcb1be736ac95e0893b263815bfa3c
+
 
 	r.Run(":8080")
 }

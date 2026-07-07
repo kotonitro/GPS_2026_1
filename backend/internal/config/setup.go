@@ -25,7 +25,7 @@ type InitialMetodoPago struct {
 }
 
 func (InitialMetodoPago) TableName() string {
-	return "metodo_pagos" 
+	return "metodo_pagos"
 }
 
 func InitialSetup(db *gorm.DB) {

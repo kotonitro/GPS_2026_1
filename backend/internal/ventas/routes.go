@@ -1,19 +1,17 @@
 package ventas
 
 import (
-	"backend/internal/auth"
-
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
 
-func RoutesConfig(api *gin.RouterGroup, db *gorm.DB, jwtSecret string) {
+func RoutesConfig(api *gin.RouterGroup, db *gorm.DB, authMiddleware gin.HandlerFunc) {
 	
 	ctrl := NewVentasController(db)
 
 	group := api.Group("ventas")
 	
-	group.Use(auth.AuthMiddleware(jwtSecret)) 
+	group.Use(authMiddleware) 
 	{
 		group.POST("/", ctrl.CrearVenta)
 		group.GET("/", ctrl.GetVentas)
