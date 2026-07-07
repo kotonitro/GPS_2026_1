@@ -21,8 +21,8 @@ type RegistroTurnos struct {
 	CajaID     string `gorm:"type:uuid;not null" json:"id_caja"`
 	EmpleadoID string `gorm:"type:uuid;not null" json:"id_empleado"`
 
-	Caja     Caja               `gorm:"foreignKey:CajaID;references:ID" json:"caja,omitempty"`
-	Empleado empleados.Empleado `gorm:"foreignKey:EmpleadoID;references:ID" json:"empleado,omitempty"`
+	Caja     *Caja               `gorm:"foreignKey:CajaID;references:ID" json:"caja,omitempty"`
+	Empleado *empleados.Empleado `gorm:"foreignKey:EmpleadoID;references:ID" json:"empleado,omitempty"`
 
 	FechaInicio time.Time `json:"fecha_inicio"`
 	FechaFin    time.Time `json:"fecha_fin"`

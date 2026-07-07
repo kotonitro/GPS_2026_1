@@ -14,7 +14,7 @@ func RoutesConfig(api *gin.RouterGroup, db *gorm.DB, authMiddleware gin.HandlerF
 	authGroup := api.Group("empleados")
 	authGroup.Use(authMiddleware)
 	{
-		authGroup.GET("/", ctrl.GetEmpleadosController)
+		authGroup.GET("", ctrl.GetEmpleadosController)
 		authGroup.GET("/:id", ctrl.GetEmpleadoByIDController)
 
 		adminGroup := authGroup.Group("")
