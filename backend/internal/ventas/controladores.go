@@ -1,10 +1,12 @@
 package ventas
 
 import (
+	"backend/internal/inventario"
+	"backend/internal/promociones"
 	"errors"
 	"net/http"
 	"time"
-	"backend/internal/inventario"
+
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
@@ -15,6 +17,27 @@ type VentasController struct {
 
 func NewVentasController(db *gorm.DB) *VentasController {
 	return &VentasController{db: db}
+}
+
+func calcularDescuentoItem(cantidad int, precio float64, promo promociones.Promocion) float64 {
+	switch promo.Tipo {
+	case "NXM":
+		if promo.Lleva > 0 && promo.Paga > 0 && promo.Lleva > promo.Paga {
+			sets := cantidad / promo.Lleva
+			descuentoCant := sets * (promo.Lleva - promo.Paga)
+			return float64(descuentoCant) * precio
+		}
+	case "porcentaje":
+		if promo.Descuento > 0 {
+			return float64(cantidad) * precio * (promo.Descuento / 100.0)
+		}
+	case "precio_fijo":
+		if promo.Descuento > 0 && precio > promo.Descuento {
+			unitDiscount := precio - promo.Descuento
+			return float64(cantidad) * unitDiscount
+		}
+	}
+	return 0
 }
 
 func (ctrl *VentasController) CrearVenta(c *gin.Context) {
@@ -35,22 +58,54 @@ func (ctrl *VentasController) CrearVenta(c *gin.Context) {
 	nuevaVenta.FechaEmision = time.Now()
 
 	err := ctrl.db.Transaction(func(tx *gorm.DB) error {
-		// 1. Validar y descontar stock
-		for _, detalle := range nuevaVenta.Detalles {
+		// Cargar todas las promociones activas
+		var activePromos []promociones.Promocion
+		now := time.Now()
+		if err := tx.Where("(fecha_inicio IS NULL OR fecha_inicio <= ?) AND (fecha_fin IS NULL OR fecha_fin >= ?)", now, now).Find(&activePromos).Error; err != nil {
+			return err
+		}
+
+		var totalDescuento float64 = 0
+		var totalVenta float64 = 0
+
+		// 1. Validar, descontar stock y calcular promociones por ítem
+		for i, detalle := range nuevaVenta.Detalles {
 			var producto inventario.Producto
 			if err := tx.First(&producto, "id = ?", detalle.ProductoID).Error; err != nil {
 				return errors.New("El producto " + detalle.ProductoID + " no existe")
 			}
-			
+
 			if producto.Stock < detalle.Cantidad {
 				return errors.New("Stock insuficiente para: " + producto.Nombre)
 			}
-			
+
 			producto.Stock -= detalle.Cantidad
 			if err := tx.Save(&producto).Error; err != nil {
 				return err
 			}
+
+			// Buscar la promoción activa que otorgue el mayor descuento para este ítem
+			var bestDiscount float64 = 0
+			for _, promo := range activePromos {
+				if promo.ProductoID == detalle.ProductoID {
+					disc := calcularDescuentoItem(detalle.Cantidad, producto.Precio, promo)
+					if disc > bestDiscount {
+						bestDiscount = disc
+					}
+				}
+			}
+
+			subtotalItem := producto.Precio * float64(detalle.Cantidad)
+			montoFinalItem := subtotalItem - bestDiscount
+			nuevaVenta.Detalles[i].MontoFinal = montoFinalItem
+
+			totalDescuento += bestDiscount
+			totalVenta += montoFinalItem
 		}
+
+		// Sobrescribir los montos totales calculados por seguridad en el backend
+		nuevaVenta.MontoDescuento = totalDescuento
+		nuevaVenta.MontoTotal = totalVenta
 
 		// 2. Guardar la venta
 		return tx.Create(&nuevaVenta).Error
