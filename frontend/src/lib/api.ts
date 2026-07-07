@@ -81,7 +81,15 @@ export async function eliminarPromocion(id: string) {
 		method: 'DELETE'
 	});
 }
-
+export async function actualizarPromocion(id: string, payload: any) {
+	return apiFetch(`/promociones/${id}`, {
+		method: 'PATCH',
+		headers: {
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify(payload)
+	});
+}
 export async function  obtenerProductos() {
 	return apiFetch('/inventario/productos');
 }
