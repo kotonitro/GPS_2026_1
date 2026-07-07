@@ -17,6 +17,7 @@ func NewPromocionController(db *gorm.DB) *PromocionController {
 }
 
 type CreatePromocionInput struct {
+	ProductoID string  `json:"producto_id" binding:"required,uuid"`
 	Tipo      string  `json:"tipo" binding:"required"`
 	Lleva     int     `json:"lleva"`
 	Paga      int     `json:"paga"`
@@ -55,6 +56,7 @@ func (ctrl *PromocionController) CreatePromocionController(c *gin.Context) {
 	}
 
 	nuevaPromocion := Promocion{
+		ProductoID: input.ProductoID,
 		Tipo:      input.Tipo,
 		Lleva:     input.Lleva,
 		Paga:      input.Paga,
