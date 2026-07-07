@@ -54,3 +54,56 @@ func UpdateCajaByID(db *gorm.DB, id string, data UpdateCajaInput) error {
 
 	return nil
 }
+
+func GetRegistros(db *gorm.DB) ([]RegistroTurnos, error) {
+	var registros []RegistroTurnos
+
+	result := db.Find(&registros)
+	return registros, result.Error
+}
+
+func GetRegistroByID(db *gorm.DB, id string) (*RegistroTurnos, error) {
+	var registro RegistroTurnos
+
+	result := db.First(&registro, "id = ?", id)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	return &registro, nil
+}
+
+func CreateRegistro(db *gorm.DB, registro *RegistroTurnos) error {
+
+	resultado := db.Create(registro)
+
+	return resultado.Error
+}
+
+func DeleteRegistroByID(db *gorm.DB, id string) error {
+	var registro RegistroTurnos
+
+	if err := db.First(&registro, "id = ?", id).Error; err != nil {
+		return err
+	}
+
+	if err := db.Delete(&registro).Error; err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func UpdateRegistroByID(db *gorm.DB, id string, data UpdateRegistroInput) error {
+	var registro RegistroTurnos
+
+	if err := db.First(&registro, "id = ?", id).Error; err != nil {
+		return err
+	}
+
+	if err := db.Model(&registro).Updates(data).Error; err != nil {
+		return err
+	}
+
+	return nil
+}

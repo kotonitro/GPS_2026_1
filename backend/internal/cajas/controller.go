@@ -3,6 +3,7 @@ package cajas
 import (
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
@@ -163,4 +164,128 @@ func ValidationErrorsFormat(err error) map[string]string {
 
 	mensajes["error"] = "El cuerpo de la petición es inválido."
 	return mensajes
+}
+
+func (ctrl *CajaController) GetRegistrosController(c *gin.Context) {
+	listaRegistros, err := GetRegistros(ctrl.db)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error interno al obtener los registros."})
+		return
+	}
+
+	c.JSON(http.StatusOK, listaRegistros)
+}
+
+func (ctrl *CajaController) GetRegistroByIDController(c *gin.Context) {
+
+	id := c.Param("id")
+
+	registro, err := GetRegistroByID(ctrl.db, id)
+	if err != nil {
+
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "El registro solicitado no existe."})
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error interno al buscar el registro en la base de datos."})
+		return
+	}
+
+	c.JSON(http.StatusOK, registro)
+}
+
+type CreateRegistroInput struct {
+	CajaID      string    `json:"id_caja" binding:"required"`
+	EmpleadoID  string    `json:"id_empleado" binding:"required"`
+	FechaInicio time.Time `json:"fecha_inicio" binding:"required"`
+	FechaFin    time.Time `json:"fecha_fin" binding:"required"`
+}
+
+func (ctrl *CajaController) CreateRegistroController(c *gin.Context) {
+	var input CreateRegistroInput
+
+	if err := c.ShouldBindJSON(&input); err != nil {
+
+		errores := ValidationErrorsFormat(err)
+		c.JSON(http.StatusBadRequest, gin.H{"errores": errores})
+		return
+	}
+
+	nuevoRegistro := RegistroTurnos{
+		CajaID:      input.CajaID,
+		EmpleadoID:  input.EmpleadoID,
+		FechaInicio: input.FechaInicio,
+		FechaFin:    input.FechaFin,
+	}
+
+	err := CreateRegistro(ctrl.db, &nuevoRegistro)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "No se pudo crear el registro.",
+		})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{
+		"mensaje": "Registro creado exitosamente.",
+		"id_caja": nuevoRegistro.ID,
+	})
+
+}
+
+func (ctrl *CajaController) DeleteRegistroByIDController(c *gin.Context) {
+	id := c.Param("id")
+
+	err := DeleteRegistroByID(ctrl.db, id)
+
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "El registro que intenta eliminar no existe."})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error interno al eliminar el registro."})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"mensaje": "Registro eliminado exitosamente."})
+}
+
+type UpdateRegistroInput struct {
+	CajaID      *string    `json:"id_caja"`
+	EmpleadoID  *string    `json:"id_empleado"`
+	FechaInicio *time.Time `json:"fecha_inicio"`
+	FechaFin    *time.Time `json:"fecha_fin"`
+}
+
+func (ctrl *CajaController) UpdateRegistroByIDController(c *gin.Context) {
+	id := c.Param("id")
+
+	var input UpdateRegistroInput
+
+	if err := c.ShouldBindJSON(&input); err != nil {
+		errores := ValidationErrorsFormat(err)
+		c.JSON(http.StatusBadRequest, gin.H{"errores": errores})
+		return
+	}
+
+	if input.CajaID == nil && input.EmpleadoID == nil && input.FechaInicio == nil && input.FechaFin == nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Se requiere al menos un campo válido para modificar.",
+		})
+		return
+	}
+
+	err := UpdateRegistroByID(ctrl.db, id, input)
+
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"Error": "El registro a modificar no existe."})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"Error": "Error interno al modificar el registro."})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"mensaje": "Registro modificado exitosamente."})
 }

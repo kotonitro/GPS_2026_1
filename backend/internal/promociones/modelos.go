@@ -2,6 +2,7 @@ package promociones
 
 import (
 	"backend/internal/inventario"
+	"time" 
 )
 
 type Promocion struct {
@@ -12,6 +13,8 @@ type Promocion struct {
 	Descuento float64 `json:"descuento"`
 	ProductoID string   `json:"producto_id"`
 	Producto   inventario.Producto `gorm:"foreignKey:ProductoID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"-"`
+	FechaInicio *time.Time `json:"fecha_inicio"`
+	FechaFin    *time.Time `json:"fecha_fin"`
 }
 
 type DetallePromocion struct {

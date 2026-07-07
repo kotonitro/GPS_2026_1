@@ -1,6 +1,9 @@
 package cajas
 
-import "time"
+import (
+	"backend/internal/empleados"
+	"time"
+)
 
 type Caja struct {
 	ID           string    `gorm:"primaryKey;type:uuid;default:gen_random_uuid()" json:"id_caja"`
@@ -11,4 +14,18 @@ type Caja struct {
 	SaldoFinal   uint      `gorm:"type:integer;check:saldo_final >= 0;default:0" json:"saldo_final"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
+}
+
+type RegistroTurnos struct {
+	ID         string `gorm:"primaryKey;type:uuid;default:gen_random_uuid()" json:"id_registro"`
+	CajaID     string `gorm:"type:uuid;not null" json:"id_caja"`
+	EmpleadoID string `gorm:"type:uuid;not null" json:"id_empleado"`
+
+	Caja     *Caja               `gorm:"foreignKey:CajaID;references:ID" json:"caja,omitempty"`
+	Empleado *empleados.Empleado `gorm:"foreignKey:EmpleadoID;references:ID" json:"empleado,omitempty"`
+
+	FechaInicio time.Time `json:"fecha_inicio"`
+	FechaFin    time.Time `json:"fecha_fin"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
