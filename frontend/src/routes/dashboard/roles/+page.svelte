@@ -12,22 +12,20 @@
 		X
 	} from '@lucide/svelte';
 	import { toast } from '$lib/toastStore.svelte';
-	import { apiRoles } from '$lib/api';
+	import { apiRoles, checkSession } from '$lib/api';
+	import { goto } from '$app/navigation';
 
-	// Estados
 	let roles = $state<any[]>([]);
 	let isLoading = $state(true);
 	let searchQuery = $state('');
-	let filtroPermisos = $state('Todos'); // 'Todos', 'Admin', 'Regular'
+	let filtroPermisos = $state('Todos');
 
-	// Estados de Modales
 	let showModal = $state(false);
 	let showDeleteModal = $state(false);
 	let isEditing = $state(false);
 	let rolToDelete = $state<any>(null);
 	let ultimoModificadoNombre = $state<string | null>(null);
 
-	// Formulario
 	let formData = $state({
 		id_rol: '',
 		nombre: '',
@@ -35,13 +33,11 @@
 		es_admin: false
 	});
 
-	// Errores y Loading del form
 	let errNombre = $state('');
 	let errDescripcion = $state('');
 	let formGeneralError = $state('');
 	let submitLoading = $state(false);
 
-	// Filtro reactivo
 	let rolesFiltrados = $derived(
 		roles
 			.filter((r) => {
@@ -61,21 +57,32 @@
 				const nombreA = a.nombre || a.Nombre || '';
 				const nombreB = b.nombre || b.Nombre || '';
 
-				// 1. Prioridad Máxima: Rol Admin siempre primero
 				if (nombreA === 'Admin') return -1;
 				if (nombreB === 'Admin') return 1;
 
-				// 2. Prioridad Secundaria: El último creado o modificado
 				if (nombreA === ultimoModificadoNombre) return -1;
 				if (nombreB === ultimoModificadoNombre) return 1;
 
-				// 3. Resto: Orden alfabético por nombre
 				return nombreA.localeCompare(nombreB);
 			})
 	);
 
 	onMount(async () => {
-		await cargarDatos();
+		try {
+			const empleado = await checkSession();
+
+			const objRol = empleado?.es_admin;
+			const esAdmin = objRol === true;
+
+			if (!esAdmin) {
+				toast.show('Acceso denegado. Se requieren privilegios de administrador.', 'error');
+				goto('/dashboard');
+				return;
+			}
+			await cargarDatos();
+		} catch (error) {
+			goto('/login');
+		}
 	});
 
 	async function cargarDatos() {
@@ -95,8 +102,6 @@
 		errDescripcion = '';
 		formGeneralError = '';
 	}
-
-	// --- Controladores de Modales de Formulario ---
 
 	function abrirModalNuevo() {
 		isEditing = false;
@@ -143,9 +148,6 @@
 		try {
 			const payload = { ...formData };
 
-			// Si tu backend espera los nombres capitalizados (ej: Nombre, Descripcion, EsAdmin), ajustalos aquí si es necesario.
-			// Asumiremos que el backend de Go con GORM puede bindear el JSON en minúsculas sin problemas.
-
 			ultimoModificadoNombre = payload.nombre;
 
 			if (isEditing) {
@@ -165,8 +167,6 @@
 			submitLoading = false;
 		}
 	}
-
-	// --- Controladores del Modal de Eliminación ---
 
 	function abrirModalEliminar(rol: any) {
 		rolToDelete = rol;
@@ -192,15 +192,12 @@
 </script>
 
 <svelte:head>
-	<title>Roles y Permisos - MinimarketGo</title>
+	<title>Gestión de Roles - MinimarketGo</title>
 </svelte:head>
 
 <div class="flex flex-col gap-6">
-	<!-- Barra Superior de Herramientas -->
 	<div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-		<!-- Bloque de Búsqueda y Filtros -->
 		<div class="flex flex-col gap-3 sm:flex-row sm:items-center flex-1">
-			<!-- Buscador -->
 			<div class="relative w-full sm:max-w-xs">
 				<Search class="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-text-muted" />
 				<input
@@ -210,8 +207,6 @@
 					class="w-full rounded-xl border border-border-color bg-bg-card py-2.5 pl-10 pr-4 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario"
 				/>
 			</div>
-
-			<!-- Filtro por Nivel de Permisos -->
 			<select
 				bind:value={filtroPermisos}
 				class="w-full sm:w-48 rounded-xl border border-border-color bg-bg-card py-2.5 pl-4 pr-10 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario cursor-pointer"
@@ -244,7 +239,6 @@
 		</button>
 	</div>
 
-	<!-- Tabla -->
 	<div class="overflow-x-auto rounded-xl border border-border-color bg-bg-card shadow-sm">
 		<table class="w-full whitespace-nowrap text-left text-sm text-text-primary">
 			<thead class="border-b border-border-color bg-bg-primary/50 text-text-muted">
@@ -272,12 +266,9 @@
 						{@const desc = rol.descripcion || rol.Descripcion}
 						{@const esAdmin = rol.es_admin !== undefined ? rol.es_admin : rol.EsAdmin}
 						<tr class="hover:bg-bg-primary/30">
-							<!-- Nombre -->
 							<td class="px-6 py-4">
 								<div class="flex items-center gap-2">
 									<span class="font-semibold">{nombre}</span>
-
-									<!-- Etiqueta del rol base del sistema -->
 									{#if nombre === 'Admin'}
 										<span
 											class="rounded-md bg-primario/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primario"
@@ -286,7 +277,6 @@
 										</span>
 									{/if}
 
-									<!-- Etiqueta del último modificado -->
 									{#if nombre === ultimoModificadoNombre && nombre !== 'Admin'}
 										<span
 											class="rounded-md bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-600"
@@ -297,12 +287,10 @@
 								</div>
 							</td>
 
-							<!-- Descripción -->
 							<td class="px-6 py-4 text-text-muted max-w-md truncate" title={desc}>
 								{desc || '-'}
 							</td>
 
-							<!-- Nivel de Acceso -->
 							<td class="px-6 py-4">
 								<div class="flex items-center gap-1.5">
 									{#if esAdmin}
@@ -315,9 +303,7 @@
 								</div>
 							</td>
 
-							<!-- Acciones -->
 							<td class="px-6 py-4 text-right">
-								<!-- Protección para no editar ni eliminar el super admin base -->
 								{#if nombre === 'Admin' && esAdmin}
 									<span class="text-xs text-text-muted italic px-2">Sistema</span>
 								{:else}
@@ -347,7 +333,6 @@
 	</div>
 </div>
 
-<!-- Modal Formulario (Crear/Editar) -->
 {#if showModal}
 	<div
 		class="fixed inset-0 z-50 flex items-center justify-center bg-text-primary/40 p-4 backdrop-blur-sm animate-modal-enter"
@@ -376,7 +361,6 @@
 				{/if}
 
 				<div class="flex flex-col gap-5">
-					<!-- Nombre del Rol -->
 					<div class="flex flex-col gap-1.5">
 						<label for="nombre" class="text-sm font-semibold text-text-primary"
 							>Nombre del Rol</label
@@ -388,14 +372,13 @@
 							bind:value={formData.nombre}
 							disabled={submitLoading}
 							required
-							placeholder="Ej: Supervisor"
+							placeholder="Ej: Cajero"
 							class="rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50"
 						/>
 						{#if errNombre}<span class="text-xs font-medium text-danger-color">{errNombre}</span
 							>{/if}
 					</div>
 
-					<!-- Descripción -->
 					<div class="flex flex-col gap-1.5">
 						<label for="descripcion" class="text-sm font-semibold text-text-primary"
 							>Descripción</label
@@ -415,7 +398,6 @@
 							>{/if}
 					</div>
 
-					<!-- Permisos (Switch) -->
 					<div class="flex items-center gap-3 pt-2">
 						<input
 							id="es_admin"
@@ -467,7 +449,6 @@
 	</div>
 {/if}
 
-<!-- Modal Confirmación de Eliminación -->
 {#if showDeleteModal && rolToDelete}
 	<div
 		class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-modal-enter"

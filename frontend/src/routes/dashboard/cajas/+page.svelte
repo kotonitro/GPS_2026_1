@@ -5,27 +5,25 @@
 		Plus,
 		Edit2,
 		Trash2,
-		MonitorSmartphone, // Icono representativo para Cajas/Terminales
+		MonitorSmartphone,
 		CheckCircle2,
 		XCircle,
 		X
 	} from '@lucide/svelte';
 	import { toast } from '$lib/toastStore.svelte';
-	import { apiCajas } from '$lib/api';
+	import { apiCajas, checkSession } from '$lib/api';
+	import { goto } from '$app/navigation';
 
-	// Estados
 	let cajas = $state<any[]>([]);
 	let isLoading = $state(true);
 	let searchQuery = $state('');
-	let filtroEstado = $state('Todos'); // 'Todos', 'Activas', 'Inactivas'
+	let filtroEstado = $state('Todos');
 
-	// Estados de Modales
 	let showModal = $state(false);
 	let showDeleteModal = $state(false);
 	let isEditing = $state(false);
 	let cajaToDelete = $state<any>(null);
 
-	// Formulario
 	let formData = $state({
 		id_caja: '',
 		nombre: '',
@@ -35,21 +33,17 @@
 		activo: true
 	});
 
-	// Errores y Loading del form
 	let errNombre = $state('');
 	let errUbicacion = $state('');
 	let formGeneralError = $state('');
 	let submitLoading = $state(false);
 
-	// Filtro reactivo
 	let cajasFiltradas = $derived(
 		cajas.filter((c) => {
-			// 1. Filtro de Búsqueda de texto (Nombre o Ubicación)
 			const coincideTexto =
 				(c.nombre || c.Nombre || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
 				(c.ubicacion || c.Ubicacion || '').toLowerCase().includes(searchQuery.toLowerCase());
 
-			// 2. Filtro de Estado
 			const esActiva = c.activo !== undefined ? c.activo : c.Activo;
 			const coincideEstado =
 				filtroEstado === 'Todos' ||
@@ -61,7 +55,21 @@
 	);
 
 	onMount(async () => {
-		await cargarDatos();
+		try {
+			const empleado = await checkSession();
+
+			const objRol = empleado?.es_admin;
+			const esAdmin = objRol === true;
+
+			if (!esAdmin) {
+				toast.show('Acceso denegado. Se requieren privilegios de administrador.', 'error');
+				goto('/dashboard');
+				return;
+			}
+			await cargarDatos();
+		} catch (error) {
+			goto('/login');
+		}
 	});
 
 	async function cargarDatos() {
@@ -76,7 +84,6 @@
 		}
 	}
 
-	// Formateador de CLP
 	function formatCurrency(amount: number) {
 		return new Intl.NumberFormat('es-CL', {
 			style: 'currency',
@@ -90,8 +97,6 @@
 		errUbicacion = '';
 		formGeneralError = '';
 	}
-
-	// --- Controladores de Modales de Formulario ---
 
 	function abrirModalNuevo() {
 		isEditing = false;
@@ -145,7 +150,6 @@
 
 		submitLoading = true;
 		try {
-			// Asegurarse de que los valores numéricos se envíen correctamente
 			const payload = {
 				...formData,
 				saldo_inicial: Number(formData.saldo_inicial),
@@ -163,7 +167,6 @@
 			showModal = false;
 			await cargarDatos();
 		} catch (error: any) {
-			// Manejo de errores específicos del backend (por ejemplo, ubicación duplicada)
 			if (error.detalle) {
 				formGeneralError = error.detalle;
 			} else if (error.errors && (error.errors.Ubicacion || error.errors.ubicacion)) {
@@ -176,8 +179,6 @@
 			submitLoading = false;
 		}
 	}
-
-	// --- Controladores del Modal de Eliminación ---
 
 	function abrirModalEliminar(caja: any) {
 		cajaToDelete = caja;
@@ -208,11 +209,8 @@
 </svelte:head>
 
 <div class="flex flex-col gap-6">
-	<!-- Barra Superior de Herramientas -->
 	<div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-		<!-- Bloque de Búsqueda y Filtros -->
 		<div class="flex flex-col gap-3 sm:flex-row sm:items-center flex-1">
-			<!-- Buscador -->
 			<div class="relative w-full sm:max-w-xs">
 				<Search class="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-text-muted" />
 				<input
@@ -223,7 +221,6 @@
 				/>
 			</div>
 
-			<!-- Filtro por Estado -->
 			<select
 				bind:value={filtroEstado}
 				class="w-full sm:w-48 rounded-xl border border-border-color bg-bg-card py-2.5 pl-4 pr-10 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario cursor-pointer"
@@ -237,7 +234,10 @@
 				type="button"
 				title="Limpiar filtros"
 				class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-text-muted hover:bg-border-color hover:text-primario disabled:cursor-not-allowed disabled:opacity-50"
-				onclick={() => { searchQuery = ''; filtroEstado = 'Todos'; }}
+				onclick={() => {
+					searchQuery = '';
+					filtroEstado = 'Todos';
+				}}
 				disabled={!searchQuery && filtroEstado === 'Todos'}
 			>
 				<X size={14} strokeWidth={2.5} />
@@ -253,287 +253,310 @@
 		</button>
 	</div>
 
-<!-- Tabla -->
-    <div class="overflow-x-auto rounded-xl border border-border-color bg-bg-card shadow-sm">
-        <table class="w-full whitespace-nowrap text-left text-sm text-text-primary">
-            <thead class="border-b border-border-color bg-bg-primary/50 text-text-muted">
-                <tr>
-                    <th class="px-6 py-4 font-semibold">Caja Registradora</th>
-                    <th class="px-6 py-4 font-semibold">Ubicación</th>
-                    <th class="px-6 py-4 font-semibold">Saldo Inicial</th>
-                    <th class="px-6 py-4 font-semibold">Saldo Final</th>
-                    <th class="px-6 py-4 font-semibold">Estado</th>
-                    <th class="px-6 py-4 text-right font-semibold">Acciones</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-border-color">
-                {#if isLoading}
-                    <tr>
-                        <td colspan="6" class="py-8 text-center text-text-muted">Cargando cajas...</td>
-                    </tr>
-                {:else if cajasFiltradas.length === 0}
-                    <tr>
-                        <td colspan="6" class="py-8 text-center text-text-muted">
-                            No se encontraron cajas con los filtros aplicados.
-                        </td>
-                    </tr>
-                {:else}
-                    {#each cajasFiltradas as caja (caja.id_caja || caja.id || caja.ID)}
-                        {@const nombre = caja.nombre || caja.Nombre}
-                        {@const ubicacion = caja.ubicacion || caja.Ubicacion}
-                        {@const saldoInicial = caja.saldo_inicial !== undefined ? caja.saldo_inicial : caja.SaldoInicial}
-                        {@const saldoFinal = caja.saldo_final !== undefined ? caja.saldo_final : caja.SaldoFinal}
-                        {@const esActiva = caja.activo !== undefined ? caja.activo : caja.Activo}
+	<div class="overflow-x-auto rounded-xl border border-border-color bg-bg-card shadow-sm">
+		<table class="w-full whitespace-nowrap text-left text-sm text-text-primary">
+			<thead class="border-b border-border-color bg-bg-primary/50 text-text-muted">
+				<tr>
+					<th class="px-6 py-4 font-semibold">Caja Registradora</th>
+					<th class="px-6 py-4 font-semibold">Ubicación</th>
+					<th class="px-6 py-4 font-semibold">Saldo Inicial</th>
+					<th class="px-6 py-4 font-semibold">Saldo Final</th>
+					<th class="px-6 py-4 font-semibold">Estado</th>
+					<th class="px-6 py-4 text-right font-semibold">Acciones</th>
+				</tr>
+			</thead>
+			<tbody class="divide-y divide-border-color">
+				{#if isLoading}
+					<tr>
+						<td colspan="6" class="py-8 text-center text-text-muted">Cargando cajas...</td>
+					</tr>
+				{:else if cajasFiltradas.length === 0}
+					<tr>
+						<td colspan="6" class="py-8 text-center text-text-muted">
+							No se encontraron cajas con los filtros aplicados.
+						</td>
+					</tr>
+				{:else}
+					{#each cajasFiltradas as caja (caja.id_caja || caja.id || caja.ID)}
+						{@const nombre = caja.nombre || caja.Nombre}
+						{@const ubicacion = caja.ubicacion || caja.Ubicacion}
+						{@const saldoInicial =
+							caja.saldo_inicial !== undefined ? caja.saldo_inicial : caja.SaldoInicial}
+						{@const saldoFinal =
+							caja.saldo_final !== undefined ? caja.saldo_final : caja.SaldoFinal}
+						{@const esActiva = caja.activo !== undefined ? caja.activo : caja.Activo}
 
-                        <tr class="hover:bg-bg-primary/30">
-                            <!-- Nombre -->
-                            <td class="px-6 py-4">
-                                <div class="flex items-center gap-3">
-                                    <div class="flex h-9 w-9 items-center justify-center rounded-full bg-primario/10 text-primario">
-                                        <MonitorSmartphone size={16} />
-                                    </div>
-                                    <span class="font-semibold">{nombre}</span>
-                                </div>
-                            </td>
+						<tr class="hover:bg-bg-primary/30">
+							<td class="px-6 py-4">
+								<div class="flex items-center gap-3">
+									<div
+										class="flex h-9 w-9 items-center justify-center rounded-full bg-primario/10 text-primario"
+									>
+										<MonitorSmartphone size={16} />
+									</div>
+									<span class="font-semibold">{nombre}</span>
+								</div>
+							</td>
 
-                            <!-- Ubicación -->
-                            <td class="px-6 py-4 text-text-muted">
-                                {ubicacion}
-                            </td>
+							<td class="px-6 py-4 text-text-muted">
+								{ubicacion}
+							</td>
 
-                            <!-- Saldo Inicial -->
-                            <td class="px-6 py-4 font-medium text-text-primary">
-                                {formatCurrency(saldoInicial)}
-                            </td>
+							<td class="px-6 py-4 font-medium text-text-primary">
+								{formatCurrency(saldoInicial)}
+							</td>
 
-                            <!-- Saldo Final -->
-                            <td class="px-6 py-4 font-medium text-text-primary">
-                                {formatCurrency(saldoFinal)}
-                            </td>
+							<td class="px-6 py-4 font-medium text-text-primary">
+								{formatCurrency(saldoFinal)}
+							</td>
 
-                            <!-- Estado -->
-                            <td class="px-6 py-4">
-                                {#if esActiva}
-                                    <span class="inline-flex items-center gap-1.5 rounded-full bg-green-500/10 px-2.5 py-1 text-xs font-medium text-green-500">
-                                        <CheckCircle2 size={14} /> Activa
-                                    </span>
-                                {:else}
-                                    <span class="inline-flex items-center gap-1.5 rounded-full bg-red-500/10 px-2.5 py-1 text-xs font-medium text-red-500">
-                                        <XCircle size={14} /> Inactiva
-                                    </span>
-                                {/if}
-                            </td>
+							<td class="px-6 py-4">
+								{#if esActiva}
+									<span
+										class="inline-flex items-center gap-1.5 rounded-full bg-green-500/10 px-2.5 py-1 text-xs font-medium text-green-500"
+									>
+										<CheckCircle2 size={14} /> Activa
+									</span>
+								{:else}
+									<span
+										class="inline-flex items-center gap-1.5 rounded-full bg-red-500/10 px-2.5 py-1 text-xs font-medium text-red-500"
+									>
+										<XCircle size={14} /> Inactiva
+									</span>
+								{/if}
+							</td>
 
-                            <!-- Acciones -->
-                            <td class="px-6 py-4 text-right">
-                                <div class="flex items-center justify-end gap-2">
-                                    <button
-                                        onclick={() => abrirModalEditar(caja)}
-                                        class="inline-flex cursor-pointer items-center justify-center rounded-lg border border-border-color bg-text-primary/3 p-2 text-text-secondary transition-all duration-200 hover:border-border-color-hover hover:bg-text-primary/7 hover:text-primario"
-                                        title="Editar Caja"
-                                    >
-                                        <Edit2 size={16} />
-                                    </button>
-                                    <button
-                                        onclick={() => abrirModalEliminar(caja)}
-                                        class="inline-flex cursor-pointer items-center justify-center rounded-lg border border-border-color bg-text-primary/3 p-2 text-text-secondary transition-all duration-200 hover:border-red-500/20 hover:bg-danger-bg hover:text-danger-color"
-                                        title="Eliminar Caja"
-                                    >
-                                        <Trash2 size={16} />
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                    {/each}
-                {/if}
-            </tbody>
-        </table>
-    </div>
+							<td class="px-6 py-4 text-right">
+								<div class="flex items-center justify-end gap-2">
+									<button
+										onclick={() => abrirModalEditar(caja)}
+										class="inline-flex cursor-pointer items-center justify-center rounded-lg border border-border-color bg-text-primary/3 p-2 text-text-secondary transition-all duration-200 hover:border-border-color-hover hover:bg-text-primary/7 hover:text-primario"
+										title="Editar Caja"
+									>
+										<Edit2 size={16} />
+									</button>
+									<button
+										onclick={() => abrirModalEliminar(caja)}
+										class="inline-flex cursor-pointer items-center justify-center rounded-lg border border-border-color bg-text-primary/3 p-2 text-text-secondary transition-all duration-200 hover:border-red-500/20 hover:bg-danger-bg hover:text-danger-color"
+										title="Eliminar Caja"
+									>
+										<Trash2 size={16} />
+									</button>
+								</div>
+							</td>
+						</tr>
+					{/each}
+				{/if}
+			</tbody>
+		</table>
+	</div>
 </div>
 
-<!-- Modal Formulario (Crear/Editar) -->
 {#if showModal}
-    <div class="fixed inset-0 z-50 flex items-center justify-center bg-text-primary/40 p-4 backdrop-blur-sm animate-modal-enter">
-        <div class="w-full max-w-lg rounded-2xl border border-border-color bg-bg-card shadow-2xl">
-            <div class="flex items-center justify-between border-b border-border-color px-6 py-4">
-                <h3 class="text-lg font-bold text-text-primary">
-                    {isEditing ? 'Configurar Caja Registradora' : 'Registrar Nueva Caja'}
-                </h3>
-                <button
-                    onclick={() => (showModal = false)}
-                    class="rounded-lg p-1 text-text-muted hover:bg-border-color hover:text-text-primary"
-                >
-                    <X size={20} />
-                </button>
-            </div>
+	<div
+		class="fixed inset-0 z-50 flex items-center justify-center bg-text-primary/40 p-4 backdrop-blur-sm animate-modal-enter"
+	>
+		<div class="w-full max-w-lg rounded-2xl border border-border-color bg-bg-card shadow-2xl">
+			<div class="flex items-center justify-between border-b border-border-color px-6 py-4">
+				<h3 class="text-lg font-bold text-text-primary">
+					{isEditing ? 'Configurar Caja Registradora' : 'Registrar Nueva Caja'}
+				</h3>
+				<button
+					onclick={() => (showModal = false)}
+					class="rounded-lg p-1 text-text-muted hover:bg-border-color hover:text-text-primary"
+				>
+					<X size={20} />
+				</button>
+			</div>
 
-            <form onsubmit={guardarCaja} class="p-6">
-                {#if formGeneralError}
-                    <div class="mb-5 flex gap-3 rounded-lg border border-red-500/15 bg-danger-bg p-4 text-sm text-danger-color" role="alert">
-                        <span>{formGeneralError}</span>
-                    </div>
-                {/if}
+			<form onsubmit={guardarCaja} class="p-6">
+				{#if formGeneralError}
+					<div
+						class="mb-5 flex gap-3 rounded-lg border border-red-500/15 bg-danger-bg p-4 text-sm text-danger-color"
+						role="alert"
+					>
+						<span>{formGeneralError}</span>
+					</div>
+				{/if}
 
-                <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                    <!-- Nombre de la Caja -->
-                    <div class="flex flex-col gap-1.5 sm:col-span-2">
-                        <label for="nombre" class="text-sm font-semibold text-text-primary">Identificador / Nombre</label>
-                        <input
-                            id="nombre"
-                            type="text"
-                            autocomplete="off"
-                            bind:value={formData.nombre}
-                            disabled={submitLoading}
-                            required
-                            placeholder="Ej: Caja Principal 01"
-                            class="rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50"
-                        />
-                        {#if errNombre}<span class="text-xs font-medium text-danger-color">{errNombre}</span>{/if}
-                    </div>
+				<div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+					<div class="flex flex-col gap-1.5 sm:col-span-2">
+						<label for="nombre" class="text-sm font-semibold text-text-primary"
+							>Identificador / Nombre</label
+						>
+						<input
+							id="nombre"
+							type="text"
+							autocomplete="off"
+							bind:value={formData.nombre}
+							disabled={submitLoading}
+							required
+							placeholder="Ej: Caja Principal"
+							class="rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50"
+						/>
+						{#if errNombre}<span class="text-xs font-medium text-danger-color">{errNombre}</span
+							>{/if}
+					</div>
 
-                    <!-- Ubicación -->
-                    <div class="flex flex-col gap-1.5 sm:col-span-2">
-                        <label for="ubicacion" class="text-sm font-semibold text-text-primary">Ubicación Física</label>
-                        <input
-                            id="ubicacion"
-                            type="text"
-                            autocomplete="off"
-                            bind:value={formData.ubicacion}
-                            disabled={submitLoading}
-                            required
-                            placeholder="Ej: Entrada Sur - Pasillo 1"
-                            class="rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50"
-                        />
-                        {#if errUbicacion}<span class="text-xs font-medium text-danger-color">{errUbicacion}</span>{/if}
-                    </div>
+					<div class="flex flex-col gap-1.5 sm:col-span-2">
+						<label for="ubicacion" class="text-sm font-semibold text-text-primary"
+							>Ubicación Física</label
+						>
+						<input
+							id="ubicacion"
+							type="text"
+							autocomplete="off"
+							bind:value={formData.ubicacion}
+							disabled={submitLoading}
+							required
+							placeholder="Ej: Entrada Sur - Pasillo 1"
+							class="rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50"
+						/>
+						{#if errUbicacion}<span class="text-xs font-medium text-danger-color"
+								>{errUbicacion}</span
+							>{/if}
+					</div>
 
-                    <!-- Saldo Inicial -->
-                    <div class="flex flex-col gap-1.5">
-                        <label for="saldo_inicial" class="text-sm font-semibold text-text-primary">Saldo Inicial base</label>
-                        <div class="relative flex items-center">
-                            <span class="absolute left-4 text-text-muted font-medium">$</span>
-                            <input
-                                id="saldo_inicial"
-                                type="number"
-                                autocomplete="off"
-                                min="0"
-                                step="1"
-                                bind:value={formData.saldo_inicial}
-                                disabled={submitLoading}
-                                required
-                                class="w-full rounded-xl border border-border-color bg-bg-primary py-2.5 pl-8 pr-4 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                            />
-                        </div>
-                    </div>
+					<div class="flex flex-col gap-1.5">
+						<label for="saldo_inicial" class="text-sm font-semibold text-text-primary"
+							>Saldo Inicial</label
+						>
+						<div class="relative flex items-center">
+							<span class="absolute left-4 text-text-muted font-medium">$</span>
+							<input
+								id="saldo_inicial"
+								type="number"
+								autocomplete="off"
+								min="0"
+								step="1"
+								bind:value={formData.saldo_inicial}
+								disabled={submitLoading}
+								required
+								class="w-full rounded-xl border border-border-color bg-bg-primary py-2.5 pl-8 pr-4 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+							/>
+						</div>
+					</div>
 
-                    <!-- Saldo Final -->
-                    <div class="flex flex-col gap-1.5">
-                        <label for="saldo_final" class="text-sm font-semibold text-text-primary">Saldo Final Actual</label>
-                        <div class="relative flex items-center">
-                            <span class="absolute left-4 text-text-muted font-medium">$</span>
-                            <input
-                                id="saldo_final"
-                                type="number"
-                                autocomplete="off"
-                                min="0"
-                                step="1"
-                                bind:value={formData.saldo_final}
-                                disabled={submitLoading}
-                                required
-                                class="w-full rounded-xl border border-border-color bg-bg-primary py-2.5 pl-8 pr-4 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                            />
-                        </div>
-                    </div>
+					<div class="flex flex-col gap-1.5">
+						<label for="saldo_final" class="text-sm font-semibold text-text-primary"
+							>Saldo Final</label
+						>
+						<div class="relative flex items-center">
+							<span class="absolute left-4 text-text-muted font-medium">$</span>
+							<input
+								id="saldo_final"
+								type="number"
+								autocomplete="off"
+								min="0"
+								step="1"
+								bind:value={formData.saldo_final}
+								disabled={submitLoading}
+								required
+								class="w-full rounded-xl border border-border-color bg-bg-primary py-2.5 pl-8 pr-4 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+							/>
+						</div>
+					</div>
 
-                    <!-- Estado (Switch) -->
-                    <div class="col-span-1 sm:col-span-2 flex items-center gap-3 pt-2">
-                        <input
-                            id="activo"
-                            type="checkbox"
-                            bind:checked={formData.activo}
-                            disabled={submitLoading}
-                            class="h-4 w-4 accent-primario cursor-pointer disabled:opacity-50 shrink-0"
-                        />
-                        <div class="flex flex-col">
-                            <label for="activo" class="text-sm font-semibold text-text-primary cursor-pointer {submitLoading ? 'opacity-50' : ''}">
-                                Caja operativa
-                            </label>
-                            <p class="text-xs text-text-muted mt-0.5">
-                                Permite que esta caja sea seleccionada para la apertura de turnos.
-                            </p>
-                        </div>
-                    </div>
-                </div>
+					<div class="col-span-1 sm:col-span-2 flex items-center gap-3 pt-2">
+						<input
+							id="activo"
+							type="checkbox"
+							bind:checked={formData.activo}
+							disabled={submitLoading}
+							class="h-4 w-4 accent-primario cursor-pointer disabled:opacity-50 shrink-0"
+						/>
+						<div class="flex flex-col">
+							<label
+								for="activo"
+								class="text-sm font-semibold text-text-primary cursor-pointer {submitLoading
+									? 'opacity-50'
+									: ''}"
+							>
+								Caja operativa
+							</label>
+							<p class="text-xs text-text-muted mt-0.5">
+								Permite que esta caja sea seleccionada para la venta de productos.
+							</p>
+						</div>
+					</div>
+				</div>
 
-                <div class="mt-8 flex justify-end gap-3">
-                    <button
-                        type="button"
-                        onclick={() => (showModal = false)}
-                        disabled={submitLoading}
-                        class="rounded-xl px-5 py-2.5 text-sm font-semibold text-text-muted hover:bg-border-color hover:text-text-primary disabled:opacity-50"
-                    >
-                        Cancelar
-                    </button>
-                    <button
-                        type="submit"
-                        disabled={submitLoading}
-                        class="rounded-xl bg-primario px-5 py-2.5 text-sm font-semibold text-white transition-transform hover:scale-[1.02] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                        {#if submitLoading} Procesando... {:else} {isEditing ? 'Guardar Cambios' : 'Registrar Caja'} {/if}
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
+				<div class="mt-8 flex justify-end gap-3">
+					<button
+						type="button"
+						onclick={() => (showModal = false)}
+						disabled={submitLoading}
+						class="rounded-xl px-5 py-2.5 text-sm font-semibold text-text-muted hover:bg-border-color hover:text-text-primary disabled:opacity-50"
+					>
+						Cancelar
+					</button>
+					<button
+						type="submit"
+						disabled={submitLoading}
+						class="rounded-xl bg-primario px-5 py-2.5 text-sm font-semibold text-white transition-transform hover:scale-[1.02] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+					>
+						{#if submitLoading}
+							Procesando...
+						{:else}
+							{isEditing ? 'Guardar Cambios' : 'Registrar Caja'}
+						{/if}
+					</button>
+				</div>
+			</form>
+		</div>
+	</div>
 {/if}
 
-<!-- Modal Confirmación de Eliminación -->
 {#if showDeleteModal && cajaToDelete}
-    <div
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-modal-enter"
-        onclick={() => (showDeleteModal = false)}
-        role="presentation"
-    >
-        <div
-            class="w-full max-w-lg rounded-2xl border border-border-color bg-bg-card shadow-2xl"
-            onclick={(e) => e.stopPropagation()}
-            role="dialog"
-        >
-            <div class="flex items-center justify-between border-b border-border-color px-6 py-4">
-                <h3 class="text-lg font-bold text-danger-color">Confirmar Eliminación</h3>
-                <button
-                    class="rounded-lg p-1 text-text-muted hover:bg-border-color hover:text-text-primary"
-                    onclick={() => (showDeleteModal = false)}
-                >
-                    <X size={20} />
-                </button>
-            </div>
-            
-            <div class="p-6 text-text-primary">
-                <p>
-                    ¿Estás seguro de que deseas eliminar la caja <strong>{cajaToDelete.nombre || cajaToDelete.Nombre}</strong> ubicada en <strong>{cajaToDelete.ubicacion || cajaToDelete.Ubicacion}</strong>?
-                </p>
-                <p class="mt-3 text-xs text-text-muted">
-                    No podrás eliminar esta caja si existe un historial de turnos o registros vinculados a ella.
-                </p>
-            </div>
-            
-            <div class="flex justify-end gap-3 border-t border-border-color bg-bg-primary/30 px-6 py-4">
-                <button
-                    type="button"
-                    class="rounded-xl px-5 py-2.5 text-sm font-semibold text-text-muted hover:bg-border-color hover:text-text-primary"
-                    onclick={() => (showDeleteModal = false)}
-                >
-                    Cancelar
-                </button>
-                <button
-                    type="button"
-                    class="rounded-xl bg-danger-color px-5 py-2.5 text-sm font-semibold text-white transition-transform hover:scale-[1.02] active:scale-95"
-                    onclick={confirmarEliminacion}
-                >
-                    Eliminar Caja
-                </button>
-            </div>
-        </div>
-    </div>
+	<div
+		class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-modal-enter"
+		onclick={() => (showDeleteModal = false)}
+		role="presentation"
+	>
+		<div
+			class="w-full max-w-lg rounded-2xl border border-border-color bg-bg-card shadow-2xl"
+			onclick={(e) => e.stopPropagation()}
+			role="dialog"
+		>
+			<div class="flex items-center justify-between border-b border-border-color px-6 py-4">
+				<h3 class="text-lg font-bold text-danger-color">Confirmar Eliminación</h3>
+				<button
+					class="rounded-lg p-1 text-text-muted hover:bg-border-color hover:text-text-primary"
+					onclick={() => (showDeleteModal = false)}
+				>
+					<X size={20} />
+				</button>
+			</div>
+
+			<div class="p-6 text-text-primary">
+				<p>
+					¿Estás seguro de que deseas eliminar la caja <strong
+						>{cajaToDelete.nombre || cajaToDelete.Nombre}</strong
+					>
+					ubicada en <strong>{cajaToDelete.ubicacion || cajaToDelete.Ubicacion}</strong>?
+				</p>
+				<p class="mt-3 text-xs text-text-muted">
+					No podrás eliminar esta caja si existe un historial de turnos o registros vinculados a
+					ella.
+				</p>
+			</div>
+
+			<div class="flex justify-end gap-3 border-t border-border-color bg-bg-primary/30 px-6 py-4">
+				<button
+					type="button"
+					class="rounded-xl px-5 py-2.5 text-sm font-semibold text-text-muted hover:bg-border-color hover:text-text-primary"
+					onclick={() => (showDeleteModal = false)}
+				>
+					Cancelar
+				</button>
+				<button
+					type="button"
+					class="rounded-xl bg-danger-color px-5 py-2.5 text-sm font-semibold text-white transition-transform hover:scale-[1.02] active:scale-95"
+					onclick={confirmarEliminacion}
+				>
+					Eliminar Caja
+				</button>
+			</div>
+		</div>
+	</div>
 {/if}

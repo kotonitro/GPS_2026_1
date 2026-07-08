@@ -111,7 +111,14 @@ func (ctrl *EmpleadoController) CreateEmpleadoController(c *gin.Context) {
 
 	err = CreateEmpleado(ctrl.db, &nuevoEmpleado)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "No se pudo registrar el empleado.", "detalle": "RUT o Usuario duplicado."})
+		if errors.Is(err, gorm.ErrDuplicatedKey) || strings.Contains(err.Error(), "23505") || strings.Contains(err.Error(), "duplicate key") {
+			c.JSON(http.StatusConflict, gin.H{
+				"error":   "No se pudo registrar el empleado.",
+				"detalle": "El RUT o Usuario ingresado ya se encuentra registrado en el sistema.",
+			})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error interno al registrar el empleado en la base de datos."})
 		return
 	}
 
@@ -153,6 +160,13 @@ func (ctrl *EmpleadoController) DeleteEmpleadoByIDController(c *gin.Context) {
 
 	err = DeleteEmpleadoByID(ctrl.db, idObj)
 	if err != nil {
+		if strings.Contains(err.Error(), "23503") || strings.Contains(err.Error(), "foreign key constraint") {
+			c.JSON(http.StatusConflict, gin.H{
+				"error":   "No se pudo eliminar el empleado.",
+				"detalle": "Este empleado tiene registros históricos asociados y no puede ser eliminado.",
+			})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error interno al eliminar el empleado."})
 		return
 	}
@@ -260,6 +274,13 @@ func (ctrl *EmpleadoController) UpdateEmpleadoByIDController(c *gin.Context) {
 
 	err = UpdateEmpleadoByID(ctrl.db, idObj, input)
 	if err != nil {
+		if errors.Is(err, gorm.ErrDuplicatedKey) || strings.Contains(err.Error(), "23505") || strings.Contains(err.Error(), "duplicate key") {
+			c.JSON(http.StatusConflict, gin.H{
+				"error":   "No se pudo modificar el empleado.",
+				"detalle": "El nuevo RUT o usuario ingresado ya está en uso por otra cuenta de empleado.",
+			})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"Error": "Error interno al modificar el empleado."})
 		return
 	}
@@ -375,10 +396,14 @@ func (ctrl *EmpleadoController) CreateRolController(c *gin.Context) {
 
 	err = CreateRol(ctrl.db, &nuevoRol)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":   "No se pudo registrar el rol.",
-			"detalle": "El nombre ya se encuentra registrado en el sistema.",
-		})
+		if errors.Is(err, gorm.ErrDuplicatedKey) || strings.Contains(err.Error(), "23505") || strings.Contains(err.Error(), "duplicate key") {
+			c.JSON(http.StatusConflict, gin.H{
+				"error":   "No se pudo registrar el rol.",
+				"detalle": "El nombre del rol ya se encuentra registrado en el sistema.",
+			})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error interno al registrar el rol."})
 		return
 	}
 
@@ -421,6 +446,13 @@ func (ctrl *EmpleadoController) DeleteRolByIDController(c *gin.Context) {
 
 	err = DeleteRolByID(ctrl.db, id)
 	if err != nil {
+		if strings.Contains(err.Error(), "23503") || strings.Contains(err.Error(), "foreign key constraint") {
+			c.JSON(http.StatusConflict, gin.H{
+				"error":   "No se pudo eliminar el rol.",
+				"detalle": "Este rol actualmente está asignado a uno o más empleados y no puede ser eliminado.",
+			})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error interno al eliminar el rol."})
 		return
 	}
@@ -491,6 +523,13 @@ func (ctrl *EmpleadoController) UpdateRolByIDController(c *gin.Context) {
 
 	err = UpdateRolByID(ctrl.db, id, input)
 	if err != nil {
+		if errors.Is(err, gorm.ErrDuplicatedKey) || strings.Contains(err.Error(), "23505") || strings.Contains(err.Error(), "duplicate key") {
+			c.JSON(http.StatusConflict, gin.H{
+				"error":   "No se pudo modificar el rol.",
+				"detalle": "Ya existe otro rol con ese mismo nombre en el sistema.",
+			})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"Error": "Error interno al modificar el rol."})
 		return
 	}

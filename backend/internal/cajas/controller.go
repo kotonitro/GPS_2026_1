@@ -3,6 +3,7 @@ package cajas
 import (
 	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
@@ -74,10 +75,14 @@ func (ctrl *CajaController) CreateCajaController(c *gin.Context) {
 
 	err := CreateCaja(ctrl.db, &nuevaCaja)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":   "No se pudo registrar la caja.",
-			"detalle": "La ubicación ya se encuentra registrada en el sistema.",
-		})
+		if errors.Is(err, gorm.ErrDuplicatedKey) || strings.Contains(err.Error(), "23505") || strings.Contains(err.Error(), "duplicate key") {
+			c.JSON(http.StatusConflict, gin.H{
+				"error":   "No se pudo registrar la caja.",
+				"detalle": "Ya existe una caja con ese nombre o ubicación registrada en el sistema.",
+			})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error interno al registrar la caja en la base de datos."})
 		return
 	}
 
@@ -85,7 +90,6 @@ func (ctrl *CajaController) CreateCajaController(c *gin.Context) {
 		"mensaje": "Caja creada exitosamente.",
 		"id_caja": nuevaCaja.ID,
 	})
-
 }
 
 func (ctrl *CajaController) DeleteCajaByIDController(c *gin.Context) {
@@ -96,6 +100,13 @@ func (ctrl *CajaController) DeleteCajaByIDController(c *gin.Context) {
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.JSON(http.StatusNotFound, gin.H{"error": "La caja que intenta eliminar no existe."})
+			return
+		}
+		if strings.Contains(err.Error(), "23503") || strings.Contains(err.Error(), "foreign key constraint") {
+			c.JSON(http.StatusConflict, gin.H{
+				"error":   "No se pudo eliminar la caja.",
+				"detalle": "Esta caja tiene registros históricos asociados y no puede ser eliminada.",
+			})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error interno al eliminar la caja."})
@@ -136,6 +147,13 @@ func (ctrl *CajaController) UpdateCajaByIDController(c *gin.Context) {
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.JSON(http.StatusNotFound, gin.H{"Error": "La caja a modificar no existe."})
+			return
+		}
+		if errors.Is(err, gorm.ErrDuplicatedKey) || strings.Contains(err.Error(), "23505") || strings.Contains(err.Error(), "duplicate key") {
+			c.JSON(http.StatusConflict, gin.H{
+				"error":   "No se pudo modificar la caja.",
+				"detalle": "Ya existe otra caja registrada con ese mismo nombre o ubicación.",
+			})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"Error": "Error interno al modificar la caja."})
