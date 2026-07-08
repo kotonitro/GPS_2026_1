@@ -1,15 +1,16 @@
 <script lang="ts">
-	import { ShoppingCart, Users, Wallet, Package, AlertCircle } from '@lucide/svelte';
+	import { ShoppingCart, Users, Wallet, Package, AlertCircle, Receipt } from '@lucide/svelte';
 	import { onMount } from 'svelte';
-	import { apiClientes, apiProductos, obtenerPromociones } from '$lib/api';
+	import { apiClientes, apiProductos, apiVentas, obtenerPromociones, apiCajas, apiEmpleados } from '$lib/api';
 
-
-	let ventasHoy = $state(3830);
-	let clientesAtendidos = $state(47);
+	let ventasHoy = $state(0);
+	let clientesAtendidos = $state(0);
+	let ticketPromedio = $state(0);
 	let fiadosPendientes = $state(0);
 	let clientesDeudores = $state(0);
 	let productosAgotados = $state(0);
 	
+	let ultimasVentas = $state<any[]>([]);
 	let productos = $state<any[]>([]);
 	let promociones = $state<any[]>([]);
 	let hoy = $derived(new Date());
@@ -52,6 +53,7 @@
 	}
 
 	onMount(async () => {
+		// 1. Cargar clientes y calcular fiados pendientes
 		try {
 			const res = await apiClientes.getAll();
 			const clientes = Array.isArray(res) ? res : [];
@@ -71,6 +73,7 @@
 			console.error('Error al cargar clientes para el dashboard:', error);
 		}
 
+		// 2. Cargar productos y contar alertas de stock
 		try {
 			const resProductos = await apiProductos.getAll();
 			productos = Array.isArray(resProductos) ? resProductos : [];
@@ -87,6 +90,76 @@
 			console.error('Error al cargar productos para el dashboard:', error);
 		}
 
+		// 3. Cargar ventas para Ventas Hoy, Clientes Atendidos, Ticket Promedio y últimas ventas
+		try {
+			// Cargar empleados para mapear ID -> Nombre
+			let mapaEmpleados = new Map<string, string>();
+			try {
+				const resEmp = await apiEmpleados.getAll();
+				const emps = Array.isArray(resEmp) ? resEmp : [];
+				for (const e of emps) {
+					mapaEmpleados.set(e.id_empleado, `${e.nombre} ${e.apellido || ''}`.trim());
+				}
+			} catch (error) {
+				console.error('Error al cargar empleados para mapear nombres:', error);
+			}
+
+			// Cargar cajas para mapear ID -> Nombre
+			let mapaCajas = new Map<string, string>();
+			try {
+				const resCajas = await apiCajas.getAll();
+				const cjs = Array.isArray(resCajas) ? resCajas : [];
+				for (const c of cjs) {
+					mapaCajas.set(c.id_caja, c.nombre);
+				}
+			} catch (error) {
+				console.error('Error al cargar cajas para mapear nombres:', error);
+			}
+
+			const resVentas = await apiVentas.getAll();
+			const ventas = Array.isArray(resVentas) ? resVentas : [];
+
+			// Filtrar las de hoy (desde las 00:00:00 local)
+			const inicioHoy = new Date();
+			inicioHoy.setHours(0, 0, 0, 0);
+
+			let sumaHoy = 0;
+			let cantidadHoy = 0;
+
+			for (const v of ventas) {
+				const fechaVenta = new Date(v.fecha_emision);
+				if (fechaVenta >= inicioHoy) {
+					sumaHoy += v.monto_total || 0;
+					cantidadHoy++;
+				}
+			}
+
+			ventasHoy = sumaHoy;
+			clientesAtendidos = cantidadHoy;
+			ticketPromedio = cantidadHoy > 0 ? (sumaHoy / cantidadHoy) : 0;
+
+			// Ordenar por fecha descendente y tomar las últimas 4
+			const ordenadas = [...ventas].sort((a, b) => {
+				return new Date(b.fecha_emision).getTime() - new Date(a.fecha_emision).getTime();
+			});
+
+			ultimasVentas = ordenadas.slice(0, 4).map(v => {
+				const empNombre = mapaEmpleados.get(v.id_empleado) || 'Público general';
+				const cajaNombre = mapaCajas.get(v.id_caja) || 'Caja';
+				return {
+					empleado: empNombre,
+					caja: cajaNombre,
+					monto: v.monto_total,
+					fecha: new Date(v.fecha_emision),
+					estado: v.metodo_pago && v.metodo_pago.nombre_metodo ? v.metodo_pago.nombre_metodo : 'Efectivo',
+					desc: `Venta #${v.id_venta.slice(0, 8)}...`
+				};
+			});
+		} catch (error) {
+			console.error('Error al cargar ventas para el dashboard:', error);
+		}
+
+		// 4. Cargar promociones activas reales
 		try {
 			const resPromos = await obtenerPromociones();
 			promociones = Array.isArray(resPromos) ? resPromos : [];
@@ -94,15 +167,6 @@
 			console.error('Error al cargar promociones para el dashboard:', error);
 		}
 	});
-
-	let ultimasVentas = $state([
-		{ cliente: 'Jorge Mendoza', monto: 102, fecha: new Date(), estado: 'Efectivo', desc: 'Manzana 2kg + Leche + Pan' },
-		{ cliente: 'Doña Rosa López', monto: 56, fecha: new Date(Date.now() - 3600000), estado: 'Fiado', desc: 'Jitomate 1kg + Cebolla + Refresco' },
-		{ cliente: 'Público general', monto: 66, fecha: new Date(Date.now() - 7200000), estado: 'Efectivo', desc: 'Gansito x3 + Agua x2' },
-		{ cliente: 'Lucía Ramírez', monto: 141, fecha: new Date(Date.now() - 10800000), estado: 'Efectivo', desc: 'Huevo + Leche + Pan Bimbo' }
-	]);
-
-
 
 	function formatCurrency(amount: number) {
 		return new Intl.NumberFormat('es-CL', {
@@ -124,33 +188,30 @@
 	<title>Dashboard General - GPSproject</title>
 </svelte:head>
 
-
 <div class="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-	
+	<!-- Ventas Hoy -->
 	<div class="flex flex-col justify-center rounded-xl border border-border-color bg-bg-card p-6 shadow-sm transition-all hover:border-border-color-hover">
 		<div class="flex items-center justify-between mb-4">
 			<div class="flex h-10 w-10 items-center justify-center rounded-lg bg-primario/10 text-primario">
 				<ShoppingCart size={20} />
 			</div>
-			<span class="rounded-full bg-exito/10 px-2 py-0.5 text-xs font-bold text-exito">+12%</span>
 		</div>
 		<h3 class="text-3xl font-bold text-text-primary">{formatCurrency(ventasHoy)}</h3>
 		<p class="mt-1 text-xs font-bold uppercase tracking-wider text-text-secondary">Ventas Hoy</p>
 	</div>
 
-	
+	<!-- Clientes Atendidos -->
 	<div class="flex flex-col justify-center rounded-xl border border-border-color bg-bg-card p-6 shadow-sm transition-all hover:border-border-color-hover">
 		<div class="flex items-center justify-between mb-4">
 			<div class="flex h-10 w-10 items-center justify-center rounded-lg bg-exito/10 text-exito">
 				<Users size={20} />
 			</div>
-			<span class="rounded-full bg-exito/10 px-2 py-0.5 text-xs font-bold text-exito">+5 vs ayer</span>
 		</div>
 		<h3 class="text-3xl font-bold text-text-primary">{clientesAtendidos}</h3>
 		<p class="mt-1 text-xs font-bold uppercase tracking-wider text-text-secondary">Clientes Atendidos</p>
 	</div>
 
-	
+	<!-- Fiados Pendientes -->
 	<div class="flex flex-col justify-center rounded-xl border border-border-color bg-bg-card p-6 shadow-sm transition-all hover:border-border-color-hover">
 		<div class="flex items-center justify-between mb-4">
 			<div class="flex h-10 w-10 items-center justify-center rounded-lg bg-danger-color/10 text-danger-color">
@@ -162,7 +223,7 @@
 		<p class="mt-1 text-xs font-bold uppercase tracking-wider text-text-secondary">Fiados Pendientes</p>
 	</div>
 
-	
+	<!-- Agotados / Bajo Stock -->
 	<div class="flex flex-col justify-center rounded-xl border border-border-color bg-bg-card p-6 shadow-sm transition-all hover:border-border-color-hover">
 		<div class="flex items-center justify-between mb-4">
 			<div class="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-500/10 text-orange-500">
@@ -188,8 +249,8 @@
 			{#each ultimasVentas as venta}
 				<div class="flex items-center justify-between border-b border-border-color p-5 last:border-0 hover:bg-text-primary/[0.015] transition-colors">
 					<div>
-						<h4 class="font-bold text-text-primary">{venta.cliente}</h4>
-						<p class="text-sm text-text-secondary">{venta.desc}</p>
+						<h4 class="font-bold text-text-primary">{venta.empleado}</h4>
+						<p class="text-sm text-text-secondary">{venta.caja} • {venta.desc}</p>
 					</div>
 					<div class="text-right">
 						<h4 class="font-bold text-text-primary">{formatCurrency(venta.monto)}</h4>
