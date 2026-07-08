@@ -33,8 +33,8 @@ type MetodoPago struct {
 
 type Fiado struct {
 	ID          string    `gorm:"primaryKey;type:uuid;default:gen_random_uuid()" json:"id_fiado"`
-	ClienteID   string    `json:"id_cliente"`
-	VentaID     string    `json:"id_venta"`
+	ClienteID   string    `gorm:"type:uuid" json:"id_cliente"`
+	VentaID     string    `gorm:"type:uuid" json:"id_venta"`
 	FechaInicio time.Time `json:"fecha_inicio"`
 	FechaLimite time.Time `json:"fecha_limite"`
 }

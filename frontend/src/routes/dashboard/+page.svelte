@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { ShoppingCart, Users, Wallet, Package, AlertCircle, Receipt } from '@lucide/svelte';
 	import { onMount } from 'svelte';
-	import { apiClientes, apiProductos, apiVentas, obtenerPromociones } from '$lib/api';
+	import { apiClientes, apiProductos, apiVentas, obtenerPromociones, apiCajas, apiEmpleados } from '$lib/api';
 
 	let ventasHoy = $state(0);
 	let clientesAtendidos = $state(0);
@@ -52,6 +52,30 @@
 
 		// 3. Cargar ventas para Ventas Hoy, Clientes Atendidos, Ticket Promedio y últimas ventas
 		try {
+			// Cargar empleados para mapear ID -> Nombre
+			let mapaEmpleados = new Map<string, string>();
+			try {
+				const resEmp = await apiEmpleados.getAll();
+				const emps = Array.isArray(resEmp) ? resEmp : [];
+				for (const e of emps) {
+					mapaEmpleados.set(e.id_empleado, `${e.nombre} ${e.apellido || ''}`.trim());
+				}
+			} catch (error) {
+				console.error('Error al cargar empleados para mapear nombres:', error);
+			}
+
+			// Cargar cajas para mapear ID -> Nombre
+			let mapaCajas = new Map<string, string>();
+			try {
+				const resCajas = await apiCajas.getAll();
+				const cjs = Array.isArray(resCajas) ? resCajas : [];
+				for (const c of cjs) {
+					mapaCajas.set(c.id_caja, c.nombre);
+				}
+			} catch (error) {
+				console.error('Error al cargar cajas para mapear nombres:', error);
+			}
+
 			const resVentas = await apiVentas.getAll();
 			const ventas = Array.isArray(resVentas) ? resVentas : [];
 
@@ -80,8 +104,11 @@
 			});
 
 			ultimasVentas = ordenadas.slice(0, 4).map(v => {
+				const empNombre = mapaEmpleados.get(v.id_empleado) || 'Público general';
+				const cajaNombre = mapaCajas.get(v.id_caja) || 'Caja';
 				return {
-					cliente: v.id_empleado ? `Empleado: ${v.id_empleado.slice(0, 8)}...` : 'Público general',
+					empleado: empNombre,
+					caja: cajaNombre,
 					monto: v.monto_total,
 					fecha: new Date(v.fecha_emision),
 					estado: v.metodo_pago && v.metodo_pago.nombre_metodo ? v.metodo_pago.nombre_metodo : 'Efectivo',
@@ -199,8 +226,8 @@
 			{#each ultimasVentas as venta}
 				<div class="flex items-center justify-between border-b border-border-color p-5 last:border-0 hover:bg-text-primary/[0.015] transition-colors">
 					<div>
-						<h4 class="font-bold text-text-primary">{venta.cliente}</h4>
-						<p class="text-sm text-text-secondary">{venta.desc}</p>
+						<h4 class="font-bold text-text-primary">{venta.empleado}</h4>
+						<p class="text-sm text-text-secondary">{venta.caja} • {venta.desc}</p>
 					</div>
 					<div class="text-right">
 						<h4 class="font-bold text-text-primary">{formatCurrency(venta.monto)}</h4>

@@ -1,6 +1,13 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
-	import { apiFetch, apiClientes, apiVentas, apiCajas, obtenerPromociones } from '$lib/api';
+	import {
+		apiFetch,
+		apiClientes,
+		apiVentas,
+		apiCajas,
+		obtenerPromociones,
+		apiEmpleados
+	} from '$lib/api';
 	import { auth } from '$lib/authStore.svelte';
 	import { toast } from '$lib/toastStore.svelte';
 	import {
@@ -103,6 +110,7 @@
 	let promociones = $state<Promocion[]>([]);
 	let cajas = $state<Caja[]>([]);
 	let ventas = $state<Venta[]>([]);
+	let empleados = $state<any[]>([]);
 
 	// POS Cart & Register State
 	let selectedCajaId = $state<string>('');
@@ -144,8 +152,7 @@
 		return ventas.filter((v) => {
 			if (!query) return true;
 			return (
-				v.id_venta.toLowerCase().includes(query) ||
-				v.id_empleado.toLowerCase().includes(query)
+				v.id_venta.toLowerCase().includes(query) || v.id_empleado.toLowerCase().includes(query)
 			);
 		});
 	});
@@ -205,7 +212,9 @@
 	}
 
 	// Totals computations
-	let subtotal = $derived(cart.reduce((acc, item) => acc + item.producto.precio * item.cantidad, 0));
+	let subtotal = $derived(
+		cart.reduce((acc, item) => acc + item.producto.precio * item.cantidad, 0)
+	);
 	let discountAmount = $derived(
 		cart.reduce((acc, item) => acc + getBestDiscountForItem(item).discount, 0)
 	);
@@ -241,7 +250,9 @@
 			);
 		}).length
 	);
-	let ticketPromedio = $derived(cantidadVentasHoy > 0 ? Math.round(totalVendidoHoy / cantidadVentasHoy) : 0);
+	let ticketPromedio = $derived(
+		cantidadVentasHoy > 0 ? Math.round(totalVendidoHoy / cantidadVentasHoy) : 0
+	);
 
 	// Selected client details
 	let selectedClientData = $derived(clientes.find((c) => c.id_cliente === selectedClienteId));
@@ -299,19 +310,22 @@
 	async function loadData() {
 		loading = true;
 		try {
-			const [resProducts, resClients, resCajas, resSales, resPromociones] = await Promise.all([
-				apiFetch('/inventario/productos').catch(() => []),
-				apiClientes.getAll().catch(() => []),
-				apiCajas.getAll().catch(() => []),
-				apiVentas.getAll().catch(() => []),
-				obtenerPromociones().catch(() => [])
-			]);
+			const [resProducts, resClients, resCajas, resSales, resPromociones, resEmployees] =
+				await Promise.all([
+					apiFetch('/inventario/productos').catch(() => []),
+					apiClientes.getAll().catch(() => []),
+					apiCajas.getAll().catch(() => []),
+					apiVentas.getAll().catch(() => []),
+					obtenerPromociones().catch(() => []),
+					apiEmpleados.getAll().catch(() => [])
+				]);
 
 			productos = Array.isArray(resProducts) ? resProducts : [];
 			clientes = Array.isArray(resClients) ? resClients : [];
 			cajas = Array.isArray(resCajas) ? resCajas.filter((c) => c.activo) : [];
 			ventas = Array.isArray(resSales) ? resSales : [];
 			promociones = Array.isArray(resPromociones) ? resPromociones : [];
+			empleados = Array.isArray(resEmployees) ? resEmployees : [];
 
 			// Detect Caja using Local Storage
 			detectCaja();
@@ -385,7 +399,9 @@
 	}
 
 	function addToCart(producto: Producto) {
-		const existingItemIndex = cart.findIndex((item) => item.producto.id_producto === producto.id_producto);
+		const existingItemIndex = cart.findIndex(
+			(item) => item.producto.id_producto === producto.id_producto
+		);
 		if (existingItemIndex > -1) {
 			const item = cart[existingItemIndex];
 			if (item.cantidad + 1 > producto.stock) {
@@ -407,7 +423,10 @@
 			if (newQty <= 0) {
 				cart.splice(index, 1);
 			} else if (newQty > item.producto.stock) {
-				toast.show(`Solo hay ${item.producto.stock} unidades disponibles de ${item.producto.nombre}`, 'error');
+				toast.show(
+					`Solo hay ${item.producto.stock} unidades disponibles de ${item.producto.nombre}`,
+					'error'
+				);
 			} else {
 				cart[index].cantidad = newQty;
 			}
@@ -461,7 +480,7 @@
 		}
 
 		submitting = true;
-		
+
 		const detallesPayload = cart.map((item) => {
 			const { discount } = getBestDiscountForItem(item);
 			return {
@@ -471,14 +490,16 @@
 			};
 		});
 
-		const metodoIdForBackend = selectedMetodoId === 'fiado' 
-			? '11111111-1111-1111-1111-111111111111' 
-			: selectedMetodoId;
+		const metodoIdForBackend =
+			selectedMetodoId === 'fiado' ? '33333333-3333-3333-3333-333333333333' : selectedMetodoId;
 
 		const payload = {
 			id_caja: selectedCajaId,
 			id_metodo: metodoIdForBackend,
-			pago: selectedMetodoId === '11111111-1111-1111-1111-111111111111' ? (cashReceived as number) : total,
+			pago:
+				selectedMetodoId === '11111111-1111-1111-1111-111111111111'
+					? (cashReceived as number)
+					: total,
 			vuelto: selectedMetodoId === '11111111-1111-1111-1111-111111111111' ? change : 0,
 			monto_total: total,
 			monto_descuento: discountAmount,
@@ -493,7 +514,10 @@
 				await apiClientes.update(selectedClienteId, {
 					fiado_actual: nuevoFiado
 				} as any);
-				toast.show(`Fiado registrado por ${formatCurrency(total)} para ${selectedClientData.nombre}`, 'success');
+				toast.show(
+					`Fiado registrado por ${formatCurrency(total)} para ${selectedClientData.nombre}`,
+					'success'
+				);
 			}
 
 			toast.show('Venta registrada con éxito.', 'success');
@@ -516,8 +540,20 @@
 		return prod ? prod.nombre : 'Producto desconocido';
 	}
 
+	function getEmpleadoName(empleadoId: string) {
+		const emp = empleados.find((e) => e.id_empleado === empleadoId);
+		return emp ? `${emp.nombre} ${emp.apellido || ''}`.trim() : 'Desconocido';
+	}
+
+	function getCajaName(cajaId: string) {
+		const c = cajas.find((cj) => cj.id_caja === cajaId);
+		return c ? c.nombre : 'Caja desconocida';
+	}
+
 	// Get name of current caja
-	let activeCajaName = $derived(cajas.find((c) => c.id_caja === selectedCajaId)?.nombre || 'Ninguna');
+	let activeCajaName = $derived(
+		cajas.find((c) => c.id_caja === selectedCajaId)?.nombre || 'Ninguna'
+	);
 </script>
 
 <svelte:head>
@@ -530,14 +566,20 @@
 	<div class="flex">
 		<button
 			onclick={() => (activeTab = 'pos')}
-			class="inline-flex items-center gap-2 border-b-2 px-6 py-3 text-sm font-semibold transition-all duration-200 {activeTab === 'pos' ? 'border-primario text-primario' : 'border-transparent text-text-secondary hover:text-text-primary'}"
+			class="inline-flex items-center gap-2 border-b-2 px-6 py-3 text-sm font-semibold transition-all duration-200 {activeTab ===
+			'pos'
+				? 'border-primario text-primario'
+				: 'border-transparent text-text-secondary hover:text-text-primary'}"
 		>
 			<ShoppingBag size={18} />
 			<span>Registrar Venta (Scanner POS)</span>
 		</button>
 		<button
 			onclick={() => (activeTab = 'history')}
-			class="inline-flex items-center gap-2 border-b-2 px-6 py-3 text-sm font-semibold transition-all duration-200 {activeTab === 'history' ? 'border-primario text-primario' : 'border-transparent text-text-secondary hover:text-text-primary'}"
+			class="inline-flex items-center gap-2 border-b-2 px-6 py-3 text-sm font-semibold transition-all duration-200 {activeTab ===
+			'history'
+				? 'border-primario text-primario'
+				: 'border-transparent text-text-secondary hover:text-text-primary'}"
 		>
 			<History size={18} />
 			<span>Historial de Ventas</span>
@@ -546,14 +588,13 @@
 
 	<!-- Caja Detection Indicator -->
 	<div class="flex items-center gap-3 pr-4">
-		<div class="flex items-center gap-2 rounded-lg border border-border-color bg-bg-card px-3 py-1.5 text-xs text-text-secondary">
+		<div
+			class="flex items-center gap-2 rounded-lg border border-border-color bg-bg-card px-3 py-1.5 text-xs text-text-secondary"
+		>
 			<Laptop size={14} class="text-primario" />
 			<span>Terminal asociado a: <strong class="text-text-primary">{activeCajaName}</strong></span>
 		</div>
-		<button
-			onclick={changeCaja}
-			class="text-xs text-primario hover:underline font-semibold"
-		>
+		<button onclick={changeCaja} class="text-xs text-primario hover:underline font-semibold">
 			Cambiar Caja
 		</button>
 	</div>
@@ -567,20 +608,40 @@
 	<!-- POS TAB -->
 	{#if activeTab === 'pos'}
 		<div class="grid grid-cols-1 gap-6 lg:grid-cols-12">
-			
 			<!-- POS Scanner Information Panel (Left side) -->
-			<div class="flex flex-col gap-6 lg:col-span-7 justify-center items-center rounded-xl border border-dashed border-border-color bg-bg-card/50 p-8 text-center min-h-[400px]">
-				
+			<div
+				class="flex flex-col gap-6 lg:col-span-7 justify-center items-center rounded-xl border border-dashed border-border-color bg-bg-card/50 p-8 text-center min-h-[400px]"
+			>
 				<!-- Bouncing Scan Circle -->
-				<div class="relative flex h-28 w-28 items-center justify-center rounded-full bg-primario/10 text-primario animate-pulse">
-					<svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-						<path stroke-linecap="round" stroke-linejoin="round" d="M3 5v14c0 1.1.9 2 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2z"/>
-						<path stroke-linecap="round" stroke-linejoin="round" d="M7 7v10M10 7v10M13 7v10M17 7v10"/>
+				<div
+					class="relative flex h-28 w-28 items-center justify-center rounded-full bg-primario/10 text-primario animate-pulse"
+				>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						class="h-16 w-16"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke="currentColor"
+						stroke-width="1.5"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							d="M3 5v14c0 1.1.9 2 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2z"
+						/>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							d="M7 7v10M10 7v10M13 7v10M17 7v10"
+						/>
 					</svg>
 					<!-- Glowing Green Status Indicator -->
 					<span class="absolute right-1 bottom-1 flex h-4 w-4">
-						<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-exito opacity-75"></span>
-						<span class="relative inline-flex rounded-full h-4 w-4 bg-exito border-2 border-bg-card"></span>
+						<span
+							class="animate-ping absolute inline-flex h-full w-full rounded-full bg-exito opacity-75"
+						></span>
+						<span class="relative inline-flex rounded-full h-4 w-4 bg-exito border-2 border-bg-card"
+						></span>
 					</span>
 				</div>
 
@@ -589,7 +650,8 @@
 						<span>Lector de Barra Activo</span>
 					</h3>
 					<p class="text-sm text-text-secondary max-w-sm mt-2">
-						El sistema está listo. Simplemente pasa la etiqueta de código de barras del producto por el lector físico para registrarlo en el carrito.
+						El sistema está listo. Simplemente pasa la etiqueta de código de barras del producto por
+						el lector físico para registrarlo en el carrito.
 					</p>
 					<p class="text-xs text-text-muted mt-1">
 						(No es necesario hacer clic en ningún campo de texto)
@@ -598,17 +660,27 @@
 
 				<!-- Visual Feedback: Last Scanned Item -->
 				{#if lastScannedProduct}
-					<div class="w-full max-w-md rounded-xl border border-primario/30 bg-primario/5 p-4 text-left flex justify-between items-center animate-modal-enter">
+					<div
+						class="w-full max-w-md rounded-xl border border-primario/30 bg-primario/5 p-4 text-left flex justify-between items-center animate-modal-enter"
+					>
 						<div class="flex-1">
-							<span class="text-[10px] uppercase font-bold tracking-wider text-primario flex items-center gap-1">
+							<span
+								class="text-[10px] uppercase font-bold tracking-wider text-primario flex items-center gap-1"
+							>
 								<Sparkles size={10} /> Escaneado Recientemente
 							</span>
 							<p class="font-bold text-text-primary text-sm mt-1">{lastScannedProduct.nombre}</p>
-							<p class="text-xs text-text-muted mt-0.5">{lastScannedProduct.marca} • Cód: {lastScannedProduct.codigo_barras}</p>
+							<p class="text-xs text-text-muted mt-0.5">
+								{lastScannedProduct.marca} • Cód: {lastScannedProduct.codigo_barras}
+							</p>
 						</div>
 						<div class="text-right">
-							<span class="text-base font-black text-primario">{formatCurrency(lastScannedProduct.precio)}</span>
-							<p class="text-[10px] text-text-muted mt-0.5">Stock restante: {lastScannedProduct.stock}</p>
+							<span class="text-base font-black text-primario"
+								>{formatCurrency(lastScannedProduct.precio)}</span
+							>
+							<p class="text-[10px] text-text-muted mt-0.5">
+								Stock restante: {lastScannedProduct.stock}
+							</p>
 						</div>
 					</div>
 				{/if}
@@ -636,35 +708,54 @@
 
 			<!-- Cart & Checkout (Right side) -->
 			<div class="lg:col-span-5">
-				<form onsubmit={handleCheckout} class="flex flex-col rounded-xl border border-border-color bg-bg-card shadow-lg overflow-hidden">
-					<header class="border-b border-border-color bg-text-primary/[0.02] p-4 flex justify-between items-center">
+				<form
+					onsubmit={handleCheckout}
+					class="flex flex-col rounded-xl border border-border-color bg-bg-card shadow-lg overflow-hidden"
+				>
+					<header
+						class="border-b border-border-color bg-text-primary/[0.02] p-4 flex justify-between items-center"
+					>
 						<h3 class="font-bold text-text-primary flex items-center gap-2">
 							<ShoppingCart size={18} class="text-primario" />
 							<span>Carrito de Ventas</span>
 						</h3>
 						{#if cart.length > 0}
-							<button type="button" onclick={clearCart} class="text-xs text-danger-color hover:underline">
+							<button
+								type="button"
+								onclick={clearCart}
+								class="text-xs text-danger-color hover:underline"
+							>
 								Vaciar
 							</button>
 						{/if}
 					</header>
 
 					<!-- Cart Items List -->
-					<div class="p-4 flex flex-col gap-3 min-h-[220px] max-h-[300px] overflow-y-auto border-b border-border-color">
+					<div
+						class="p-4 flex flex-col gap-3 min-h-[220px] max-h-[300px] overflow-y-auto border-b border-border-color"
+					>
 						{#if cart.length === 0}
-							<div class="flex flex-col items-center justify-center h-full text-center text-text-muted py-8">
+							<div
+								class="flex flex-col items-center justify-center h-full text-center text-text-muted py-8"
+							>
 								<ShoppingBag size={32} class="mb-2 opacity-50" />
 								<p class="text-sm">Escanea productos para agregarlos al carrito</p>
 							</div>
 						{:else}
 							{#each cart as item (item.producto.id_producto)}
 								{@const { discount, promo } = getBestDiscountForItem(item)}
-								<div class="flex items-center justify-between gap-3 p-2 rounded-lg bg-text-primary/[0.015] border border-border-color/50">
+								<div
+									class="flex items-center justify-between gap-3 p-2 rounded-lg bg-text-primary/[0.015] border border-border-color/50"
+								>
 									<div class="flex-1">
-										<p class="text-sm font-semibold text-text-primary line-clamp-1">{item.producto.nombre}</p>
-										<p class="text-xs text-primario font-bold">{formatCurrency(item.producto.precio)} c/u</p>
+										<p class="text-sm font-semibold text-text-primary line-clamp-1">
+											{item.producto.nombre}
+										</p>
+										<p class="text-xs text-primario font-bold">
+											{formatCurrency(item.producto.precio)} c/u
+										</p>
 									</div>
-									
+
 									<!-- Quantity Control -->
 									<div class="flex items-center gap-2">
 										<button
@@ -674,7 +765,9 @@
 										>
 											<Minus size={12} />
 										</button>
-										<span class="text-sm font-bold w-6 text-center text-text-primary">{item.cantidad}</span>
+										<span class="text-sm font-bold w-6 text-center text-text-primary"
+											>{item.cantidad}</span
+										>
 										<button
 											type="button"
 											onclick={() => updateQuantity(item.producto.id_producto, 1)}
@@ -696,7 +789,11 @@
 												</span>
 												{#if promo}
 													<span class="text-[9px] text-accent font-bold">
-														{promo.tipo === 'NXM' ? `${promo.lleva}x${promo.paga}` : promo.tipo === 'porcentaje' ? `-${promo.descuento}%` : 'Promo'}
+														{promo.tipo === 'NXM'
+															? `${promo.lleva}x${promo.paga}`
+															: promo.tipo === 'porcentaje'
+																? `-${promo.descuento}%`
+																: 'Promo'}
 													</span>
 												{/if}
 											{:else}
@@ -720,31 +817,54 @@
 
 					<!-- Checkout Options -->
 					<div class="p-4 flex flex-col gap-4 bg-text-primary/[0.005]">
-
 						<!-- Payment Method Selection -->
 						<div class="flex flex-col gap-1">
-							<span class="text-xs font-bold uppercase tracking-wider text-text-secondary mb-1">Método de Pago</span>
+							<span class="text-xs font-bold uppercase tracking-wider text-text-secondary mb-1"
+								>Método de Pago</span
+							>
 							<div class="grid grid-cols-3 gap-2">
 								<button
 									type="button"
-									onclick={() => { selectedMetodoId = '11111111-1111-1111-1111-111111111111'; cashReceived = ''; }}
-									class="flex flex-col items-center justify-center p-2 rounded-lg border text-xs font-semibold gap-1 transition-all {selectedMetodoId === '11111111-1111-1111-1111-111111111111' ? 'border-primario bg-primario/10 text-primario' : 'border-border-color text-text-secondary hover:bg-text-primary/5'}"
+									disabled={cart.length === 0}
+									onclick={() => {
+										selectedMetodoId = '11111111-1111-1111-1111-111111111111';
+										cashReceived = '';
+									}}
+									class="flex flex-col items-center justify-center p-2 rounded-lg border text-xs font-semibold gap-1 transition-all {selectedMetodoId ===
+									'11111111-1111-1111-1111-111111111111'
+										? 'border-primario bg-primario/10 text-primario'
+										: 'border-border-color text-text-secondary hover:bg-text-primary/5'} disabled:opacity-50 disabled:cursor-not-allowed"
 								>
 									<Coins size={16} />
 									<span>Efectivo</span>
 								</button>
 								<button
 									type="button"
-									onclick={() => { selectedMetodoId = '22222222-2222-2222-2222-222222222222'; cashReceived = ''; selectedClienteId = ''; }}
-									class="flex flex-col items-center justify-center p-2 rounded-lg border text-xs font-semibold gap-1 transition-all {selectedMetodoId === '22222222-2222-2222-2222-222222222222' ? 'border-primario bg-primario/10 text-primario' : 'border-border-color text-text-secondary hover:bg-text-primary/5'}"
+									disabled={cart.length === 0}
+									onclick={() => {
+										selectedMetodoId = '22222222-2222-2222-2222-222222222222';
+										cashReceived = '';
+										selectedClienteId = '';
+									}}
+									class="flex flex-col items-center justify-center p-2 rounded-lg border text-xs font-semibold gap-1 transition-all {selectedMetodoId ===
+									'22222222-2222-2222-2222-222222222222'
+										? 'border-primario bg-primario/10 text-primario'
+										: 'border-border-color text-text-secondary hover:bg-text-primary/5'} disabled:opacity-50 disabled:cursor-not-allowed"
 								>
 									<CreditCard size={16} />
 									<span>Tarjeta</span>
 								</button>
 								<button
 									type="button"
-									onclick={() => { selectedMetodoId = 'fiado'; cashReceived = ''; }}
-									class="flex flex-col items-center justify-center p-2 rounded-lg border text-xs font-semibold gap-1 transition-all {selectedMetodoId === 'fiado' ? 'border-primario bg-primario/10 text-primario' : 'border-border-color text-text-secondary hover:bg-text-primary/5'}"
+									disabled={cart.length === 0}
+									onclick={() => {
+										selectedMetodoId = 'fiado';
+										cashReceived = '';
+									}}
+									class="flex flex-col items-center justify-center p-2 rounded-lg border text-xs font-semibold gap-1 transition-all {selectedMetodoId ===
+									'fiado'
+										? 'border-primario bg-primario/10 text-primario'
+										: 'border-border-color text-text-secondary hover:bg-text-primary/5'} disabled:opacity-50 disabled:cursor-not-allowed"
 								>
 									<User size={16} />
 									<span>Fiado</span>
@@ -757,43 +877,82 @@
 							<!-- Cash Received -->
 							<div class="flex gap-4">
 								<div class="flex-1 flex flex-col gap-1">
-									<label for="cashReceived" class="text-xs font-bold uppercase tracking-wider text-text-secondary">Efectivo Recibido</label>
+									<label
+										for="cashReceived"
+										class="text-xs font-bold uppercase tracking-wider text-text-secondary"
+										>Efectivo Recibido</label
+									>
 									<div class="relative flex items-center">
 										<span class="absolute left-3 text-sm text-text-muted font-bold">$</span>
-										<input id="cashReceived" type="number" min="0" placeholder="0" bind:value={cashReceived} class="w-full rounded-lg border border-border-color bg-bg-card py-2 pl-7 pr-3 text-sm text-text-primary outline-none focus:border-accent" required />
+										<input
+											id="cashReceived"
+											type="number"
+											min="0"
+											placeholder="0"
+											bind:value={cashReceived}
+											disabled={cart.length === 0}
+											class="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none w-full rounded-lg border border-border-color bg-bg-card py-2 pl-7 pr-3 text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-accent focus:border-accent disabled:opacity-50 disabled:cursor-not-allowed"
+											required
+										/>
 									</div>
 								</div>
 								<div class="flex-1 flex flex-col justify-end pb-1">
-									<span class="text-xs font-bold uppercase tracking-wider text-text-muted">Vuelto:</span>
+									<span class="text-xs font-bold uppercase tracking-wider text-text-muted"
+										>Vuelto:</span
+									>
 									<span class="text-lg font-black text-exito mt-1">{formatCurrency(change)}</span>
 								</div>
 							</div>
 						{:else if selectedMetodoId === 'fiado'}
 							<!-- Client Selection -->
 							<div class="flex flex-col gap-1">
-								<label for="clientSelect" class="text-xs font-bold uppercase tracking-wider text-text-secondary">Cliente Asoc.</label>
-								<select id="clientSelect" bind:value={selectedClienteId} class="w-full rounded-lg border border-border-color bg-bg-card p-2.5 text-sm text-text-primary outline-none focus:border-accent" required>
+								<label
+									for="clientSelect"
+									class="text-xs font-bold uppercase tracking-wider text-text-secondary"
+									>Cliente Asoc.</label
+								>
+								<select
+									id="clientSelect"
+									bind:value={selectedClienteId}
+									disabled={cart.length === 0}
+									class="w-full rounded-lg border border-border-color bg-bg-card p-2.5 text-sm text-text-primary outline-none focus:border-accent disabled:opacity-50 disabled:cursor-not-allowed"
+									required
+								>
 									<option value="" disabled>-- Selecciona un cliente --</option>
 									{#each clientes as cli}
-										<option value={cli.id_cliente}>{cli.nombre} (Deuda: {formatCurrency(cli.fiado_actual)})</option>
+										<option value={cli.id_cliente}
+											>{cli.nombre} (Deuda: {formatCurrency(cli.fiado_actual)})</option
+										>
 									{/each}
 								</select>
 								{#if selectedClientData}
-									<div class="mt-2 p-3 rounded-lg border text-xs flex flex-col gap-1 {isFiadoLimitExceeded ? 'border-red-500/15 bg-danger-bg text-danger-color' : 'border-border-color bg-text-primary/[0.01]' }">
+									<div
+										class="mt-2 p-3 rounded-lg border text-xs flex flex-col gap-1 {isFiadoLimitExceeded
+											? 'border-red-500/15 bg-danger-bg text-danger-color'
+											: 'border-border-color bg-text-primary/[0.01]'}"
+									>
 										<div class="flex justify-between">
 											<span>Fiado Actual:</span>
-											<span class="font-bold">{formatCurrency(selectedClientData.fiado_actual)}</span>
+											<span class="font-bold"
+												>{formatCurrency(selectedClientData.fiado_actual)}</span
+											>
 										</div>
 										<div class="flex justify-between">
 											<span>Cupo Máximo:</span>
-											<span class="font-bold">{formatCurrency(selectedClientData.fiado_maximo)}</span>
+											<span class="font-bold"
+												>{formatCurrency(selectedClientData.fiado_maximo)}</span
+											>
 										</div>
-										<div class="flex justify-between border-t border-dashed pt-1 mt-1 font-semibold">
+										<div
+											class="flex justify-between border-t border-dashed pt-1 mt-1 font-semibold"
+										>
 											<span>Nueva Deuda:</span>
 											<span>{formatCurrency(selectedClientData.fiado_actual + total)}</span>
 										</div>
 										{#if isFiadoLimitExceeded}
-											<p class="font-bold text-[10px] uppercase mt-1">⚠️ Excede el saldo máximo permitido</p>
+											<p class="font-bold text-[10px] uppercase mt-1">
+												⚠️ Excede el saldo máximo permitido
+											</p>
 										{/if}
 									</div>
 								{/if}
@@ -812,7 +971,9 @@
 									<span>-{formatCurrency(discountAmount)}</span>
 								</div>
 							{/if}
-							<div class="flex justify-between items-center text-text-primary border-t border-dashed border-border-color pt-2 mt-1">
+							<div
+								class="flex justify-between items-center text-text-primary border-t border-dashed border-border-color pt-2 mt-1"
+							>
 								<span class="font-black text-sm">TOTAL:</span>
 								<span class="font-black text-2xl text-primario">{formatCurrency(total)}</span>
 							</div>
@@ -840,39 +1001,46 @@
 	<!-- HISTORY TAB -->
 	{#if activeTab === 'history'}
 		<!-- Stats -->
-		<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-			<div class="flex flex-col justify-center rounded-xl border border-border-color bg-bg-card p-5 shadow-sm">
-				<span class="mb-1 text-sm font-bold uppercase tracking-wider text-text-muted">Total Recaudado Hoy</span>
+		<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+			<div
+				class="flex flex-col justify-center rounded-xl border border-border-color bg-bg-card p-5 shadow-sm"
+			>
+				<span class="mb-1 text-sm font-bold uppercase tracking-wider text-text-muted"
+					>Total Recaudado Hoy</span
+				>
 				<h3 class="text-2xl font-black text-text-primary">{formatCurrency(totalVendidoHoy)}</h3>
 			</div>
-			<div class="flex flex-col justify-center rounded-xl border border-border-color bg-bg-card p-5 shadow-sm">
-				<span class="mb-1 text-sm font-bold uppercase tracking-wider text-text-muted">Ventas Registradas Hoy</span>
+			<div
+				class="flex flex-col justify-center rounded-xl border border-border-color bg-bg-card p-5 shadow-sm"
+			>
+				<span class="mb-1 text-sm font-bold uppercase tracking-wider text-text-muted"
+					>Ventas Registradas Hoy</span
+				>
 				<h3 class="text-2xl font-black text-text-primary">{cantidadVentasHoy}</h3>
-			</div>
-			<div class="flex flex-col justify-center rounded-xl border border-border-color bg-bg-card p-5 shadow-sm">
-				<span class="mb-1 text-sm font-bold uppercase tracking-wider text-text-muted">Ticket Promedio Hoy</span>
-				<h3 class="text-2xl font-black text-primario">{formatCurrency(ticketPromedio)}</h3>
 			</div>
 		</div>
 
 		<!-- Search Sales -->
-		<div class="mb-6 rounded-xl border border-border-color bg-bg-card p-4 shadow-sm">
-			<div class="relative flex overflow-hidden rounded-lg border border-[rgba(15,30,54,0.15)] bg-white focus-within:border-accent dark:bg-bg-primary">
-				<div class="flex items-center pl-4 text-text-muted">
-					<Search size={16} />
-				</div>
+		<div class="mb-6">
+			<div class="relative w-full sm:max-w-xs">
+				<Search
+					class="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-text-muted"
+					size={20}
+				/>
 				<input
 					type="text"
 					bind:value={searchHistoryQuery}
 					placeholder="Buscar venta por ID..."
-					class="w-full border-none bg-transparent px-3 py-2.5 text-sm text-text-primary outline-none"
+					class="w-full rounded-xl border border-border-color bg-bg-card py-2.5 pl-10 pr-4 text-sm text-text-primary transition-colors focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario"
 				/>
 			</div>
 		</div>
 
 		<!-- Sales Table -->
 		{#if filteredSales.length === 0}
-			<div class="flex flex-col items-center justify-center rounded-xl border border-border-color bg-bg-card p-16 text-center shadow-md">
+			<div
+				class="flex flex-col items-center justify-center rounded-xl border border-border-color bg-bg-card p-16 text-center shadow-md"
+			>
 				<FileText size={48} class="mb-3 text-text-muted" />
 				<h3 class="font-semibold text-text-primary">No se encontraron ventas</h3>
 				<p class="text-sm text-text-secondary max-w-sm mt-1">
@@ -884,12 +1052,30 @@
 				<table class="w-full text-left border-collapse">
 					<thead>
 						<tr>
-							<th class="border-b border-border-color bg-text-primary/4 p-4 text-xs font-bold uppercase tracking-wider text-text-secondary">ID Venta</th>
-							<th class="border-b border-border-color bg-text-primary/4 p-4 text-xs font-bold uppercase tracking-wider text-text-secondary">Fecha y Hora</th>
-							<th class="border-b border-border-color bg-text-primary/4 p-4 text-xs font-bold uppercase tracking-wider text-text-secondary">Método de Pago</th>
-							<th class="border-b border-border-color bg-text-primary/4 p-4 text-xs font-bold uppercase tracking-wider text-text-secondary">Descuento</th>
-							<th class="border-b border-border-color bg-text-primary/4 p-4 text-xs font-bold uppercase tracking-wider text-text-secondary">Total</th>
-							<th class="w-[100px] border-b border-border-color bg-text-primary/4 p-4 text-right text-xs font-bold uppercase tracking-wider text-text-secondary">Detalles</th>
+							<th
+								class="border-b border-border-color bg-text-primary/4 p-4 text-xs font-bold uppercase tracking-wider text-text-secondary"
+								>ID Venta</th
+							>
+							<th
+								class="border-b border-border-color bg-text-primary/4 p-4 text-xs font-bold uppercase tracking-wider text-text-secondary"
+								>Fecha y Hora</th
+							>
+							<th
+								class="border-b border-border-color bg-text-primary/4 p-4 text-xs font-bold uppercase tracking-wider text-text-secondary"
+								>Método de Pago</th
+							>
+							<th
+								class="border-b border-border-color bg-text-primary/4 p-4 text-xs font-bold uppercase tracking-wider text-text-secondary"
+								>Descuento</th
+							>
+							<th
+								class="border-b border-border-color bg-text-primary/4 p-4 text-xs font-bold uppercase tracking-wider text-text-secondary"
+								>Total</th
+							>
+							<th
+								class="w-[100px] border-b border-border-color bg-text-primary/4 p-4 text-right text-xs font-bold uppercase tracking-wider text-text-secondary"
+								>Detalles</th
+							>
 						</tr>
 					</thead>
 					<tbody>
@@ -902,12 +1088,19 @@
 									{new Date(sale.fecha_emision).toLocaleString('es-CL')}
 								</td>
 								<td class="border-b border-border-color p-4">
-									<span class="text-xs font-semibold px-2 py-0.5 rounded-full {sale.metodo_pago?.nombre_metodo === 'Tarjeta' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}">
+									<span
+										class="text-xs font-semibold px-2 py-0.5 rounded-full {sale.metodo_pago
+											?.nombre_metodo === 'Tarjeta'
+											? 'bg-blue-100 text-blue-800'
+											: 'bg-green-100 text-green-800'}"
+									>
 										{sale.metodo_pago?.nombre_metodo || 'Efectivo'}
 									</span>
 								</td>
 								<td class="border-b border-border-color p-4 text-sm text-danger-color">
-									{sale.monto_descuento > 0 ? `-${formatCurrency(sale.monto_descuento)}` : 'Ninguno'}
+									{sale.monto_descuento > 0
+										? `-${formatCurrency(sale.monto_descuento)}`
+										: 'Ninguno'}
 								</td>
 								<td class="border-b border-border-color p-4 text-sm font-bold text-text-primary">
 									{formatCurrency(sale.monto_total)}
@@ -932,14 +1125,25 @@
 
 <!-- Detail Modal -->
 {#if showDetailModal && selectedSale}
-	<div class="fixed inset-0 z-50 flex items-center justify-center bg-text-primary/40 p-5 backdrop-blur-[4px]" onclick={() => (showDetailModal = false)} role="presentation">
-		<div class="w-full max-w-[600px] overflow-hidden rounded-xl border border-border-color bg-bg-card shadow-lg animate-modal-enter" onclick={(e) => e.stopPropagation()} role="dialog">
+	<div
+		class="fixed inset-0 z-50 flex items-center justify-center bg-text-primary/40 p-5 backdrop-blur-[4px]"
+		onclick={() => (showDetailModal = false)}
+		role="presentation"
+	>
+		<div
+			class="w-full max-w-[600px] overflow-hidden rounded-xl border border-border-color bg-bg-card shadow-lg animate-modal-enter"
+			onclick={(e) => e.stopPropagation()}
+			role="dialog"
+		>
 			<header class="flex items-center justify-between border-b border-border-color p-5">
 				<div>
 					<h2 class="text-lg font-bold text-text-primary">Detalle de Venta</h2>
 					<p class="text-xs text-text-muted mt-0.5">ID: {selectedSale.id_venta}</p>
 				</div>
-				<button class="inline-flex cursor-pointer items-center justify-center rounded-lg border border-border-color bg-text-primary/3 p-2 text-text-secondary transition-all duration-200 hover:border-border-color-hover hover:bg-text-primary/7 hover:text-text-primary" onclick={() => (showDetailModal = false)}>&times;</button>
+				<button
+					class="inline-flex cursor-pointer items-center justify-center rounded-lg border border-border-color bg-text-primary/3 p-2 text-text-secondary transition-all duration-200 hover:border-border-color-hover hover:bg-text-primary/7 hover:text-text-primary"
+					onclick={() => (showDetailModal = false)}>&times;</button
+				>
 			</header>
 			<div class="p-6">
 				<!-- Meta info -->
@@ -957,12 +1161,16 @@
 						</p>
 					</div>
 					<div>
-						<p class="text-text-muted font-medium text-xs uppercase">ID Empleado</p>
-						<p class="font-semibold text-text-primary mt-0.5">{selectedSale.id_empleado}</p>
+						<p class="text-text-muted font-medium text-xs uppercase">Empleado</p>
+						<p class="font-semibold text-text-primary mt-0.5">
+							{getEmpleadoName(selectedSale.id_empleado)}
+						</p>
 					</div>
 					<div>
-						<p class="text-text-muted font-medium text-xs uppercase">ID Caja</p>
-						<p class="font-semibold text-text-primary mt-0.5">{selectedSale.id_caja}</p>
+						<p class="text-text-muted font-medium text-xs uppercase">Caja</p>
+						<p class="font-semibold text-text-primary mt-0.5">
+							{getCajaName(selectedSale.id_caja)}
+						</p>
 					</div>
 				</div>
 
@@ -974,7 +1182,9 @@
 							<tr class="bg-text-primary/2">
 								<th class="p-3 font-semibold text-xs text-text-secondary">Producto</th>
 								<th class="p-3 font-semibold text-xs text-text-secondary text-center">Cant.</th>
-								<th class="p-3 font-semibold text-xs text-text-secondary text-right font-bold">Total</th>
+								<th class="p-3 font-semibold text-xs text-text-secondary text-right font-bold"
+									>Total</th
+								>
 							</tr>
 						</thead>
 						<tbody>
@@ -987,7 +1197,9 @@
 										<td class="p-3 border-b border-border-color text-center text-text-primary">
 											{det.cantidad}
 										</td>
-										<td class="p-3 border-b border-border-color text-right font-semibold text-text-primary">
+										<td
+											class="p-3 border-b border-border-color text-right font-semibold text-text-primary"
+										>
 											{formatCurrency(det.monto_final)}
 										</td>
 									</tr>
@@ -1028,7 +1240,11 @@
 				</div>
 			</div>
 			<footer class="flex justify-end border-t border-border-color bg-text-primary/2 p-4 px-6">
-				<button type="button" class="inline-flex cursor-pointer items-center justify-center rounded-lg border border-border-color bg-bg-secondary px-5 py-2.5 text-sm font-semibold text-text-primary transition-all duration-200 hover:bg-text-primary/5" onclick={() => (showDetailModal = false)}>
+				<button
+					type="button"
+					class="inline-flex cursor-pointer items-center justify-center rounded-lg border border-border-color bg-bg-secondary px-5 py-2.5 text-sm font-semibold text-text-primary transition-all duration-200 hover:bg-text-primary/5"
+					onclick={() => (showDetailModal = false)}
+				>
 					Cerrar
 				</button>
 			</footer>
@@ -1038,32 +1254,49 @@
 
 <!-- Caja Config Configuration Modal -->
 {#if showCajaConfigModal}
-	<div class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-5 backdrop-blur-sm">
-		<div class="w-full max-w-[450px] overflow-hidden rounded-xl border border-border-color bg-bg-card p-6 shadow-2xl animate-modal-enter text-center relative">
+	<div
+		class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-5 backdrop-blur-sm"
+	>
+		<div
+			class="w-full max-w-[450px] overflow-hidden rounded-xl border border-border-color bg-bg-card p-6 shadow-2xl animate-modal-enter text-center relative"
+		>
 			{#if selectedCajaId}
-				<button 
-					type="button" 
+				<button
+					type="button"
 					class="absolute top-4 right-4 text-text-muted hover:text-text-primary text-xl transition-colors"
 					onclick={() => (showCajaConfigModal = false)}
 				>
 					&times;
 				</button>
 			{/if}
-			
-			<div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primario/10 text-primario">
+
+			<div
+				class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primario/10 text-primario"
+			>
 				<Laptop size={28} />
 			</div>
 			<h3 class="text-lg font-bold text-text-primary">Asociar Caja a este Terminal</h3>
 			<p class="text-xs text-text-secondary mt-1.5 max-w-xs mx-auto">
-				Por seguridad y control de arqueo, debes indicar a qué caja corresponde este equipo antes de realizar ventas. Esta selección quedará guardada en este dispositivo.
+				Por seguridad y control de arqueo, debes indicar a qué caja corresponde este equipo antes de
+				realizar ventas. Esta selección quedará guardada en este dispositivo.
 			</p>
-			
+
 			<div class="my-6">
-				<label for="cajaConfigSelect" class="block text-left text-xs font-bold uppercase tracking-wider text-text-secondary mb-2">Selecciona la caja activa</label>
-				<select id="cajaConfigSelect" class="w-full rounded-lg border border-border-color bg-bg-card p-3 text-sm text-text-primary outline-none focus:border-primario" onchange={(e) => handleCajaSelection((e.target as HTMLSelectElement).value)}>
+				<label
+					for="cajaConfigSelect"
+					class="block text-left text-xs font-bold uppercase tracking-wider text-text-secondary mb-2"
+					>Selecciona la caja activa</label
+				>
+				<select
+					id="cajaConfigSelect"
+					class="w-full rounded-lg border border-border-color bg-bg-card p-3 text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-primario focus:border-primario"
+					onchange={(e) => handleCajaSelection((e.target as HTMLSelectElement).value)}
+				>
 					<option value="" disabled selected={!selectedCajaId}>-- Selecciona una caja --</option>
 					{#each cajas as c}
-						<option value={c.id_caja} selected={c.id_caja === selectedCajaId}>{c.nombre} ({c.ubicacion})</option>
+						<option value={c.id_caja} selected={c.id_caja === selectedCajaId}
+							>{c.nombre} ({c.ubicacion})</option
+						>
 					{/each}
 				</select>
 			</div>
@@ -1089,28 +1322,53 @@
 
 <!-- Manual Code Input Modal (For damaged labels) -->
 {#if showManualCodeModal}
-	<div class="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-5 backdrop-blur-sm" onclick={() => (showManualCodeModal = false)} role="presentation">
-		<div class="w-full max-w-[400px] overflow-hidden rounded-xl border border-border-color bg-bg-card shadow-2xl animate-modal-enter" onclick={(e) => e.stopPropagation()} role="dialog">
+	<div
+		class="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-5 backdrop-blur-sm"
+		onclick={() => (showManualCodeModal = false)}
+		role="presentation"
+	>
+		<div
+			class="w-full max-w-[400px] overflow-hidden rounded-xl border border-border-color bg-bg-card shadow-2xl animate-modal-enter"
+			onclick={(e) => e.stopPropagation()}
+			role="dialog"
+		>
 			<header class="flex items-center justify-between border-b border-border-color p-4">
 				<h3 class="font-bold text-text-primary text-sm">Ingreso Manual de Código</h3>
-				<button class="text-text-muted hover:text-text-primary text-lg" onclick={() => (showManualCodeModal = false)}>&times;</button>
+				<button
+					class="text-text-muted hover:text-text-primary text-lg"
+					onclick={() => (showManualCodeModal = false)}>&times;</button
+				>
 			</header>
 			<form onsubmit={handleManualBarcodeSubmit}>
 				<div class="p-5">
-					<label for="manualBarcode" class="block text-xs font-bold uppercase tracking-wider text-text-secondary mb-2">Código de barras</label>
+					<label
+						for="manualBarcode"
+						class="block text-xs font-bold uppercase tracking-wider text-text-secondary mb-2"
+						>Código de barras</label
+					>
 					<input
 						id="manualBarcode"
 						type="text"
 						bind:value={manualBarcodeValue}
 						placeholder="Escribe el código numérico..."
-						class="w-full rounded-lg border border-border-color bg-bg-card p-3 text-sm text-text-primary outline-none focus:border-primario"
+						class="w-full rounded-lg border border-border-color bg-bg-card p-3 text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-primario focus:border-primario"
 						required
 						autofocus
 					/>
 				</div>
-				<footer class="flex justify-end gap-3 border-t border-border-color bg-text-primary/2 p-3 px-5">
-					<button type="button" class="px-4 py-2 rounded-lg border border-border-color text-xs font-semibold text-text-secondary bg-bg-secondary hover:bg-text-primary/5" onclick={() => (showManualCodeModal = false)}>Cancelar</button>
-					<button type="submit" class="px-4 py-2 rounded-lg bg-primario text-white text-xs font-bold hover:bg-primario-hover shadow-sm">Agregar Producto</button>
+				<footer
+					class="flex justify-end gap-3 border-t border-border-color bg-text-primary/2 p-3 px-5"
+				>
+					<button
+						type="button"
+						class="px-4 py-2 rounded-lg border border-border-color text-xs font-semibold text-text-secondary bg-bg-secondary hover:bg-text-primary/5"
+						onclick={() => (showManualCodeModal = false)}>Cancelar</button
+					>
+					<button
+						type="submit"
+						class="px-4 py-2 rounded-lg bg-primario text-white text-xs font-bold hover:bg-primario-hover shadow-sm"
+						>Agregar Producto</button
+					>
 				</footer>
 			</form>
 		</div>
@@ -1119,11 +1377,22 @@
 
 <!-- Scanner Modal -->
 {#if modoEscaneo}
-	<div class="fixed inset-0 z-[110] flex items-center justify-center bg-black/50 p-5 backdrop-blur-sm" onclick={() => (modoEscaneo = false)} role="presentation">
-		<div class="w-full max-w-[460px] overflow-hidden rounded-xl border border-border-color bg-bg-card shadow-2xl animate-modal-enter" onclick={(e) => e.stopPropagation()} role="dialog">
+	<div
+		class="fixed inset-0 z-[110] flex items-center justify-center bg-black/50 p-5 backdrop-blur-sm"
+		onclick={() => (modoEscaneo = false)}
+		role="presentation"
+	>
+		<div
+			class="w-full max-w-[460px] overflow-hidden rounded-xl border border-border-color bg-bg-card shadow-2xl animate-modal-enter"
+			onclick={(e) => e.stopPropagation()}
+			role="dialog"
+		>
 			<header class="flex items-center justify-between border-b border-border-color p-4">
 				<h3 class="font-bold text-text-primary text-sm">Escanear Código de Barras</h3>
-				<button class="text-text-muted hover:text-text-primary text-lg" onclick={() => (modoEscaneo = false)}>&times;</button>
+				<button
+					class="text-text-muted hover:text-text-primary text-lg"
+					onclick={() => (modoEscaneo = false)}>&times;</button
+				>
 			</header>
 			<div class="p-6 flex flex-col items-center justify-center">
 				<Scanner onScan={manejarEscaneo} onClose={() => (modoEscaneo = false)} />

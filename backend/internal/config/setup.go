@@ -87,20 +87,21 @@ func InitialSetup(db *gorm.DB) {
 
 		log.Println("Administrador y rol inicial creados con éxito.")
 	}
-	var countMetodos int64
-	db.Model(&InitialMetodoPago{}).Count(&countMetodos)
+	metodosBasicos := []InitialMetodoPago{
+		{ID: "11111111-1111-1111-1111-111111111111", NombreMetodo: "Efectivo"},
+		{ID: "22222222-2222-2222-2222-222222222222", NombreMetodo: "Tarjeta"},
+		{ID: "33333333-3333-3333-3333-333333333333", NombreMetodo: "Fiado"},
+	}
 
-	if countMetodos == 0 {
-		metodosBasicos := []InitialMetodoPago{
-			{ID: "11111111-1111-1111-1111-111111111111", NombreMetodo: "Efectivo"},
-			{ID: "22222222-2222-2222-2222-222222222222", NombreMetodo: "Tarjeta"},
-		}
-
-		for _, metodo := range metodosBasicos {
+	for _, metodo := range metodosBasicos {
+		var count int64
+		db.Model(&InitialMetodoPago{}).Where("id = ?", metodo.ID).Count(&count)
+		if count == 0 {
 			if err := db.Create(&metodo).Error; err != nil {
 				log.Println("Error al crear método de pago base: ", err)
+			} else {
+				log.Printf("Método de pago base '%s' creado con éxito.\n", metodo.NombreMetodo)
 			}
 		}
-		log.Println("Métodos de pago base creados con éxito.")
 	}
 }
