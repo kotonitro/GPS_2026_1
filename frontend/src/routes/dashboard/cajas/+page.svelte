@@ -7,7 +7,8 @@
 		Trash2,
 		MonitorSmartphone, // Icono representativo para Cajas/Terminales
 		CheckCircle2,
-		XCircle
+		XCircle,
+		X
 	} from '@lucide/svelte';
 	import { toast } from '$lib/toastStore.svelte';
 	import { apiCajas } from '$lib/api';
@@ -231,6 +232,16 @@
 				<option value="Activas">Solo Activas</option>
 				<option value="Inactivas">Solo Inactivas</option>
 			</select>
+
+			<button
+				type="button"
+				title="Limpiar filtros"
+				class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-border-color hover:text-primario disabled:cursor-not-allowed disabled:opacity-50"
+				onclick={() => { searchQuery = ''; filtroEstado = 'Todos'; }}
+				disabled={!searchQuery && filtroEstado === 'Todos'}
+			>
+				<X size={14} strokeWidth={2.5} />
+			</button>
 		</div>
 
 		<button
@@ -401,11 +412,12 @@
 						<input
 							id="nombre"
 							type="text"
+							autocomplete="off"
 							bind:value={formData.nombre}
 							disabled={submitLoading}
 							required
 							placeholder="Ej: Caja Principal 01"
-							class="rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none disabled:opacity-50"
+							class="rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50"
 						/>
 						{#if errNombre}<span class="text-xs font-medium text-danger-color">{errNombre}</span
 							>{/if}
@@ -419,11 +431,12 @@
 						<input
 							id="ubicacion"
 							type="text"
+							autocomplete="off"
 							bind:value={formData.ubicacion}
 							disabled={submitLoading}
 							required
 							placeholder="Ej: Entrada Sur - Pasillo 1"
-							class="rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none disabled:opacity-50"
+							class="rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50"
 						/>
 						{#if errUbicacion}<span class="text-xs font-medium text-danger-color"
 								>{errUbicacion}</span
@@ -440,12 +453,13 @@
 							<input
 								id="saldo_inicial"
 								type="number"
+								autocomplete="off"
 								min="0"
 								step="1"
 								bind:value={formData.saldo_inicial}
 								disabled={submitLoading}
 								required
-								class="w-full rounded-xl border border-border-color bg-bg-primary py-2.5 pl-8 pr-4 text-sm text-text-primary focus:border-primario focus:outline-none disabled:opacity-50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+								class="w-full rounded-xl border border-border-color bg-bg-primary py-2.5 pl-8 pr-4 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
 							/>
 						</div>
 					</div>
@@ -460,12 +474,13 @@
 							<input
 								id="saldo_final"
 								type="number"
+								autocomplete="off"
 								min="0"
 								step="1"
 								bind:value={formData.saldo_final}
 								disabled={submitLoading}
 								required
-								class="w-full rounded-xl border border-border-color bg-bg-primary py-2.5 pl-8 pr-4 text-sm text-text-primary focus:border-primario focus:outline-none disabled:opacity-50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+								class="w-full rounded-xl border border-border-color bg-bg-primary py-2.5 pl-8 pr-4 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
 							/>
 						</div>
 					</div>

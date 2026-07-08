@@ -56,27 +56,27 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}) {
 
 	if (!response.ok) {
 		const errorData = await response.json().catch(() => ({}));
-		throw new Error(errorData.error || 'Error de conexión con el servidor');
+		throw new Error(errorData.error || errorData.Error || errorData.mensaje || 'Error de conexión con el servidor');
 	}
 
 	return response.json();
 }
 
 export async function login(usuario: string, contrasena: string): Promise<Empleado> {
-    return apiFetch('/auth/login', {
-        method: 'POST',
-        body: JSON.stringify({ usuario, contrasena })
-    });
+	return apiFetch('/auth/login', {
+		method: 'POST',
+		body: JSON.stringify({ usuario, contrasena })
+	});
 }
 
 export async function logout(): Promise<void> {
-    return apiFetch('/auth/logout', {
-        method: 'POST'
-    });
+	return apiFetch('/auth/logout', {
+		method: 'POST'
+	});
 }
 
 export async function checkSession(): Promise<Empleado> {
-    return apiFetch('/auth/me');
+	return apiFetch('/auth/me');
 }
 
 //promociones 
@@ -106,7 +106,8 @@ export async function actualizarPromocion(id: string, payload: Partial<Promocion
 		body: JSON.stringify(payload)
 	});
 }
-export async function  obtenerProductos() {
+
+export async function obtenerProductos() {
 	return apiFetch('/inventario/productos');
 }
 
@@ -128,11 +129,40 @@ export const apiClientes = {
 	})
 };
 
+export const apiVentas = {
+	getAll: () => apiFetch('/ventas/'),
+	getById: (id: string) => apiFetch(`/ventas/${id}`),
+	create: (data: {
+		id_caja: string;
+		id_metodo: string;
+		pago: number;
+		vuelto: number;
+		monto_total: number;
+		monto_descuento: number;
+		detalles: Array<{
+			id_producto: string;
+			cantidad: number;
+			monto_final: number;
+		}>;
+	}) => apiFetch('/ventas/', {
+		method: 'POST',
+		body: JSON.stringify(data)
+	})
+};
+
+
 export const apiCategorias = {
     getAll: () => apiFetch('/inventario/categorias'),
     create: (data: { nombre_categoria: string }) => apiFetch('/inventario/categorias', {
         method: 'POST',
         body: JSON.stringify(data)
+    }),
+    update: (id: string, data: { nombre_categoria: string }) => apiFetch(`/inventario/categorias/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data)
+    }),
+    delete: (id: string) => apiFetch(`/inventario/categorias/${id}`, {
+        method: 'DELETE'
     })
 };
 

@@ -54,6 +54,7 @@ func main() {
 	authMiddleware := authCtrl.AuthMiddleware()
 
 	// rutas
+
 	auth.RoutesConfig(api, authCtrl, authMiddleware)
 	cajas.RoutesConfig(api, db, authMiddleware)
 	clientes.RoutesConfig(api, db, authMiddleware)
@@ -61,6 +62,7 @@ func main() {
 	inventario.RoutesConfig(api, db, authMiddleware)
 	ventas.ConfigurarRutas(api, db, authMiddleware)
 	promociones.RoutesConfig(api, db, authMiddleware)
+
 
 	r.Run(":8080")
 }

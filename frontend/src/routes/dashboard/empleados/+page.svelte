@@ -367,7 +367,15 @@
 				<option value="Inactivos">Inactivo</option>
 			</select>
 
-			<!-- Filtro por Rol Dinámico -->
+			<button
+				type="button"
+				title="Limpiar filtros"
+				class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-border-color hover:text-primario disabled:cursor-not-allowed disabled:opacity-50"
+				onclick={() => { searchQuery = ''; filtroRol = 'Todos'; filtroEstado = 'Todos'; }}
+				disabled={!searchQuery && filtroRol === 'Todos' && filtroEstado === 'Todos'}
+			>
+				<X size={14} strokeWidth={2.5} />
+			</button>
 		</div>
 
 		<button
@@ -491,7 +499,7 @@
 <!-- Modal Formulario -->
 {#if isModalOpen}
 	<div
-		class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-modal-enter"
+		class="fixed inset-0 z-50 flex items-center justify-center bg-text-primary/40 p-4 backdrop-blur-sm animate-modal-enter"
 	>
 		<div class="w-full max-w-lg rounded-2xl border border-border-color bg-bg-card shadow-2xl">
 			<div class="flex items-center justify-between border-b border-border-color px-6 py-4">
@@ -523,11 +531,12 @@
 						<input
 							id="rut"
 							type="text"
+							autocomplete="off"
 							value={formData.rut}
 							oninput={handleRutInput}
 							disabled={submitLoading || isEditing}
 							required
-							class="rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none disabled:opacity-50"
+							class="rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50"
 							placeholder="12.345.678-9"
 						/>
 						{#if errRut}<span class="text-xs font-medium text-danger-color">{errRut}</span>{/if}
@@ -541,11 +550,12 @@
 						<input
 							id="nombre"
 							type="text"
+							autocomplete="off"
 							bind:value={formData.nombre}
 							onblur={handleNombreBlur}
 							disabled={submitLoading}
 							required
-							class="rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none disabled:opacity-50"
+							class="rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50"
 						/>
 						{#if errNombre}<span class="text-xs font-medium text-danger-color">{errNombre}</span
 							>{/if}
@@ -559,10 +569,11 @@
 						<input
 							id="usuario"
 							type="text"
+							autocomplete="off"
 							bind:value={formData.usuario}
 							disabled={submitLoading}
 							required
-							class="rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none disabled:opacity-50"
+							class="rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50"
 						/>
 						{#if errUsuario}<span class="text-xs font-medium text-danger-color">{errUsuario}</span
 							>{/if}
@@ -577,10 +588,11 @@
 							<input
 								id="contrasena"
 								type={showPassword ? 'text' : 'password'}
+								autocomplete="off"
 								bind:value={formData.contrasena}
 								disabled={submitLoading}
 								required={!isEditing}
-								class="w-full rounded-xl border border-border-color bg-bg-primary py-2.5 pl-4 pr-11 text-sm text-text-primary focus:border-primario focus:outline-none disabled:opacity-50"
+								class="w-full rounded-xl border border-border-color bg-bg-primary py-2.5 pl-4 pr-11 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50"
 								placeholder={isEditing ? '••••••••' : 'TuC0ntr4s3ña!'}
 							/>
 							<button
@@ -609,10 +621,11 @@
 						<input
 							id="telefono"
 							type="tel"
+							autocomplete="off"
 							bind:value={formData.telefono}
 							disabled={submitLoading}
 							required
-							class="rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none disabled:opacity-50"
+							class="rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50"
 							placeholder="+56 9 1234 5678"
 						/>
 						{#if errTelefono}<span class="text-xs font-medium text-danger-color">{errTelefono}</span
@@ -627,7 +640,7 @@
 							bind:value={formData.id_rol}
 							disabled={submitLoading}
 							required
-							class="rounded-xl border border-border-color bg-bg-primary pl-4 pr-10 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none cursor-pointer disabled:opacity-50"
+							class="rounded-xl border border-border-color bg-bg-primary pl-4 pr-10 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario cursor-pointer disabled:opacity-50"
 						>
 							{#if roles.length === 0}
 								<option value="" disabled>Cargando roles...</option>
