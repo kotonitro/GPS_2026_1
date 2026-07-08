@@ -31,6 +31,19 @@ func (InitialAdmin) TableName() string {
 	return "empleados"
 }
 
+type InitialCaja struct {
+	ID           string `gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	Nombre       string
+	Ubicacion    string
+	Activo       bool
+	SaldoInicial uint
+	SaldoFinal   uint
+}
+
+func (InitialCaja) TableName() string {
+	return "cajas"
+}
+
 type InitialMetodoPago struct {
 	ID           string
 	NombreMetodo string
@@ -74,7 +87,7 @@ func InitialSetup(db *gorm.DB) {
 
 		admin := InitialAdmin{
 			Rut:        "11111111-1",
-			Nombre:     "Administrador",
+			Nombre:     "Admin A",
 			Usuario:    "admin",
 			Contrasena: string(hashContrasena),
 			RolID:      rolAdmin.ID,
@@ -87,6 +100,22 @@ func InitialSetup(db *gorm.DB) {
 
 		log.Println("Administrador y rol inicial creados con éxito.")
 	}
+
+	var cajaInicial InitialCaja
+
+	errCaja := db.Where(InitialCaja{Nombre: "Caja Principal"}).Attrs(InitialCaja{
+		Ubicacion:    "Caja Central",
+		Activo:       true,
+		SaldoInicial: 0,
+		SaldoFinal:   0,
+	}).FirstOrCreate(&cajaInicial).Error
+
+	if errCaja != nil {
+		log.Println("Advertencia: No se pudo inicializar la caja principal: ", errCaja)
+	} else {
+		log.Println("Caja inicial 'Caja Principal' creada con éxito.")
+	}
+
 	metodosBasicos := []InitialMetodoPago{
 		{ID: "11111111-1111-1111-1111-111111111111", NombreMetodo: "Efectivo"},
 		{ID: "22222222-2222-2222-2222-222222222222", NombreMetodo: "Tarjeta"},

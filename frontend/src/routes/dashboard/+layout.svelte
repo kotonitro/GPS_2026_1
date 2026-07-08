@@ -15,11 +15,10 @@
 		Tag,
 		UserCog,
 		LogOut,
-		Wallet,
+		MonitorSmartphone,
 		Sun,
 		Moon,
 		Bell,
-		ClipboardList,
 		Shield
 	} from '@lucide/svelte';
 
@@ -50,7 +49,6 @@
 		if (path.startsWith('/dashboard/empleados')) return 'Empleados';
 		if (path.startsWith('/dashboard/roles')) return 'Roles';
 		if (path.startsWith('/dashboard/cajas')) return 'Cajas';
-		if (path.startsWith('/dashboard/turnos')) return 'Registro turnos';
 		return 'Dashboard';
 	});
 
@@ -166,7 +164,7 @@
 
 					<a
 						href="/dashboard"
-						class="relative flex items-center gap-3 rounded-xl border p-3 transition-colors {isActive(
+						class="relative flex items-center gap-3 rounded-xl border p-3 {isActive(
 							'/dashboard'
 						)
 							? 'border-[#4a3a28] bg-[#382a1b] text-primario'
@@ -181,7 +179,7 @@
 
 					<a
 						href="/dashboard/ventas"
-						class="relative flex items-center gap-3 rounded-xl border p-3 transition-colors {isActive(
+						class="relative flex items-center gap-3 rounded-xl border p-3 {isActive(
 							'/dashboard/ventas'
 						)
 							? 'border-[#4a3a28] bg-[#382a1b] text-primario'
@@ -196,7 +194,7 @@
 
 					<a
 						href="/dashboard/productos"
-						class="relative flex items-center gap-3 rounded-xl border p-3 transition-colors {isActive(
+						class="relative flex items-center gap-3 rounded-xl border p-3 {isActive(
 							'/dashboard/productos'
 						)
 							? 'border-[#4a3a28] bg-[#382a1b] text-primario'
@@ -211,7 +209,7 @@
 
 					<a
 						href="/dashboard/clientes"
-						class="relative flex items-center gap-3 rounded-xl border p-3 transition-colors {isActive(
+						class="relative flex items-center gap-3 rounded-xl border p-3 {isActive(
 							'/dashboard/clientes'
 						)
 							? 'border-[#4a3a28] bg-[#382a1b] text-primario'
@@ -226,7 +224,7 @@
 
 					<a
 						href="/dashboard/promociones"
-						class="relative flex items-center gap-3 rounded-xl border p-3 transition-colors {isActive(
+						class="relative flex items-center gap-3 rounded-xl border p-3 {isActive(
 							'/dashboard/promociones'
 						)
 							? 'border-[#4a3a28] bg-[#382a1b] text-primario'
@@ -250,7 +248,7 @@
 
 						<a
 							href="/dashboard/empleados"
-							class="relative flex items-center gap-3 rounded-xl border p-3 transition-colors {isActive(
+							class="relative flex items-center gap-3 rounded-xl border p-3 {isActive(
 								'/dashboard/empleados'
 							)
 								? 'border-[#4a3a28] bg-[#382a1b] text-primario'
@@ -265,7 +263,7 @@
 
 						<a
 							href="/dashboard/roles"
-							class="relative flex items-center gap-3 rounded-xl border p-3 transition-colors {isActive(
+							class="relative flex items-center gap-3 rounded-xl border p-3 {isActive(
 								'/dashboard/roles'
 							)
 								? 'border-[#4a3a28] bg-[#382a1b] text-primario'
@@ -280,30 +278,15 @@
 
 						<a
 							href="/dashboard/cajas"
-							class="relative flex items-center gap-3 rounded-xl border p-3 transition-colors {isActive(
+							class="relative flex items-center gap-3 rounded-xl border p-3 {isActive(
 								'/dashboard/cajas'
 							)
 								? 'border-[#4a3a28] bg-[#382a1b] text-primario'
 								: 'border-transparent hover:bg-[#241e1a] hover:text-white'}"
 						>
-							<Wallet size={20} />
+							<MonitorSmartphone size={20} />
 							<span class="font-medium">Cajas</span>
 							{#if isActive('/dashboard/cajas')}
-								<span class="absolute right-4 h-1.5 w-1.5 rounded-full bg-primario"></span>
-							{/if}
-						</a>
-
-						<a
-							href="/dashboard/turnos"
-							class="relative flex items-center gap-3 rounded-xl border p-3 transition-colors {isActive(
-								'/dashboard/turnos'
-							)
-								? 'border-[#4a3a28] bg-[#382a1b] text-primario'
-								: 'border-transparent hover:bg-[#241e1a] hover:text-white'}"
-						>
-							<ClipboardList size={20} />
-							<span class="font-medium">Registro turnos</span>
-							{#if isActive('/dashboard/turnos')}
 								<span class="absolute right-4 h-1.5 w-1.5 rounded-full bg-primario"></span>
 							{/if}
 						</a>
@@ -328,7 +311,7 @@
 					</div>
 					<button
 						onclick={toggleTheme}
-						class="rounded-lg p-2 text-[#a39b93] hover:bg-[#241e1a] hover:text-white transition-colors"
+						class="rounded-lg p-2 text-[#a39b93] hover:bg-[#241e1a] hover:text-white"
 						title="Cambiar de modo (Oscuro/Claro)"
 						aria-label="Cambiar tema"
 					>
@@ -359,7 +342,7 @@
 				</div>
 				<div class="relative">
 					<button
-						class="relative rounded-full p-2 text-text-muted transition-colors hover:bg-border-color hover:text-text-primary"
+						class="relative rounded-full p-2 text-text-muted hover:bg-border-color hover:text-text-primary"
 						onclick={toggleNotifications}
 						aria-label="Notificaciones"
 					>

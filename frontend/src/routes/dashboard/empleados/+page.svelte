@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { auth } from '$lib/authStore.svelte';
 	import { onMount } from 'svelte';
 	import {
 		Search,
@@ -50,6 +51,16 @@
 	let showPassword = $state(false);
 	let showDeleteModal = $state(false);
 	let empleadoToDelete = $state<any>(null);
+	let ultimoModificadoRut = $state<string | null>(null);
+
+	// NUEVO: Lista de roles filtrada para el formulario (Oculta Admin a menos que ya lo tenga asignado)
+	let rolesDisponibles = $derived(
+		roles.filter((r) => {
+			const esRolAdmin = (r.nombre || r.Nombre) === 'Admin';
+			const esElRolActualDelEmpleado = isEditing && formData.id_rol === (r.id_rol || r.id || r.ID);
+			return !esRolAdmin || esElRolActualDelEmpleado;
+		})
+	);
 
 	function clearErrors() {
 		errRut = '';
@@ -139,28 +150,54 @@
 		formData.nombre = formatNombreInput(formData.nombre).trim();
 	}
 
+	function handleUsuarioInput(e: Event) {
+		const target = e.target as HTMLInputElement;
+		// Reemplaza cualquier tipo de espacio en blanco por nada
+		const sinEspacios = target.value.replace(/\s/g, '');
+		formData.usuario = sinEspacios;
+		target.value = sinEspacios;
+	}
+
 	// Filtro reactivo actualizado (Texto + Estado + Rol)
 	let empleadosFiltrados = $derived(
-		empleados.filter((emp) => {
-			// 1. Filtro de Búsqueda de texto (Nombre o RUT)
-			const coincideTexto =
-				emp.nombre.toLowerCase().includes(searchQuery.toLowerCase()) ||
-				emp.rut.toLowerCase().includes(searchQuery.toLowerCase());
+		empleados
+			.filter((emp) => {
+				const coincideTexto =
+					emp.nombre.toLowerCase().includes(searchQuery.toLowerCase()) ||
+					emp.rut.toLowerCase().includes(searchQuery.toLowerCase()) ||
+					(emp.usuario || '').toLowerCase().includes(searchQuery.toLowerCase());
 
-			// 2. Filtro de Estado
-			const esActivo = emp.activo !== undefined ? emp.activo : emp.Activo;
-			const coincideEstado =
-				filtroEstado === 'Todos' ||
-				(filtroEstado === 'Activos' && esActivo) ||
-				(filtroEstado === 'Inactivos' && !esActivo);
+				const esActivo = emp.activo !== undefined ? emp.activo : emp.Activo;
+				const coincideEstado =
+					filtroEstado === 'Todos' ||
+					(filtroEstado === 'Activos' && esActivo) ||
+					(filtroEstado === 'Inactivos' && !esActivo);
 
-			// 3. Filtro de Rol
-			const objRol = emp.Rol || emp.rol || {};
-			const nombreRol = objRol.nombre || objRol.Nombre || '';
-			const coincideRol = filtroRol === 'Todos' || nombreRol === filtroRol;
+				const objRol = emp.Rol || emp.rol || {};
+				const nombreRol = objRol.nombre || objRol.Nombre || '';
+				const coincideRol = filtroRol === 'Todos' || nombreRol === filtroRol;
 
-			return coincideTexto && coincideEstado && coincideRol;
-		})
+				return coincideTexto && coincideEstado && coincideRol;
+			})
+			.sort((a, b) => {
+				// Identificar los IDs para comparar con el usuario actual
+				const idA = a.id_empleado || a.ID;
+				const idB = b.id_empleado || b.ID;
+
+				// Ajusta esto dependiendo de cómo se llame el ID en tu auth.user
+				const miId = auth.user?.id_empleado || auth.user?.id || '';
+
+				// 1. Prioridad Máxima: El usuario logueado siempre primero
+				if (idA === miId) return -1;
+				if (idB === miId) return 1;
+
+				// 2. Prioridad Secundaria: El último creado o modificado
+				if (a.rut === ultimoModificadoRut) return -1;
+				if (b.rut === ultimoModificadoRut) return 1;
+
+				// 3. Resto: Orden alfabético por nombre
+				return a.nombre.localeCompare(b.nombre);
+			})
 	);
 
 	onMount(async () => {
@@ -178,7 +215,7 @@
 			empleados = Array.isArray(resEmpleados) ? resEmpleados : [];
 			roles = Array.isArray(resRoles) ? resRoles : [];
 		} catch (error) {
-			toast.show('Error al cargar los datos del sistema.', 'error'); // <- Corregido
+			toast.show('Error al cargar los datos del sistema.', 'error');
 		} finally {
 			isLoading = false;
 		}
@@ -187,6 +224,14 @@
 	function abrirModalNuevo() {
 		isEditing = false;
 		showPassword = false;
+		clearErrors();
+
+		// NUEVO: Usa el primer rol de rolesDisponibles por defecto
+		const primerRolValido =
+			rolesDisponibles.length > 0
+				? rolesDisponibles[0].id_rol || rolesDisponibles[0].id || rolesDisponibles[0].ID
+				: '';
+
 		formData = {
 			id_empleado: '',
 			rut: '',
@@ -194,7 +239,7 @@
 			usuario: '',
 			contrasena: '',
 			telefono: '',
-			id_rol: roles.length > 0 ? roles[0].id_rol || roles[0].id || roles[0].ID : '',
+			id_rol: primerRolValido,
 			activo: true
 		};
 		isModalOpen = true;
@@ -203,6 +248,7 @@
 	function abrirModalEditar(empleado: any) {
 		isEditing = true;
 		showPassword = false;
+		clearErrors();
 		formData = {
 			...empleado,
 			id_rol:
@@ -223,7 +269,6 @@
 		clearErrors();
 		let isValid = true;
 
-		// 1. Validar Nombre
 		if (!formData.nombre.trim()) {
 			errNombre = 'El nombre es obligatorio.';
 			isValid = false;
@@ -241,7 +286,6 @@
 			}
 		}
 
-		// 2. Validar RUT
 		const rawRut = formData.rut.replace(/\./g, '');
 		if (!formData.rut) {
 			errRut = 'El RUT es obligatorio.';
@@ -251,7 +295,6 @@
 			isValid = false;
 		}
 
-		// 3. Validar Usuario
 		if (!formData.usuario.trim()) {
 			errUsuario = 'El usuario es obligatorio.';
 			isValid = false;
@@ -260,7 +303,6 @@
 			isValid = false;
 		}
 
-		// 4. Validar Teléfono
 		if (!formData.telefono.trim()) {
 			errTelefono = 'El teléfono es obligatorio.';
 			isValid = false;
@@ -269,7 +311,6 @@
 			isValid = false;
 		}
 
-		// 5. Validar Contraseña
 		if (!isEditing && !formData.contrasena) {
 			errContrasena = 'La contraseña es obligatoria.';
 			isValid = false;
@@ -284,15 +325,17 @@
 		try {
 			const payload = { ...formData, rut: rawRut };
 
+			ultimoModificadoRut = rawRut;
+
 			if (isEditing) {
 				const dataToUpdate = { ...payload };
 				if (!dataToUpdate.contrasena) delete dataToUpdate.contrasena;
 
 				await apiEmpleados.update(payload.id_empleado || payload.ID, dataToUpdate);
-				toast.show('Empleado actualizado correctamente.', 'success'); // <- Corregido
+				toast.show('Empleado actualizado correctamente.', 'success');
 			} else {
 				await apiEmpleados.create(payload);
-				toast.show('Empleado creado exitosamente.', 'success'); // <- Corregido
+				toast.show('Empleado creado exitosamente.', 'success');
 			}
 
 			cerrarModal();
@@ -305,7 +348,7 @@
 			} else {
 				formGeneralError = error.message || 'Ocurrió un error al guardar el empleado.';
 			}
-			toast.show('No se pudo guardar el empleado.', 'error'); // <- Corregido
+			toast.show('No se pudo guardar el empleado.', 'error');
 		} finally {
 			submitLoading = false;
 		}
@@ -341,15 +384,16 @@
 				<Search class="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-text-muted" />
 				<input
 					type="text"
-					placeholder="Buscar por nombre o RUT..."
+					placeholder="Buscar por nombre, RUT o usuario..."
 					bind:value={searchQuery}
-					class="w-full rounded-xl border border-border-color bg-bg-card py-2.5 pl-10 pr-4 text-sm text-text-primary transition-colors focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario"
+					class="w-full rounded-xl border border-border-color bg-bg-card py-2.5 pl-10 pr-4 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario"
 				/>
 			</div>
 
+			<!-- Filtro de roles de la página (Usa la lista completa de roles) -->
 			<select
 				bind:value={filtroRol}
-				class="w-full sm:w-auto rounded-xl border border-border-color bg-bg-card py-2.5 pl-4 pr-10 text-sm text-text-primary transition-colors focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario cursor-pointer"
+				class="w-full sm:w-auto rounded-xl border border-border-color bg-bg-card py-2.5 pl-4 pr-10 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario cursor-pointer"
 			>
 				<option value="Todos">Todos los roles</option>
 				{#each roles as r}
@@ -360,7 +404,7 @@
 			<!-- Filtro por Estado -->
 			<select
 				bind:value={filtroEstado}
-				class="w-full sm:w-auto rounded-xl border border-border-color bg-bg-card py-2.5 pl-4 pr-10 text-sm text-text-primary transition-colors focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario cursor-pointer"
+				class="w-full sm:w-auto rounded-xl border border-border-color bg-bg-card py-2.5 pl-4 pr-10 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario cursor-pointer"
 			>
 				<option value="Todos">Todos los estados</option>
 				<option value="Activos">Activo</option>
@@ -370,8 +414,12 @@
 			<button
 				type="button"
 				title="Limpiar filtros"
-				class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-border-color hover:text-primario disabled:cursor-not-allowed disabled:opacity-50"
-				onclick={() => { searchQuery = ''; filtroRol = 'Todos'; filtroEstado = 'Todos'; }}
+				class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-text-muted hover:bg-border-color hover:text-primario disabled:cursor-not-allowed disabled:opacity-50"
+				onclick={() => {
+					searchQuery = '';
+					filtroRol = 'Todos';
+					filtroEstado = 'Todos';
+				}}
 				disabled={!searchQuery && filtroRol === 'Todos' && filtroEstado === 'Todos'}
 			>
 				<X size={14} strokeWidth={2.5} />
@@ -414,8 +462,7 @@
 				{:else}
 					{#each empleadosFiltrados as emp (emp.id_empleado || emp.ID)}
 						{@const objRol = emp.Rol || emp.rol || {}}
-						<tr class="transition-colors hover:bg-bg-primary/30">
-							<!-- 1. Empleado (Nombre y RUT) -->
+						<tr class="hover:bg-bg-primary/30">
 							<td class="px-6 py-4">
 								<div class="flex items-center gap-3">
 									<div
@@ -424,23 +471,40 @@
 										{emp.nombre.substring(0, 2).toUpperCase()}
 									</div>
 									<div class="flex flex-col">
-										<span class="font-semibold">{emp.nombre}</span>
+										<div class="flex items-center gap-2">
+											<span class="font-semibold">{emp.nombre}</span>
+
+											<!-- Etiqueta del usuario logueado -->
+											{#if (emp.id_empleado || emp.ID) === (auth.user?.id_empleado || auth.user?.id)}
+												<span
+													class="rounded-md bg-primario/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primario"
+												>
+													Tú
+												</span>
+											{/if}
+
+											<!-- Etiqueta del último modificado (solo si no eres tú mismo) -->
+											{#if emp.rut === ultimoModificadoRut && (emp.id_empleado || emp.ID) !== (auth.user?.id_empleado || auth.user?.id)}
+												<span
+													class="rounded-md bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-600"
+												>
+													Reciente
+												</span>
+											{/if}
+										</div>
 										<span class="text-xs text-text-muted">{emp.rut}</span>
 									</div>
 								</div>
 							</td>
 
-							<!-- 2. Usuario -->
 							<td class="px-6 py-4 font-medium">
 								{emp.usuario}
 							</td>
 
-							<!-- 3. Teléfono -->
 							<td class="px-6 py-4 text-text-muted">
 								{emp.telefono || '-'}
 							</td>
 
-							<!-- 4. Rol -->
 							<td class="px-6 py-4">
 								<div class="flex items-center gap-1.5">
 									{#if objRol.es_admin || objRol.EsAdmin}
@@ -452,7 +516,6 @@
 								</div>
 							</td>
 
-							<!-- 5. Estado -->
 							<td class="px-6 py-4">
 								{#if emp.activo || emp.Activo}
 									<span
@@ -469,22 +532,21 @@
 								{/if}
 							</td>
 
-							<!-- 6. Acciones -->
 							<td class="px-6 py-4 text-right">
 								<div class="flex items-center justify-end gap-2">
 									<button
 										onclick={() => abrirModalEditar(emp)}
-										class="rounded-lg p-2 text-text-muted transition-colors hover:bg-border-color hover:text-primario"
+										class="inline-flex cursor-pointer items-center justify-center rounded-lg border border-border-color bg-text-primary/3 p-2 text-text-secondary transition-all duration-200 hover:border-border-color-hover hover:bg-text-primary/7 hover:text-primario"
 										title="Editar"
 									>
-										<Edit2 size={18} />
+										<Edit2 size={16} />
 									</button>
 									<button
 										onclick={() => abrirModalEliminar(emp)}
-										class="rounded-lg p-2 text-text-muted transition-colors hover:bg-danger-bg hover:text-danger-color"
+										class="inline-flex cursor-pointer items-center justify-center rounded-lg border border-border-color bg-text-primary/3 p-2 text-text-secondary transition-all duration-200 hover:border-red-500/20 hover:bg-danger-bg hover:text-danger-color"
 										title="Eliminar"
 									>
-										<Trash2 size={18} />
+										<Trash2 size={16} />
 									</button>
 								</div>
 							</td>
@@ -508,7 +570,7 @@
 				</h3>
 				<button
 					onclick={cerrarModal}
-					class="rounded-lg p-1 text-text-muted hover:bg-border-color hover:text-text-primary transition-colors"
+					class="rounded-lg p-1 text-text-muted hover:bg-border-color hover:text-text-primary"
 				>
 					<X size={20} />
 				</button>
@@ -570,7 +632,8 @@
 							id="usuario"
 							type="text"
 							autocomplete="off"
-							bind:value={formData.usuario}
+							value={formData.usuario}
+							oninput={handleUsuarioInput}
 							disabled={submitLoading}
 							required
 							class="rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50"
@@ -593,13 +656,13 @@
 								disabled={submitLoading}
 								required={!isEditing}
 								class="w-full rounded-xl border border-border-color bg-bg-primary py-2.5 pl-4 pr-11 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50"
-								placeholder={isEditing ? '••••••••' : 'TuC0ntr4s3ña!'}
+								placeholder={isEditing ? '••••••••' : ''}
 							/>
 							<button
 								type="button"
 								onclick={() => (showPassword = !showPassword)}
 								tabindex="-1"
-								class="absolute right-3 text-text-muted hover:text-primario transition-colors focus:outline-none"
+								class="absolute right-3 text-text-muted hover:text-primario focus:outline-none"
 								title={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
 							>
 								{#if showPassword}
@@ -632,7 +695,7 @@
 							>{/if}
 					</div>
 
-					<!-- Rol Dinámico -->
+					<!-- Rol Dinámico (NUEVO: Usa rolesDisponibles en vez de roles) -->
 					<div class="flex flex-col gap-1.5">
 						<label for="rol" class="text-sm font-semibold text-text-primary">Rol del Sistema</label>
 						<select
@@ -642,10 +705,10 @@
 							required
 							class="rounded-xl border border-border-color bg-bg-primary pl-4 pr-10 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario cursor-pointer disabled:opacity-50"
 						>
-							{#if roles.length === 0}
+							{#if rolesDisponibles.length === 0}
 								<option value="" disabled>Cargando roles...</option>
 							{:else}
-								{#each roles as r}
+								{#each rolesDisponibles as r}
 									<option value={r.id_rol || r.id || r.ID}>{r.nombre || r.Nombre}</option>
 								{/each}
 							{/if}
@@ -661,14 +724,14 @@
 							disabled={submitLoading}
 							class="h-4 w-4 accent-primario cursor-pointer disabled:opacity-50"
 						/>
-						<label
-							for="activo"
-							class="text-sm font-semibold text-text-primary cursor-pointer {submitLoading
-								? 'opacity-50'
-								: ''}"
-						>
-							Empleado Activo en el sistema
-						</label>
+                        <div class="flex flex-col">
+                            <label for="activo" class="text-sm font-semibold text-text-primary cursor-pointer {submitLoading ? 'opacity-50' : ''}">
+                                Empleado activo en el sistema
+                            </label>
+                            <p class="text-xs text-text-muted mt-0.5">
+                                Permite que el empleado pueda ingresar al sistema.
+                            </p>
+                        </div>
 					</div>
 				</div>
 
@@ -677,7 +740,7 @@
 						type="button"
 						onclick={cerrarModal}
 						disabled={submitLoading}
-						class="rounded-xl px-5 py-2.5 text-sm font-semibold text-text-muted hover:bg-border-color hover:text-text-primary transition-colors disabled:opacity-50"
+						class="rounded-xl px-5 py-2.5 text-sm font-semibold text-text-muted hover:bg-border-color hover:text-text-primary disabled:opacity-50"
 					>
 						Cancelar
 					</button>

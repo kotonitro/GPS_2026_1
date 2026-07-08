@@ -81,6 +81,11 @@ func (ctrl *EmpleadoController) CreateEmpleadoController(c *gin.Context) {
 		return
 	}
 
+	if rolAsignar.Nombre == "Admin" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "El rol 'Admin' no puede ser asignado a otros empleados."})
+		return
+	}
+
 	if rolAsignar.EsAdmin && !esSuperAdmin {
 		c.JSON(http.StatusForbidden, gin.H{"error": "No tienes permisos para crear cuentas de administrador."})
 		return
@@ -225,9 +230,16 @@ func (ctrl *EmpleadoController) UpdateEmpleadoByIDController(c *gin.Context) {
 
 	if input.RolID != nil && *input.RolID != empleadoObj.RolID {
 		nuevoRol, errRol := GetRolByID(ctrl.db, *input.RolID)
-		if errRol == nil && nuevoRol.EsAdmin && !esSuperAdmin {
-			c.JSON(http.StatusForbidden, gin.H{"error": "No tienes permisos para otorgar el rol de administrador."})
-			return
+		if errRol == nil {
+			if nuevoRol.Nombre == "Admin" {
+				c.JSON(http.StatusForbidden, gin.H{"error": "El rol 'Admin' no puede ser asignado a otros empleados."})
+				return
+			}
+
+			if nuevoRol.EsAdmin && !esSuperAdmin {
+				c.JSON(http.StatusForbidden, gin.H{"error": "No tienes permisos para otorgar el rol de administrador."})
+				return
+			}
 		}
 	}
 
@@ -351,7 +363,7 @@ func (ctrl *EmpleadoController) CreateRolController(c *gin.Context) {
 	esSuperAdmin := solicitante.Rol.Nombre == "Admin"
 
 	if input.EsAdmin && !esSuperAdmin {
-		c.JSON(http.StatusForbidden, gin.H{"error": "No tienes permisos para crear roles con privilegios."})
+		c.JSON(http.StatusForbidden, gin.H{"error": "No tienes permisos para crear roles administrativos."})
 		return
 	}
 

@@ -16,18 +16,21 @@ import (
 func calcularDescuentoItem(cantidad int, precio float64, promo promociones.Promocion) float64 {
 	switch promo.Tipo {
 	case "NXM":
-		if promo.Lleva > 0 && promo.Paga > 0 && promo.Lleva > promo.Paga {
-			sets := cantidad / promo.Lleva
-			descuentoCant := sets * (promo.Lleva - promo.Paga)
-			return float64(descuentoCant) * precio
+		// Verificar que los punteros no sean nil antes de usarlos
+		if promo.Lleva != nil && promo.Paga != nil {
+			if *promo.Lleva > 0 && *promo.Paga > 0 && *promo.Lleva > *promo.Paga {
+				sets := cantidad / *promo.Lleva
+				descuentoCant := sets * (*promo.Lleva - *promo.Paga)
+				return float64(descuentoCant) * precio
+			}
 		}
 	case "porcentaje":
-		if promo.Descuento > 0 {
-			return float64(cantidad) * precio * (promo.Descuento / 100.0)
+		if promo.Descuento != nil && *promo.Descuento > 0 {
+			return float64(cantidad) * precio * (*promo.Descuento / 100.0)
 		}
 	case "precio_fijo":
-		if promo.Descuento > 0 && precio > promo.Descuento {
-			unitDiscount := precio - promo.Descuento
+		if promo.Descuento != nil && *promo.Descuento > 0 && precio > *promo.Descuento {
+			unitDiscount := precio - *promo.Descuento
 			return float64(cantidad) * unitDiscount
 		}
 	}
@@ -89,7 +92,8 @@ func (ctrl *VentasController) CrearVenta(c *gin.Context) {
 			// Buscar la promoción activa que otorgue el mayor descuento para este ítem
 			var bestDiscount float64 = 0
 			for _, promo := range activePromos {
-				if promo.ProductoID == detalle.ProductoID {
+				// Validar que ProductoID no sea nil antes de desreferenciarlo
+				if promo.ProductoID != nil && *promo.ProductoID == detalle.ProductoID {
 					disc := calcularDescuentoItem(detalle.Cantidad, producto.Precio, promo)
 					if disc > bestDiscount {
 						bestDiscount = disc
