@@ -531,11 +531,12 @@
 						<input
 							id="rut"
 							type="text"
+							autocomplete="off"
 							value={formData.rut}
 							oninput={handleRutInput}
 							disabled={submitLoading || isEditing}
 							required
-							class="rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none disabled:opacity-50"
+							class="rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50"
 							placeholder="12.345.678-9"
 						/>
 						{#if errRut}<span class="text-xs font-medium text-danger-color">{errRut}</span>{/if}
@@ -549,11 +550,12 @@
 						<input
 							id="nombre"
 							type="text"
+							autocomplete="off"
 							bind:value={formData.nombre}
 							onblur={handleNombreBlur}
 							disabled={submitLoading}
 							required
-							class="rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none disabled:opacity-50"
+							class="rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50"
 						/>
 						{#if errNombre}<span class="text-xs font-medium text-danger-color">{errNombre}</span
 							>{/if}
@@ -567,10 +569,11 @@
 						<input
 							id="usuario"
 							type="text"
+							autocomplete="off"
 							bind:value={formData.usuario}
 							disabled={submitLoading}
 							required
-							class="rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none disabled:opacity-50"
+							class="rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50"
 						/>
 						{#if errUsuario}<span class="text-xs font-medium text-danger-color">{errUsuario}</span
 							>{/if}
@@ -585,10 +588,11 @@
 							<input
 								id="contrasena"
 								type={showPassword ? 'text' : 'password'}
+								autocomplete="off"
 								bind:value={formData.contrasena}
 								disabled={submitLoading}
 								required={!isEditing}
-								class="w-full rounded-xl border border-border-color bg-bg-primary py-2.5 pl-4 pr-11 text-sm text-text-primary focus:border-primario focus:outline-none disabled:opacity-50"
+								class="w-full rounded-xl border border-border-color bg-bg-primary py-2.5 pl-4 pr-11 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50"
 								placeholder={isEditing ? '••••••••' : 'TuC0ntr4s3ña!'}
 							/>
 							<button
@@ -617,10 +621,11 @@
 						<input
 							id="telefono"
 							type="tel"
+							autocomplete="off"
 							bind:value={formData.telefono}
 							disabled={submitLoading}
 							required
-							class="rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none disabled:opacity-50"
+							class="rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50"
 							placeholder="+56 9 1234 5678"
 						/>
 						{#if errTelefono}<span class="text-xs font-medium text-danger-color">{errTelefono}</span
@@ -635,7 +640,7 @@
 							bind:value={formData.id_rol}
 							disabled={submitLoading}
 							required
-							class="rounded-xl border border-border-color bg-bg-primary pl-4 pr-10 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none cursor-pointer disabled:opacity-50"
+							class="rounded-xl border border-border-color bg-bg-primary pl-4 pr-10 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario cursor-pointer disabled:opacity-50"
 						>
 							{#if roles.length === 0}
 								<option value="" disabled>Cargando roles...</option>

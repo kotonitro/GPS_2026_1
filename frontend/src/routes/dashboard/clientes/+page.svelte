@@ -503,19 +503,19 @@
 				<div class="grid grid-cols-1 gap-5">
 					<div class="flex flex-col gap-1.5">
 						<label class="text-sm font-semibold text-text-primary" for="formNombre">Nombre Completo</label>
-						<input type="text" id="formNombre" autocomplete="off" class="rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none disabled:opacity-50" placeholder="Ej: Juan Pérez Gómez" bind:value={formNombre} onblur={handleNombreBlur} disabled={submitLoading} required />
+						<input type="text" id="formNombre" autocomplete="off" class="rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50" placeholder="Ej: Juan Pérez Gómez" bind:value={formNombre} onblur={handleNombreBlur} disabled={submitLoading} required />
 						{#if errNombre}<span class="mt-1 text-xs font-medium text-danger-color">{errNombre}</span>{/if}
 					</div>
 
 					<div class="flex flex-col gap-1.5">
 						<label class="text-sm font-semibold text-text-primary" for="formRut">RUT</label>
-						<input type="text" id="formRut" class="rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none disabled:opacity-50" placeholder="Ej: 12.345.678-K" value={formRut} oninput={handleRutInput} disabled={submitLoading || editingCliente !== null} required />
+						<input type="text" id="formRut" class="rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50" placeholder="Ej: 12.345.678-K" value={formRut} oninput={handleRutInput} disabled={submitLoading || editingCliente !== null} required />
 						{#if errRut}<span class="mt-1 text-xs font-medium text-danger-color">{errRut}</span>{/if}
 					</div>
 
 					<div class="flex flex-col gap-1.5">
 						<label class="text-sm font-semibold text-text-primary" for="formTelefono">Número Telefónico</label>
-						<input type="text" id="formTelefono" class="rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none disabled:opacity-50" placeholder="Ej: +56912345678" bind:value={formTelefono} disabled={submitLoading} required />
+						<input type="text" id="formTelefono" class="rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50" placeholder="Ej: +56912345678" bind:value={formTelefono} disabled={submitLoading} required />
 						{#if errTelefono}<span class="mt-1 text-xs font-medium text-danger-color">{errTelefono}</span>{/if}
 					</div>
 
@@ -523,7 +523,7 @@
 						<label class="text-sm font-semibold text-text-primary" for="formFiadoActual">Fiado</label>
 						<div class="relative flex items-center">
 							<span class="absolute left-4 text-text-muted font-medium">$</span>
-							<input type="number" min="0" step="1" id="formFiadoActual" class="w-full rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 pl-8 text-sm text-text-primary focus:border-primario focus:outline-none disabled:opacity-50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" bind:value={formFiadoActual} disabled={submitLoading} required />
+							<input type="number" min="0" step="1" id="formFiadoActual" class="w-full rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 pl-8 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" bind:value={formFiadoActual} disabled={submitLoading} required />
 						</div>
 					</div>
 				</div>
