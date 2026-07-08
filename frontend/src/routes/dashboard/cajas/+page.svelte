@@ -7,7 +7,8 @@
 		Trash2,
 		MonitorSmartphone, // Icono representativo para Cajas/Terminales
 		CheckCircle2,
-		XCircle
+		XCircle,
+		X
 	} from '@lucide/svelte';
 	import { toast } from '$lib/toastStore.svelte';
 	import { apiCajas } from '$lib/api';
@@ -231,6 +232,16 @@
 				<option value="Activas">Solo Activas</option>
 				<option value="Inactivas">Solo Inactivas</option>
 			</select>
+
+			<button
+				type="button"
+				title="Limpiar filtros"
+				class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-border-color hover:text-primario disabled:cursor-not-allowed disabled:opacity-50"
+				onclick={() => { searchQuery = ''; filtroEstado = 'Todos'; }}
+				disabled={!searchQuery && filtroEstado === 'Todos'}
+			>
+				<X size={14} strokeWidth={2.5} />
+			</button>
 		</div>
 
 		<button

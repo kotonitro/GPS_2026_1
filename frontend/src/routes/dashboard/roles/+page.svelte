@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { Search, Plus, Edit2, Trash2, Shield, User, CheckCircle2, XCircle } from '@lucide/svelte';
+	import { Search, Plus, Edit2, Trash2, Shield, User, CheckCircle2, XCircle, X } from '@lucide/svelte';
 	import { toast } from '$lib/toastStore.svelte';
 	import { apiRoles } from '$lib/api';
 
@@ -193,6 +193,16 @@
 				<option value="Admin">Administradores</option>
 				<option value="Regular">Regulares</option>
 			</select>
+
+			<button
+				type="button"
+				title="Limpiar filtros"
+				class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-border-color hover:text-primario disabled:cursor-not-allowed disabled:opacity-50"
+				onclick={() => { searchQuery = ''; filtroPermisos = 'Todos'; }}
+				disabled={!searchQuery && filtroPermisos === 'Todos'}
+			>
+				<X size={14} strokeWidth={2.5} />
+			</button>
 		</div>
 
 		<button

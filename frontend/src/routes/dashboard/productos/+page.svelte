@@ -311,255 +311,246 @@
 </svelte:head>
 
 <div class="h-full">
-	<!-- Page Header & Stats -->
-
-    <div class="mb-8 flex flex-wrap items-center justify-end gap-4">
-		{#if auth.user?.rol?.toLowerCase() === 'admin'}
-            <button
-                onclick={openCreateModal}
-                class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-accent-light to-accent px-5 py-2.5 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-[1px] hover:shadow-glow disabled:cursor-not-allowed disabled:opacity-50"
-            >
-                <Plus size={18} strokeWidth={2.5} />
-                <span>Agregar producto</span>
-            </button>
-        {/if}
-	</div>
-
-	<!-- Main Content Area -->
-	<div class="flex flex-col gap-6">
-		<!-- Search and Filters Bar -->
-		<div class="mb-6 w-full md:w-fit rounded-xl border border-border-color bg-bg-card p-6 shadow-md transition-all duration-300 hover:border-border-color-hover hover:shadow-lg">
-			<div class="flex flex-col sm:flex-row items-center gap-4">
-				<div class="flex min-w-[280px] w-full sm:w-80 overflow-hidden rounded-lg border border-[rgba(15,30,54,0.15)] bg-white focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/15 dark:bg-bg-primary">
-					<div class="flex items-center justify-center pl-4 pr-2 text-text-muted">
-                        <Search size={18} />
-					</div>
-					<input
-						type="text"
-						class="flex-1 border-none bg-transparent px-2 py-3 text-sm text-text-primary outline-none focus:ring-0"
-						placeholder="Buscar producto..."
-						bind:value={searchQuery}
-					/>
-				</div>
-                <div class="flex gap-4 w-full sm:w-auto">
-                    <!-- Category Filter -->
-                    <select 
-                        bind:value={selectedCategoria}
-                        class="w-full sm:w-48 rounded-lg border border-[rgba(15,30,54,0.15)] bg-white px-4 py-3 text-sm font-medium text-text-primary outline-none transition-all focus:border-accent focus:ring-2 focus:ring-accent/15 dark:bg-bg-primary"
-                    >
-                        <option value="Todas">Todas las categorías</option>
-                        {#each categorias as cat (cat.id_categoria)}
-                            <option value={cat.id_categoria}>{cat.nombre_categoria}</option>
-                        {/each}
-                    </select>
-                    
-                    <!-- Status Filter -->
-                    <select 
-                        bind:value={selectedEstado}
-                        class="w-full sm:w-48 rounded-lg border border-[rgba(15,30,54,0.15)] bg-white px-4 py-3 text-sm font-medium text-text-primary outline-none transition-all focus:border-accent focus:ring-2 focus:ring-accent/15 dark:bg-bg-primary"
-                    >
-                        <option value="Todas">Todos los estados</option>
-                        <option value="Disponible">Disponible</option>
-                        <option value="Bajo stock">Bajo stock</option>
-                        <option value="Agotado">Agotado</option>
-                    </select>
-
-                    <button
-                        type="button"
-                        title="Limpiar filtros"
-                        class="flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-lg border border-border-color bg-bg-secondary text-text-muted transition-all duration-200 hover:bg-text-primary/10 hover:text-text-primary focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/15 disabled:cursor-not-allowed disabled:opacity-30"
-                        onclick={() => { searchQuery = ''; selectedCategoria = 'Todas'; selectedEstado = 'Todas'; }}
-                        disabled={!searchQuery && selectedCategoria === 'Todas' && selectedEstado === 'Todas'}
-                    >
-                        <X size={18} />
-                    </button>
-                </div>
+	<!-- Search and Actions Row -->
+	<div class="mb-6 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+		<!-- Bloque de Búsqueda y Filtros -->
+		<div class="flex flex-col gap-3 sm:flex-row sm:items-center flex-1">
+			<!-- Buscador -->
+			<div class="relative w-full sm:max-w-xs">
+				<Search class="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-text-muted" size={20} />
+				<input
+					type="text"
+					placeholder="Buscar producto..."
+					bind:value={searchQuery}
+					class="w-full rounded-xl border border-border-color bg-bg-card py-2.5 pl-10 pr-4 text-sm text-text-primary transition-colors focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario"
+				/>
 			</div>
+
+			<!-- Category Filter -->
+			<select 
+				bind:value={selectedCategoria}
+				class="w-full sm:w-auto rounded-xl border border-border-color bg-bg-card py-2.5 pl-4 pr-10 text-sm text-text-primary transition-colors focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario cursor-pointer"
+			>
+				<option value="Todas">Todas las categorías</option>
+				{#each categorias as cat (cat.id_categoria)}
+					<option value={cat.id_categoria}>{cat.nombre_categoria}</option>
+				{/each}
+			</select>
+			
+			<!-- Status Filter -->
+			<select 
+				bind:value={selectedEstado}
+				class="w-full sm:w-auto rounded-xl border border-border-color bg-bg-card py-2.5 pl-4 pr-10 text-sm text-text-primary transition-colors focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario cursor-pointer"
+			>
+				<option value="Todas">Todos los estados</option>
+				<option value="Disponible">Disponible</option>
+				<option value="Bajo stock">Bajo stock</option>
+				<option value="Agotado">Agotado</option>
+			</select>
+
+			<button
+				type="button"
+				title="Limpiar filtros"
+				class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-border-color hover:text-primario disabled:cursor-not-allowed disabled:opacity-50"
+				onclick={() => { searchQuery = ''; selectedCategoria = 'Todas'; selectedEstado = 'Todas'; }}
+				disabled={!searchQuery && selectedCategoria === 'Todas' && selectedEstado === 'Todas'}
+			>
+				<X size={14} strokeWidth={2.5} />
+			</button>
 		</div>
 
+		<!-- Add Button -->
+		{#if auth.user?.rol?.toLowerCase() === 'admin'}
+			<button
+				onclick={openCreateModal}
+				class="flex w-full items-center justify-center gap-2 rounded-xl bg-primario px-5 py-2.5 text-sm font-semibold text-white transition-transform hover:scale-[1.02] active:scale-95 sm:w-auto"
+			>
+				<Plus size={18} />
+				Nuevo Producto
+			</button>
+		{/if}
+	</div>
+
 		<!-- Data Table -->
-		<div class="overflow-hidden rounded-xl border border-[rgba(15,30,54,0.08)] bg-bg-card shadow-sm">
-			<div class="overflow-x-auto">
-				<table class="w-full text-left text-sm text-text-secondary">
-					<thead class="border-b border-[rgba(15,30,54,0.08)] bg-gray-50/50 text-[0.65rem] font-bold uppercase tracking-wider text-text-muted dark:bg-bg-primary/20">
-						<tr>
-							<th class="px-6 py-4">Producto</th>
-							<th class="px-6 py-4">Categoría</th>
-							<th class="px-6 py-4">Precio</th>
-                            <th class="px-6 py-4">
-                                <button class="flex items-center gap-1 hover:text-text-primary" onclick={toggleSortStock}>
-                                    STOCK
-                                    {#if sortStock === 'asc'}
-                                        <ArrowUp size={12} />
-                                    {:else if sortStock === 'desc'}
-                                        <ArrowDown size={12} />
-                                    {:else}
-                                        <ArrowUpDown size={12} class="opacity-50" />
-                                    {/if}
-                                </button>
-                            </th>
-                            <th class="px-6 py-4">Unidad</th>
-                            <th class="px-6 py-4">Estado</th>
-                            {#if auth.user?.rol?.toLowerCase() === 'admin'}
-							    <th class="px-6 py-4 text-right">Acciones</th>
-                            {/if}
+	<div class="overflow-x-auto rounded-xl border border-border-color bg-bg-card shadow-sm">
+		<table class="w-full whitespace-nowrap text-left text-sm text-text-primary">
+			<thead class="border-b border-border-color bg-bg-primary/50 text-text-muted">
+				<tr>
+					<th class="px-6 py-4 font-semibold">Producto</th>
+					<th class="px-6 py-4 font-semibold">Categoría</th>
+					<th class="px-6 py-4 font-semibold">Precio</th>
+					<th class="px-6 py-4 font-semibold">
+						<button class="flex items-center gap-1 hover:text-text-primary" onclick={toggleSortStock}>
+							STOCK
+							{#if sortStock === 'asc'}
+								<ArrowUp size={12} />
+							{:else if sortStock === 'desc'}
+								<ArrowDown size={12} />
+							{:else}
+								<ArrowUpDown size={12} class="opacity-50" />
+							{/if}
+						</button>
+					</th>
+					<th class="px-6 py-4 font-semibold">Unidad</th>
+					<th class="px-6 py-4 font-semibold">Estado</th>
+					{#if auth.user?.rol?.toLowerCase() === 'admin'}
+						<th class="px-6 py-4 text-right font-semibold">Acciones</th>
+					{/if}
+				</tr>
+			</thead>
+			<tbody class="divide-y divide-border-color">
+				{#if loading}
+					<tr>
+						<td colspan="7" class="px-6 py-12 text-center text-text-muted">
+							Cargando productos...
+						</td>
+					</tr>
+				{:else if filteredProductos.length === 0}
+					<tr>
+						<td colspan="7" class="px-6 py-12 text-center text-text-muted">
+							No se encontraron productos que coincidan con la búsqueda.
+						</td>
+					</tr>
+				{:else}
+					{#each filteredProductos as producto (producto.id_producto)}
+						{@const estado = getEstadoBadge(producto)}
+						<tr class="group transition-colors hover:bg-bg-primary/30">
+							<td class="px-6 py-4">
+								<div class="flex flex-col">
+									<span class="font-bold text-text-primary">{producto.nombre}</span>
+									{#if producto.marca}
+										<span class="text-xs text-text-muted">{producto.marca}</span>
+									{/if}
+								</div>
+							</td>
+							<td class="px-6 py-4">
+								<span class="rounded-full border border-accent-light/40 bg-accent-light/10 px-3 py-1 text-xs font-bold text-accent">
+									{producto.categoria?.nombre_categoria || 'Sin categoría'}
+								</span>
+							</td>
+							<td class="px-6 py-4 font-bold text-text-primary">
+								{formatCurrency(producto.precio)}
+							</td>
+							<td class="px-6 py-4 font-semibold text-text-primary">
+								{producto.stock}
+							</td>
+							<td class="px-6 py-4 text-text-secondary capitalize">
+								{producto.unidad || 'unidades'}
+							</td>
+							<td class="px-6 py-4">
+								<span class="rounded-full border px-2.5 py-1 text-[0.70rem] font-bold {estado.classes}">
+									{estado.text}
+								</span>
+							</td>
+							{#if auth.user?.rol?.toLowerCase() === 'admin'}
+								<td class="px-6 py-4 text-right">
+									<div class="flex items-center justify-end gap-2">
+										<button
+											class="rounded-lg p-2 text-text-muted transition-colors hover:bg-border-color hover:text-primario"
+											onclick={() => openEditModal(producto)}
+											title="Editar"
+										>
+											<Edit2 size={18} />
+										</button>
+										<button
+											class="rounded-lg p-2 text-text-muted transition-colors hover:bg-danger-bg hover:text-danger-color"
+											onclick={() => confirmDelete(producto)}
+											title="Eliminar"
+										>
+											<Trash2 size={18} />
+										</button>
+									</div>
+								</td>
+							{/if}
 						</tr>
-					</thead>
-					<tbody>
-						{#if loading}
-							<tr>
-								<td colspan="7" class="px-6 py-12 text-center text-text-muted">
-									Cargando productos...
-								</td>
-							</tr>
-						{:else if filteredProductos.length === 0}
-							<tr>
-								<td colspan="7" class="px-6 py-12 text-center text-text-muted">
-									No se encontraron productos que coincidan con la búsqueda.
-								</td>
-							</tr>
-						{:else}
-							{#each filteredProductos as producto (producto.id_producto)}
-                                {@const estado = getEstadoBadge(producto)}
-								<tr class="group border-b border-[rgba(15,30,54,0.04)] bg-bg-card transition-colors hover:bg-gray-50/80 last:border-0 dark:hover:bg-bg-primary/40">
-									<td class="px-6 py-4">
-                                        <div class="flex flex-col">
-                                            <span class="font-bold text-text-primary">{producto.nombre}</span>
-                                            {#if producto.marca}
-                                                <span class="text-xs text-text-muted">{producto.marca}</span>
-                                            {/if}
-                                        </div>
-									</td>
-                                    <td class="px-6 py-4">
-                                        <span class="rounded-full border border-accent-light/40 bg-accent-light/10 px-3 py-1 text-xs font-bold text-accent">
-                                            {producto.categoria?.nombre_categoria || 'Sin categoría'}
-                                        </span>
-                                    </td>
-									<td class="px-6 py-4 font-bold text-text-primary">
-										{formatCurrency(producto.precio)}
-									</td>
-                                    <td class="px-6 py-4 font-semibold text-text-primary">
-										{producto.stock}
-									</td>
-                                    <td class="px-6 py-4 text-text-secondary capitalize">
-                                        {producto.unidad || 'unidades'}
-                                    </td>
-                                    <td class="px-6 py-4">
-                                        <span class="rounded-full border px-2.5 py-1 text-[0.70rem] font-bold {estado.classes}">
-                                            {estado.text}
-                                        </span>
-                                    </td>
-                                    {#if auth.user?.rol?.toLowerCase() === 'admin'}
-                                        <td class="px-6 py-4 text-right">
-                                            <div class="flex justify-end gap-2">
-                                                <button
-                                                    onclick={() => openEditModal(producto)}
-                                                    class="inline-flex cursor-pointer items-center justify-center rounded-lg border border-border-color bg-text-primary/3 p-2 text-text-secondary transition-all duration-200 hover:border-border-color-hover hover:bg-text-primary/7 hover:text-text-primary"
-                                                    aria-label="Editar"
-                                                    title="Editar"
-                                                >
-                                                    <Edit2 size={16} />
-                                                </button>
-                                                <button
-                                                    onclick={() => confirmDelete(producto)}
-                                                    class="inline-flex cursor-pointer items-center justify-center rounded-lg border border-border-color bg-text-primary/3 p-2 text-text-secondary transition-all duration-200 hover:border-red-500/20 hover:bg-danger-bg hover:text-danger-color"
-                                                    aria-label="Eliminar"
-                                                    title="Eliminar"
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    {/if}
-								</tr>
 							{/each}
 						{/if}
 					</tbody>
 				</table>
 			</div>
-		</div>
 	</div>
-</div>
 
 <!-- Modal Crear/Editar -->
 {#if showModal}
-	<div class="fixed inset-0 z-50 flex items-center justify-center bg-text-primary/40 p-5 backdrop-blur-[4px]" onclick={closeModal} role="presentation">
-		<div class="w-full max-w-2xl overflow-hidden rounded-xl border border-border-color bg-bg-card shadow-lg animate-modal-enter" onclick={(e) => e.stopPropagation()} role="dialog">
-			<header class="flex items-center justify-between border-b border-border-color p-5">
-				<h2 class="text-lg font-bold text-text-primary">{editingProducto ? 'Editar Producto' : 'Nuevo Producto'}</h2>
-				<button class="inline-flex cursor-pointer items-center justify-center rounded-lg border border-border-color bg-text-primary/3 p-2 text-text-secondary transition-all duration-200 hover:border-border-color-hover hover:bg-text-primary/7 hover:text-text-primary" onclick={closeModal}>&times;</button>
+	<div class="fixed inset-0 z-50 flex items-center justify-center bg-text-primary/40 p-4 backdrop-blur-[4px] animate-modal-enter" onclick={closeModal} role="presentation">
+		<div class="w-full max-w-2xl overflow-hidden rounded-2xl border border-border-color bg-bg-card shadow-2xl" onclick={(e) => e.stopPropagation()} role="dialog">
+			<header class="flex items-center justify-between border-b border-border-color px-6 py-4">
+				<h3 class="text-lg font-bold text-text-primary">{editingProducto ? 'Editar Producto' : 'Añadir Nuevo Producto'}</h3>
+				<button class="rounded-lg p-1 text-text-muted hover:bg-border-color hover:text-text-primary transition-colors" onclick={closeModal}>
+					<X size={20} />
+				</button>
 			</header>
 
 			<form onsubmit={handleSubmit} autocomplete="off" class="p-6 max-h-[80vh] overflow-y-auto">
-					{#if formGeneralError}
-						<div class="mb-6 rounded-xl border border-red-500/20 bg-danger-bg p-4 text-sm text-danger-color">
-							{formGeneralError}
-						</div>
-					{/if}
+				{#if formGeneralError}
+					<div class="mb-5 flex gap-3 rounded-lg border border-red-500/15 bg-danger-bg p-4 text-sm text-danger-color" role="alert">
+						<span>{formGeneralError}</span>
+					</div>
+				{/if}
+				
+				<div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+					<div class="flex flex-col gap-1.5 md:col-span-2">
+						<label class="text-sm font-semibold text-text-primary" for="formNombre">Nombre del Producto *</label>
+						<input type="text" id="formNombre" autocomplete="off" class="rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none disabled:opacity-50" placeholder="Ej: Manzana Roja" bind:value={formNombre} onblur={handleNombreBlur} disabled={submitLoading} required />
+						{#if errNombre}<span class="mt-1 text-xs font-medium text-danger-color">{errNombre}</span>{/if}
+					</div>
+
+					<div class="flex flex-col gap-1.5 md:col-span-2">
+						<label class="text-sm font-semibold text-text-primary" for="formDescripcion">Descripción</label>
+						<textarea id="formDescripcion" rows="2" class="rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none disabled:opacity-50 resize-none" placeholder="Breve descripción del producto..." bind:value={formDescripcion} disabled={submitLoading}></textarea>
+					</div>
 					
-                    <div class="grid grid-cols-1 gap-5 md:grid-cols-2 mb-5">
-                        <div class="flex flex-col gap-1.5 md:col-span-2">
-                            <label class="text-[0.85rem] font-semibold text-text-secondary" for="formNombre">Nombre del Producto *</label>
-                            <input type="text" id="formNombre" autocomplete="off" class="rounded-lg border border-[rgba(15,30,54,0.15)] bg-white px-4 py-3 text-sm text-text-primary outline-none transition-all duration-200 focus:border-accent focus:ring-2 focus:ring-accent/15 disabled:opacity-50 dark:bg-bg-primary" placeholder="Ej: Manzana Roja" bind:value={formNombre} onblur={handleNombreBlur} disabled={submitLoading} required />
-                            {#if errNombre}<span class="mt-1 text-xs font-medium text-danger-color">{errNombre}</span>{/if}
-                        </div>
+					<div class="flex flex-col gap-1.5 md:col-span-1">
+						<label class="text-sm font-semibold text-text-primary" for="formUnidad">Unidad *</label>
+						<select id="formUnidad" class="rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none disabled:opacity-50" bind:value={formUnidad} disabled={submitLoading} required>
+							<option value="unidades">Unidades</option>
+							<option value="kg">Kilogramos (kg)</option>
+						</select>
+					</div>
+					
+					<div class="flex flex-col gap-1.5 md:col-span-1">
+						<label class="text-sm font-semibold text-text-primary" for="formCategoria">Categoría *</label>
+						<div class="relative flex items-center">
+							<input type="text" class="absolute inset-0 z-0 w-full rounded-xl border border-transparent bg-transparent px-4 py-2.5 text-sm text-text-secondary/40 outline-none" value={inlineSuggestion} disabled />
+							<input type="text" id="formCategoria" autocomplete="off" class="relative z-10 w-full rounded-xl border border-border-color bg-transparent px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none disabled:opacity-50" placeholder="Ej: Frutas, Abarrotes..." bind:value={formCategoriaNombre} onkeydown={handleCategoriaKeyDown} disabled={submitLoading} required />
+						</div>
+						{#if errCategoria}<span class="mt-1 text-xs font-medium text-danger-color">{errCategoria}</span>{/if}
+					</div>
+					
+					<div class="flex flex-col gap-1.5">
+						<label class="text-sm font-semibold text-text-primary" for="formPrecio">Precio (CLP) *</label>
+						<input type="number" min="0" id="formPrecio" class="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none disabled:opacity-50" bind:value={formPrecio} disabled={submitLoading} required onfocus={(e) => e.currentTarget.select()} />
+						{#if errPrecio}<span class="mt-1 text-xs font-medium text-danger-color">{errPrecio}</span>{/if}
+					</div>
 
-                        <div class="flex flex-col gap-1.5 md:col-span-2">
-                            <label class="text-[0.85rem] font-semibold text-text-secondary" for="formDescripcion">Descripción</label>
-                            <textarea id="formDescripcion" rows="2" class="rounded-lg border border-[rgba(15,30,54,0.15)] bg-white px-4 py-3 text-sm text-text-primary outline-none transition-all duration-200 focus:border-accent focus:ring-2 focus:ring-accent/15 disabled:opacity-50 dark:bg-bg-primary resize-none" placeholder="Breve descripción del producto..." bind:value={formDescripcion} disabled={submitLoading}></textarea>
-                        </div>
-                        
-                        <div class="flex flex-col gap-1.5 md:col-span-1">
-                            <label class="text-[0.85rem] font-semibold text-text-secondary" for="formUnidad">Unidad *</label>
-                            <select id="formUnidad" class="rounded-lg border border-[rgba(15,30,54,0.15)] bg-white px-4 py-3 text-sm text-text-primary outline-none transition-all duration-200 focus:border-accent focus:ring-2 focus:ring-accent/15 disabled:opacity-50 dark:bg-bg-primary" bind:value={formUnidad} disabled={submitLoading} required>
-                                <option value="unidades">Unidades</option>
-                                <option value="kg">Kilogramos (kg)</option>
-                            </select>
-                        </div>
-                        
-                        <div class="flex flex-col gap-1.5 md:col-span-1">
-                            <label class="text-[0.85rem] font-semibold text-text-secondary" for="formCategoria">Categoría *</label>
-                            <div class="relative flex items-center">
-                                <input type="text" class="absolute inset-0 z-0 w-full rounded-lg border border-transparent bg-white px-4 py-3 text-sm text-text-secondary/40 outline-none dark:bg-bg-primary" value={inlineSuggestion} disabled />
-                                <input type="text" id="formCategoria" autocomplete="off" class="relative z-10 w-full rounded-lg border border-[rgba(15,30,54,0.15)] bg-transparent px-4 py-3 text-sm text-text-primary outline-none transition-all duration-200 focus:border-accent focus:ring-2 focus:ring-accent/15 disabled:opacity-50" placeholder="Ej: Frutas, Abarrotes..." bind:value={formCategoriaNombre} onkeydown={handleCategoriaKeyDown} disabled={submitLoading} required />
-                            </div>
-                            {#if errCategoria}<span class="mt-1 text-xs font-medium text-danger-color">{errCategoria}</span>{/if}
-                        </div>
-                        
-                        <div class="flex flex-col gap-1.5">
-                            <label class="text-[0.85rem] font-semibold text-text-secondary" for="formPrecio">Precio (CLP) *</label>
-                            <input type="number" min="0" id="formPrecio" class="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none rounded-lg border border-[rgba(15,30,54,0.15)] bg-white px-4 py-3 text-sm text-text-primary outline-none transition-all duration-200 focus:border-accent focus:ring-2 focus:ring-accent/15 disabled:opacity-50 dark:bg-bg-primary" bind:value={formPrecio} disabled={submitLoading} required onfocus={(e) => e.currentTarget.select()} />
-                            {#if errPrecio}<span class="mt-1 text-xs font-medium text-danger-color">{errPrecio}</span>{/if}
-                        </div>
+					<div class="flex flex-col gap-1.5">
+						<label class="text-sm font-semibold text-text-primary" for="formStock">Stock Actual</label>
+						<input type="number" id="formStock" class="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none disabled:opacity-50" bind:value={formStock} disabled={submitLoading} required onfocus={(e) => e.currentTarget.select()} />
+					</div>
+					
+					<div class="flex flex-col gap-1.5">
+						<label class="text-sm font-semibold text-text-primary" for="formStockMinimo">Alerta Stock Mínimo</label>
+						<input type="number" id="formStockMinimo" min="0" class="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none disabled:opacity-50" bind:value={formStockMinimo} disabled={submitLoading || !!editingProducto} onfocus={(e) => e.currentTarget.select()} />
+					</div>
 
-                        <div class="flex flex-col gap-1.5">
-                            <label class="text-[0.85rem] font-semibold text-text-secondary" for="formStock">Stock Actual</label>
-                            <input type="number" id="formStock" class="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none rounded-lg border border-[rgba(15,30,54,0.15)] bg-white px-4 py-3 text-sm text-text-primary outline-none transition-all duration-200 focus:border-accent focus:ring-2 focus:ring-accent/15 disabled:opacity-50 dark:bg-bg-primary" bind:value={formStock} disabled={submitLoading} required onfocus={(e) => e.currentTarget.select()} />
-                        </div>
-                        
-                        <div class="flex flex-col gap-1.5">
-                            <label class="text-[0.85rem] font-semibold text-text-secondary" for="formStockMinimo">Alerta Stock Mínimo</label>
-                            <input type="number" id="formStockMinimo" min="0" class="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none rounded-lg border border-[rgba(15,30,54,0.15)] bg-white px-4 py-3 text-sm text-text-primary outline-none transition-all duration-200 focus:border-accent focus:ring-2 focus:ring-accent/15 disabled:opacity-50 dark:bg-bg-primary" bind:value={formStockMinimo} disabled={submitLoading || !!editingProducto} onfocus={(e) => e.currentTarget.select()} />
-                        </div>
-
-                        <div class="flex flex-col gap-1.5">
-                            <label class="text-[0.85rem] font-semibold text-text-secondary" for="formMarca">Marca</label>
-                            <input type="text" id="formMarca" class="rounded-lg border border-[rgba(15,30,54,0.15)] bg-white px-4 py-3 text-sm text-text-primary outline-none transition-all duration-200 focus:border-accent focus:ring-2 focus:ring-accent/15 disabled:opacity-50 dark:bg-bg-primary" placeholder="Ej: Coca-Cola" bind:value={formMarca} disabled={submitLoading} />
-                        </div>
-                        
-                        <div class="flex flex-col gap-1.5">
-                            <label class="text-[0.85rem] font-semibold text-text-secondary" for="formCodigoBarras">Código de Barras *</label>
-                            <input type="text" id="formCodigoBarras" autocomplete="off" class="rounded-lg border border-[rgba(15,30,54,0.15)] bg-white px-4 py-3 text-sm text-text-primary outline-none transition-all duration-200 focus:border-accent focus:ring-2 focus:ring-accent/15 disabled:opacity-50 dark:bg-bg-primary" placeholder="Ej: 780123456789" bind:value={formCodigoBarras} disabled={submitLoading} required />
-                        </div>
-                    </div>
-                    
-					<footer class="flex justify-end gap-3 border-t border-border-color bg-text-primary/2 p-4 px-6 mt-6">
-						<button type="button" class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-border-color bg-bg-secondary px-5 py-2.5 text-sm font-semibold text-text-primary transition-all duration-200 hover:bg-text-primary/5" onclick={closeModal} disabled={submitLoading}>Cancelar</button>
-						<button type="submit" class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-accent-light to-accent px-5 py-2.5 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-[1px] hover:shadow-glow disabled:cursor-not-allowed disabled:opacity-50" disabled={submitLoading}>
-							{#if submitLoading} Procesando... {:else} Guardar Cambios {/if}
-						</button>
-					</footer>
-				</form>
+					<div class="flex flex-col gap-1.5">
+						<label class="text-sm font-semibold text-text-primary" for="formMarca">Marca</label>
+						<input type="text" id="formMarca" class="rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none disabled:opacity-50" placeholder="Ej: Coca-Cola" bind:value={formMarca} disabled={submitLoading} />
+					</div>
+					
+					<div class="flex flex-col gap-1.5">
+						<label class="text-sm font-semibold text-text-primary" for="formCodigoBarras">Código de Barras *</label>
+						<input type="text" id="formCodigoBarras" autocomplete="off" class="rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none disabled:opacity-50" placeholder="Ej: 780123456789" bind:value={formCodigoBarras} disabled={submitLoading} required />
+					</div>
+				</div>
+				
+				<div class="mt-8 flex justify-end gap-4">
+					<button type="button" class="font-semibold text-text-muted transition-colors hover:text-text-primary" onclick={closeModal} disabled={submitLoading}>Cancelar</button>
+					<button type="submit" class="rounded-xl bg-primario px-6 py-2.5 text-sm font-semibold text-white transition-transform hover:scale-[1.02] active:scale-95 disabled:cursor-not-allowed disabled:opacity-70" disabled={submitLoading}>
+						{#if submitLoading} Procesando... {:else} {editingProducto ? 'Guardar Cambios' : 'Crear Producto'} {/if}
+					</button>
+				</div>
+			</form>
 		</div>
 	</div>
 {/if}
