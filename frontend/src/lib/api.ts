@@ -51,20 +51,20 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}) {
 }
 
 export async function login(usuario: string, contrasena: string): Promise<Empleado> {
-    return apiFetch('/auth/login', {
-        method: 'POST',
-        body: JSON.stringify({ usuario, contrasena })
-    });
+	return apiFetch('/auth/login', {
+		method: 'POST',
+		body: JSON.stringify({ usuario, contrasena })
+	});
 }
 
 export async function logout(): Promise<void> {
-    return apiFetch('/auth/logout', {
-        method: 'POST'
-    });
+	return apiFetch('/auth/logout', {
+		method: 'POST'
+	});
 }
 
 export async function checkSession(): Promise<Empleado> {
-    return apiFetch('/auth/me');
+	return apiFetch('/auth/me');
 }
 
 //promociones 
@@ -84,6 +84,7 @@ export async function eliminarPromocion(id: string) {
 		method: 'DELETE'
 	});
 }
+
 export async function actualizarPromocion(id: string, payload: any) {
 	return apiFetch(`/promociones/${id}`, {
 		method: 'PATCH',
@@ -93,7 +94,8 @@ export async function actualizarPromocion(id: string, payload: any) {
 		body: JSON.stringify(payload)
 	});
 }
-export async function  obtenerProductos() {
+
+export async function obtenerProductos() {
 	return apiFetch('/inventario/productos');
 }
 
@@ -114,6 +116,28 @@ export const apiClientes = {
 		method: 'DELETE'
 	})
 };
+
+export const apiVentas = {
+	getAll: () => apiFetch('/ventas/'),
+	getById: (id: string) => apiFetch(`/ventas/${id}`),
+	create: (data: {
+		id_caja: string;
+		id_metodo: string;
+		pago: number;
+		vuelto: number;
+		monto_total: number;
+		monto_descuento: number;
+		detalles: Array<{
+			id_producto: string;
+			cantidad: number;
+			monto_final: number;
+		}>;
+	}) => apiFetch('/ventas/', {
+		method: 'POST',
+		body: JSON.stringify(data)
+	})
+};
+
 
 export const apiCategorias = {
     getAll: () => apiFetch('/inventario/categorias'),
