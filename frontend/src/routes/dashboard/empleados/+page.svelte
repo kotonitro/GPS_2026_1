@@ -367,7 +367,15 @@
 				<option value="Inactivos">Inactivo</option>
 			</select>
 
-			<!-- Filtro por Rol Dinámico -->
+			<button
+				type="button"
+				title="Limpiar filtros"
+				class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-border-color hover:text-primario disabled:cursor-not-allowed disabled:opacity-50"
+				onclick={() => { searchQuery = ''; filtroRol = 'Todos'; filtroEstado = 'Todos'; }}
+				disabled={!searchQuery && filtroRol === 'Todos' && filtroEstado === 'Todos'}
+			>
+				<X size={14} strokeWidth={2.5} />
+			</button>
 		</div>
 
 		<button
@@ -491,7 +499,7 @@
 <!-- Modal Formulario -->
 {#if isModalOpen}
 	<div
-		class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-modal-enter"
+		class="fixed inset-0 z-50 flex items-center justify-center bg-text-primary/40 p-4 backdrop-blur-sm animate-modal-enter"
 	>
 		<div class="w-full max-w-lg rounded-2xl border border-border-color bg-bg-card shadow-2xl">
 			<div class="flex items-center justify-between border-b border-border-color px-6 py-4">
