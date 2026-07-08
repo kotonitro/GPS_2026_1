@@ -277,7 +277,10 @@
 <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
 	<div class="flex flex-col rounded-xl border border-border-color bg-bg-card shadow-md">
 		<div class="border-b border-border-color p-5">
-			<h2 class="flex items-center gap-2 text-lg font-bold text-text-primary">Últimas Ventas</h2>
+			<h2 class="flex items-center gap-2 text-lg font-bold text-text-primary">
+				<ShoppingCart size={20} class="text-primario" />
+				Últimas Ventas
+			</h2>
 			<a
 				href="/dashboard/ventas"
 				class="text-sm font-semibold text-text-secondary hover:text-primario">Ver todas</a
