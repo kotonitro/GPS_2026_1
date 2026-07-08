@@ -14,15 +14,20 @@ func RoutesConfig(api *gin.RouterGroup, db *gorm.DB, authMiddleware gin.HandlerF
 	authGroup := api.Group("cajas")
 	authGroup.Use(authMiddleware)
 	{
-		authGroup.GET("/", ctrl.GetCajasController)
+		authGroup.GET("", ctrl.GetCajasController)
 		authGroup.GET("/:id", ctrl.GetCajaByIDController)
 
 		adminGroup := authGroup.Group("")
-		adminGroup.Use(auth.RoleMiddleware("Admin"))
+		adminGroup.Use(auth.AdminMiddleware())
 		{
 			adminGroup.POST("", ctrl.CreateCajaController)
 			adminGroup.DELETE("/:id", ctrl.DeleteCajaByIDController)
 			adminGroup.PATCH("/:id", ctrl.UpdateCajaByIDController)
+			adminGroup.GET("/registros", ctrl.GetRegistrosController)
+			adminGroup.GET("/registros/:id", ctrl.GetRegistroByIDController)
+			adminGroup.POST("/registros", ctrl.CreateRegistroController)
+			adminGroup.DELETE("/registros/:id", ctrl.DeleteRegistroByIDController)
+			adminGroup.PATCH("/registros/:id", ctrl.UpdateRegistroByIDController)
 		}
 	}
 }

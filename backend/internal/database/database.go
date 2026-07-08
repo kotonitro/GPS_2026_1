@@ -36,8 +36,10 @@ func Connect(cfg *config.AppConfig) *gorm.DB {
 func Migrations(db *gorm.DB) {
 	err := db.AutoMigrate(
 		&empleados.Empleado{},
+		&empleados.Rol{},
 		&clientes.Cliente{},
 		&cajas.Caja{},
+		&cajas.RegistroTurno{},
 		&inventario.Categoria{},
 		&inventario.Producto{},
 		&promociones.Promocion{},
