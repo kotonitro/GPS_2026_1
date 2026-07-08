@@ -1,13 +1,14 @@
 package ventas
 
 import (
+	"backend/internal/cajas"
 	"backend/internal/clientes"
 	"time"
 )
 
 type Venta struct {
 	ID             string    `gorm:"primaryKey;type:uuid;default:gen_random_uuid()" json:"id_venta"`
-	CajaID         string    `json:"id_caja"`
+	CajaID         string    `gorm:"type:uuid;not null" json:"id_caja"`
 	MetodoID       string    `json:"id_metodo"`
 	EmpleadoID     string    `json:"id_empleado"`
 	ClienteID      *string   `gorm:"type:uuid" json:"id_cliente,omitempty"`
@@ -21,6 +22,7 @@ type Venta struct {
 	Detalles   []DetalleVenta `gorm:"foreignKey:VentaID" json:"detalles,omitempty"`
 	MetodoPago MetodoPago     `gorm:"foreignKey:MetodoID" json:"metodo_pago,omitempty"`
 	Fiado      *Fiado         `gorm:"foreignKey:VentaID" json:"fiado,omitempty"`
+	Caja       *cajas.Caja    `gorm:"foreignKey:CajaID;references:ID;constraint:OnDelete:RESTRICT" json:"caja,omitempty"`
 }
 
 type DetalleVenta struct {
