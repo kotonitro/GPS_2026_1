@@ -8,11 +8,12 @@ import (
 type Promocion struct {
 	ID        string  `gorm:"primaryKey;type:uuid;default:gen_random_uuid()" json:"id_promocion"`
 	Tipo      string  `json:"tipo"`  //dsp este va a ser NXM,pocentaje o precio fijo
-	Lleva     int     `json:"lleva"` //N
-	Paga      int     `json:"paga"`  //M
-	Descuento float64 `json:"descuento"`
-	ProductoID string   `json:"producto_id"`
-	Producto   inventario.Producto `gorm:"foreignKey:ProductoID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"-"`
+	Lleva     *int     `json:"lleva"` //N
+	Paga      *int     `json:"paga"`  //M
+	Descuento *float64 `json:"descuento"`
+	ProductoID *string `json:"producto_id"`
+	Producto   *inventario.Producto `gorm:"foreignKey:ProductoID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"-"`
+	ProductosCombo []string `gorm:"serializer:json" json:"productos_combo"`
 	FechaInicio *time.Time `json:"fecha_inicio"`
 	FechaFin    *time.Time `json:"fecha_fin"`
 }

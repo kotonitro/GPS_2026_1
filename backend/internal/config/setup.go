@@ -24,6 +24,7 @@ type InitialAdmin struct {
 	Usuario    string
 	Contrasena string
 	RolID      string
+	Telefono   string
 }
 
 func (InitialAdmin) TableName() string {
@@ -68,6 +69,7 @@ func InitialSetup(db *gorm.DB) {
 			Usuario:    "admin",
 			Contrasena: string(hashContrasena),
 			RolID:      rolAdmin.ID,
+			Telefono:   "999999999",
 		}
 
 		if err := db.Create(&admin).Error; err != nil {

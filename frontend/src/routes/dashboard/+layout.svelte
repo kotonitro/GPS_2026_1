@@ -146,7 +146,7 @@
 {:else}
 	<div class="flex h-screen w-screen overflow-hidden">
 		<aside
-			class="flex h-full w-[240px] flex-col justify-between border-r border-[#2a241f] bg-[#1a1512] px-5 py-6 text-[#a39b93]"
+			class="sidebar-scroll flex h-full w-[240px] shrink-0 flex-col justify-between overflow-y-auto border-r border-[#2a241f] bg-[#1a1512] px-5 py-6 text-[#a39b93]"
 		>
 			<div class="flex flex-col gap-8">
 				<div class="flex items-center gap-3 px-2">

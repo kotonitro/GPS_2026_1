@@ -25,13 +25,15 @@ func ObtenerPromocionPorID(db *gorm.DB, id string) (*Promocion, error) {
 	return &promocion, nil
 }
 
-// Actualiza una promocion mediante su id
-func ActualizarPromocion(db *gorm.DB, id string, datosActualizados *Promocion) (Promocion, error) {
+// Actualiza una promocion por id
+func ActualizarPromocion(db *gorm.DB, id string, datosActualizados map[string]interface{}) (Promocion, error) {
 	var promocion Promocion
+	
 	if err := db.Where("id = ?", id).First(&promocion).Error; err != nil {
 		return promocion, err
 	}
 	result := db.Model(&promocion).Updates(datosActualizados)
+	
 	return promocion, result.Error
 }
 

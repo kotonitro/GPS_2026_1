@@ -7,8 +7,8 @@
 		eliminarPromocion,
 		actualizarPromocion
 	} from '$lib/api';
-	import { auth } from '$lib/authStore.svelte'; // Asumiendo que usas el mismo store de la otra página
-	import { toast } from '$lib/toastStore.svelte'; // Asumiendo que usas el mismo store
+	import { auth } from '$lib/authStore.svelte'; 
+	import { toast } from '$lib/toastStore.svelte'; 
 
 	let promociones = $state<any[]>([]);
 	let productos = $state<any[]>([]);
@@ -18,12 +18,18 @@
 	let mostrarFormulario = $state(false);
 	let mostrarModalEliminar = $state(false);
 
+	// Variables del formulario
 	let categoriaSeleccionada = $state('');
 	let tipoPromocion = $state('NXM');
-	let productoSeleccionado = $state('');
-	let lleva = $state(0);
-	let paga = $state(0);
-	let descuento = $state(0);
+	let productoSeleccionado = $state<string>('');
+	let comboSeleccionados = $state<string[]>([]);
+	
+	// Buscador de productos
+	let busquedaProducto = $state('');
+
+	let lleva = $state<number | string>('');
+	let paga = $state<number | string>('');
+	let descuento = $state<number | string>('');
 	let editandoId = $state<string | null>(null);
 	
 	let fechaInicio = $state('');
@@ -37,11 +43,25 @@
 		...new Set(productos.map((p) => p.categoria?.nombre_categoria))
 	]);
 
-	let productosFiltrados = $derived(
-		categoriaSeleccionada === ''
-			? productos
-			: productos.filter((p) => p.categoria?.nombre_categoria === categoriaSeleccionada)
-	);
+	// buscador
+	let productosFiltrados = $derived.by(() => {
+		let result = productos;
+		
+		if (categoriaSeleccionada !== '') {
+			result = result.filter((p) => p.categoria?.nombre_categoria === categoriaSeleccionada);
+		}
+
+		if (busquedaProducto.trim()) {
+			const query = busquedaProducto.toLowerCase().trim();
+			result = result.filter((p) => {
+				const matchNombre = p.nombre.toLowerCase().includes(query);
+				const matchCodigo = p.codigo_barras ? p.codigo_barras.toLowerCase().includes(query) : false;
+				return matchNombre || matchCodigo;
+			});
+		}
+		
+		return result;
+	});
 
 	let activas = $derived(promociones.filter(p => {
 		if (!p.fecha_inicio || !p.fecha_fin) return true;
@@ -89,20 +109,58 @@
 		}
 	}
 
+	// selección del buscador
+	function seleccionarProducto(id: string) {
+		if (tipoPromocion === 'COMBO') {
+			if (!comboSeleccionados.includes(id) && comboSeleccionados.length < 3) {
+				comboSeleccionados = [...comboSeleccionados, id];
+			} else if (comboSeleccionados.length >= 3) {
+				if(toast) toast.show('Máximo 3 productos por combo', 'error');
+			}
+		} else {
+			productoSeleccionado = id;
+			busquedaProducto = '';
+		}
+	}
+
+	function removerProductoCombo(id: string) {
+		comboSeleccionados = comboSeleccionados.filter(pId => pId !== id);
+	}
+
+	// Limpiar selecciones si cambia el tipo de promoción
+	$effect(() => {
+		if (tipoPromocion) {
+			productoSeleccionado = '';
+			comboSeleccionados = [];
+			busquedaProducto = '';
+		}
+	});
+
 	async function handleCrearPromocion(e: Event) {
 		e.preventDefault();
+		
+		if (tipoPromocion === 'COMBO' && comboSeleccionados.length < 2) {
+			if(toast) toast.show('Un combo debe tener al menos 2 productos.', 'error');
+			return;
+		}
+		if (tipoPromocion !== 'COMBO' && !productoSeleccionado) {
+			if(toast) toast.show('Debes seleccionar un producto.', 'error');
+			return;
+		}
+
 		submitLoading = true;
 
 		try {
-			const payload = {
-				producto_id: productoSeleccionado,
-				tipo: tipoPromocion,
-				lleva: tipoPromocion === 'NXM' ? lleva : 0,
-				paga: tipoPromocion === 'NXM' ? paga : 0,
-				descuento: (tipoPromocion === 'precio_fijo' || tipoPromocion === 'porcentaje') ? descuento : 0,
-				fecha_inicio: fechaInicio ? new Date(fechaInicio).toISOString() : null,
-				fecha_fin: fechaFin ? new Date(fechaFin).toISOString() : null
-			};
+		const payload = {
+            producto_id: tipoPromocion === 'COMBO' ? null : (productoSeleccionado || null),
+            productos_combo: comboSeleccionados.length > 0 ? comboSeleccionados : [], 
+            tipo: tipoPromocion,
+            lleva: Number(lleva),
+            paga: Number(paga),
+            descuento: Number(descuento),
+            fecha_inicio: fechaInicio ? new Date(fechaInicio).toISOString() : null,
+            fecha_fin: fechaFin ? new Date(fechaFin).toISOString() : null
+};
 
 			if (editandoId) {
 				await actualizarPromocion(editandoId, payload);
@@ -123,14 +181,19 @@
 
 	function handleEditar(promo: any) {
 		editandoId = promo.id_promocion;
-		const prod = obtenerProducto(promo.producto_id);
-		categoriaSeleccionada = prod?.categoria?.nombre_categoria || '';
-		
-		productoSeleccionado = promo.producto_id;
 		tipoPromocion = promo.tipo;
-		lleva = promo.lleva || 0;
-		paga = promo.paga || 0;
-		descuento = promo.descuento || 0;
+		
+		if (promo.tipo === 'COMBO') {
+			comboSeleccionados = promo.productos_combo || [];
+		} else {
+			productoSeleccionado = promo.producto_id;
+			const prod = obtenerProducto(promo.producto_id);
+			categoriaSeleccionada = prod?.categoria?.nombre_categoria || '';
+		}
+		
+		lleva = promo.lleva || '';
+		paga = promo.paga || '';
+		descuento = promo.descuento || '';
 		fechaInicio = promo.fecha_inicio ? promo.fecha_inicio.split('T')[0] : '';
 		fechaFin = promo.fecha_fin ? promo.fecha_fin.split('T')[0] : '';
 
@@ -141,11 +204,14 @@
 		editandoId = null;
 		categoriaSeleccionada = '';
 		productoSeleccionado = '';
+		comboSeleccionados = [];
+		busquedaProducto = '';
+		tipoPromocion = 'NXM';
 		fechaInicio = '';
 		fechaFin = '';
-		lleva = 0;
-		paga = 0;
-		descuento = 0;
+		lleva = '';
+		paga = '';
+		descuento = '';
 		mostrarFormulario = true;
 	}
 
@@ -185,6 +251,8 @@
 			return `${promo.lleva}x${promo.paga}`;
 		} else if (promo.tipo === 'porcentaje') {
 			return `${promo.descuento}%`;
+		} else if (promo.tipo === 'COMBO') {
+			return `$${promo.descuento}`;
 		} else {
 			if (producto && producto.precio > 0) {
 				return Math.round((promo.descuento / producto.precio) * 100) + '%';
@@ -196,7 +264,14 @@
 	function generarTitulo(promo: any, nombreProd: string) {
 		if (promo.tipo === 'NXM') return `${promo.lleva}x${promo.paga} en ${nombreProd}`;
 		if (promo.tipo === 'porcentaje') return `${promo.descuento}% en ${nombreProd}`;
+		if (promo.tipo === 'COMBO') return `Combo Especial`; 
 		return `$${promo.descuento} de dcto. en ${nombreProd}`;
+	}
+
+	function generarNombresCombo(promo: any) {
+		if (!promo.productos_combo || promo.productos_combo.length === 0) return 'Productos del combo';
+		const nombres = promo.productos_combo.map((id: string) => obtenerProducto(id)?.nombre || 'Producto').join(' + ');
+		return nombres;
 	}
 </script>
 
@@ -231,16 +306,18 @@
 {/if}
 
 {#snippet promoCard(promo, estado)}
-	{@const prod = obtenerProducto(promo.producto_id)}
-	{@const nombreProd = prod?.nombre || 'Producto sin nombre'}
+	{@const prod = promo.tipo !== 'COMBO' ? obtenerProducto(promo.producto_id) : null}
+	{@const nombreProd = promo.tipo === 'COMBO' ? generarNombresCombo(promo) : (prod?.nombre || 'Producto sin nombre')}
 	
 	<div class="min-w-[300px] w-[300px] sm:w-[320px] flex-none snap-start bg-bg-card border border-border-color rounded-xl p-5 shadow-sm hover:border-border-color-hover transition-all flex flex-col justify-between {estado === 'expirada' ? 'opacity-60 grayscale' : ''}">
 		
 		<div>
 			<div class="flex justify-between items-start mb-4">
-				<div class="w-8 h-8 rounded {promo.tipo === 'NXM' ? 'bg-text-primary/10 text-accent' : 'bg-text-primary/10 text-accent'} flex items-center justify-center font-bold text-sm">
+				<div class="w-8 h-8 rounded {promo.tipo === 'NXM' ? 'bg-text-primary/10 text-accent' : (promo.tipo === 'COMBO' ? 'bg-purple-500/15 text-purple-500' : 'bg-text-primary/10 text-accent')} flex items-center justify-center font-bold text-sm">
 					{#if promo.tipo === 'NXM'}
 						<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>
+					{:else if promo.tipo === 'COMBO'}
+						<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
 					{:else}
 						%
 					{/if}
@@ -256,7 +333,7 @@
 			</div>
 
 			<h3 class="font-bold text-text-primary text-[15px] mb-1 line-clamp-1">{generarTitulo(promo, nombreProd)}</h3>
-			<p class="text-text-secondary text-xs mb-4 line-clamp-1">{nombreProd}</p>
+			<p class="text-text-secondary text-xs mb-4 line-clamp-2" title={nombreProd}>{nombreProd}</p>
 
 			<div class="flex justify-between items-end mb-5">
 				<div class="text-3xl font-black text-accent">
@@ -267,6 +344,8 @@
 						Lleva {promo.lleva} Paga {promo.paga}
 					{:else if promo.tipo === 'porcentaje'}
 						% Descuento
+					{:else if promo.tipo === 'COMBO'}
+						Precio Combo
 					{:else}
 						Precio fijo
 					{/if}
@@ -385,52 +464,90 @@
 			</header>
 
 			<form onsubmit={handleCrearPromocion}>
-				<div class="p-6">
-					{#if errorMsg}
-						<div class="mb-5 flex gap-3 rounded-lg border border-red-500/15 bg-danger-bg p-4 text-sm text-danger-color" role="alert">
-							<span>{errorMsg}</span>
-						</div>
-					{/if}
+				<div class="p-6 overflow-y-auto max-h-[65vh] hide-scrollbar">
+					
+					<div class="flex flex-col gap-1.5 mb-5">
+						<label for="tipoPromo" class="text-[0.85rem] font-semibold text-text-secondary">Tipo de Oferta:</label>
+						<select id="tipoPromo" bind:value={tipoPromocion} class="rounded-lg border border-[rgba(15,30,54,0.15)] bg-white px-4 py-3 text-sm text-text-primary outline-none transition-all duration-200 focus:border-primario focus:ring-1 focus:ring-primario dark:bg-bg-primary">
+							<option value="NXM">Lleva X, Paga Y (Ej. 3x2)</option>
+							<option value="precio_fijo">Descuento Directo ($)</option>
+							<option value="porcentaje">Descuento por Porcentaje (%)</option>
+							<option value="COMBO">Combo (Hasta 3 productos)</option>
+						</select>
+					</div>
 
-					<div class="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-5">
-						<div class="flex flex-col gap-1.5">
-							<label for="filtroCat" class="text-[0.85rem] font-semibold text-text-secondary">Categoría:</label>
-							<select id="filtroCat" bind:value={categoriaSeleccionada} class="rounded-lg border border-[rgba(15,30,54,0.15)] bg-white px-4 py-3 text-sm text-text-primary outline-none transition-all duration-200 focus:border-accent focus:ring-2 focus:ring-accent/15 dark:bg-bg-primary">
-								<option value="">Todas</option>
+					<div class="mb-5 rounded-lg border border-border-color p-4 bg-text-primary/2">
+						<label class="text-[0.85rem] font-semibold text-text-secondary mb-2 block">
+							{tipoPromocion === 'COMBO' ? 'Buscar y añadir productos (Máx 3):' : 'Buscar producto asociado:'}
+						</label>
+						
+						{#if tipoPromocion !== 'COMBO'}
+							<select bind:value={categoriaSeleccionada} class="w-full mb-3 rounded-lg border border-[rgba(15,30,54,0.15)] bg-white px-4 py-2 text-sm text-text-primary outline-none transition-all duration-200 focus:border-primario focus:ring-1 focus:ring-primario dark:bg-bg-primary">
+								<option value="">Todas las categorías</option>
 								{#each categoriasUnicas.filter(Boolean) as cat}
 									<option value={cat}>{cat}</option>
 								{/each}
 							</select>
+						{/if}
+
+						<div class="flex w-full overflow-hidden rounded-lg border border-[rgba(15,30,54,0.15)] bg-white transition-all duration-200 focus-within:border-primario focus-within:ring-1 focus-within:ring-primario dark:bg-bg-primary mb-3">
+							<div class="flex items-center justify-center pl-3 pr-2 text-text-muted">
+								<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+							</div>
+							<input
+								type="text"
+								class="flex-1 border-none bg-transparent px-2 py-2 text-sm text-text-primary outline-none focus:ring-0"
+								placeholder="Escribe el nombre o escanea el código..."
+								bind:value={busquedaProducto}
+							/>
 						</div>
-						<div class="flex flex-col gap-1.5">
-							<label for="selectProd" class="text-[0.85rem] font-semibold text-text-secondary">Producto asociado:</label>
-							<select id="selectProd" bind:value={productoSeleccionado} required class="rounded-lg border border-[rgba(15,30,54,0.15)] bg-white px-4 py-3 text-sm text-text-primary outline-none transition-all duration-200 focus:border-accent focus:ring-2 focus:ring-accent/15 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-bg-primary" disabled={productosFiltrados.length === 0}>
-								<option value="" disabled>Seleccione un producto...</option>
+
+						{#if busquedaProducto.trim() && productosFiltrados.length > 0}
+							<div class="max-h-32 overflow-y-auto rounded-lg border border-border-color bg-bg-card shadow-inner mb-3">
 								{#each productosFiltrados as prod}
-									<option value={prod.id_producto}>{prod.nombre} (${prod.precio})</option>
+									<button type="button" onclick={() => seleccionarProducto(prod.id_producto)} class="w-full text-left px-3 py-2 text-sm border-b border-border-color hover:bg-text-primary/5 text-text-primary last:border-0 flex justify-between items-center">
+										<span>{prod.nombre}</span>
+										<span class="text-xs text-text-muted">{prod.codigo_barras || 'Sin código'}</span>
+									</button>
 								{/each}
-							</select>
+							</div>
+						{:else if busquedaProducto.trim() && productosFiltrados.length === 0}
+							<p class="text-xs text-danger-color mb-3">No se encontraron productos.</p>
+						{/if}
+
+						<div class="flex flex-wrap gap-2">
+							{#if tipoPromocion === 'COMBO'}
+								{#each comboSeleccionados as id}
+									<div class="flex items-center gap-2 rounded-full bg-accent/10 px-3 py-1 text-xs font-semibold text-accent border border-accent/20">
+										{obtenerProducto(id)?.nombre || 'Producto'}
+										<button type="button" onclick={() => removerProductoCombo(id)} class="text-accent hover:text-danger-color">&times;</button>
+									</div>
+								{/each}
+								{#if comboSeleccionados.length === 0}
+									<span class="text-xs text-text-muted italic">Ningún producto seleccionado.</span>
+								{/if}
+							{:else}
+								{#if productoSeleccionado}
+									<div class="flex items-center gap-2 rounded-full bg-accent/10 px-3 py-1 text-xs font-semibold text-accent border border-accent/20">
+										{obtenerProducto(productoSeleccionado)?.nombre || 'Producto'}
+										<button type="button" onclick={() => productoSeleccionado = ''} class="text-accent hover:text-danger-color">&times;</button>
+									</div>
+								{:else}
+									<span class="text-xs text-text-muted italic">Ningún producto seleccionado.</span>
+								{/if}
+							{/if}
 						</div>
 					</div>
 
 					<div class="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-5">
 						<div class="flex flex-col gap-1.5">
 							<label for="fechaInicio" class="text-[0.85rem] font-semibold text-text-secondary">Fecha de Inicio:</label>
-							<input type="date" id="fechaInicio" bind:value={fechaInicio} min={hoyStr} required class="rounded-lg border border-[rgba(15,30,54,0.15)] bg-white px-4 py-3 text-sm text-text-primary outline-none transition-all duration-200 focus:border-accent focus:ring-2 focus:ring-accent/15 dark:bg-bg-primary" style="color-scheme: dark;" />
+							<input type="date" id="fechaInicio" bind:value={fechaInicio} min={hoyStr} required class="rounded-lg border border-[rgba(15,30,54,0.15)] bg-white px-4 py-3 text-sm text-text-primary outline-none transition-all duration-200 focus:border-primario focus:ring-1 focus:ring-primario dark:bg-bg-primary" style="color-scheme: dark;" />
 						</div>
 						<div class="flex flex-col gap-1.5">
 							<label for="fechaFin" class="text-[0.85rem] font-semibold text-text-secondary">Fecha de Fin:</label>
-							<input type="date" id="fechaFin" bind:value={fechaFin} min={fechaInicio || hoyStr} required class="rounded-lg border border-[rgba(15,30,54,0.15)] bg-white px-4 py-3 text-sm text-text-primary outline-none transition-all duration-200 focus:border-accent focus:ring-2 focus:ring-accent/15 dark:bg-bg-primary" style="color-scheme: dark;" />
+							<input type="date" id="fechaFin" bind:value={fechaFin} min={fechaInicio || hoyStr} required class="rounded-lg border border-[rgba(15,30,54,0.15)] bg-white px-4 py-3 text-sm text-text-primary outline-none transition-all duration-200 focus:border-primario focus:ring-1 focus:ring-primario dark:bg-bg-primary" style="color-scheme: dark;" />
 						</div>
-					</div>
-
-					<div class="flex flex-col gap-1.5 mb-5">
-						<label for="tipoPromo" class="text-[0.85rem] font-semibold text-text-secondary">Tipo de Oferta:</label>
-						<select id="tipoPromo" bind:value={tipoPromocion} class="rounded-lg border border-[rgba(15,30,54,0.15)] bg-white px-4 py-3 text-sm text-text-primary outline-none transition-all duration-200 focus:border-accent focus:ring-2 focus:ring-accent/15 dark:bg-bg-primary">
-							<option value="NXM">Lleva X, Paga Y (Ej. 3x2)</option>
-							<option value="precio_fijo">Descuento Directo ($)</option>
-							<option value="porcentaje">Descuento por Porcentaje (%)</option>
-						</select>
 					</div>
 
 					<div class="bg-text-primary/5 p-4 rounded-lg border border-border-color">
@@ -438,22 +555,22 @@
 							<div class="flex gap-4">
 								<div class="flex-1 flex flex-col gap-1.5">
 									<label for="inputLleva" class="text-[0.85rem] font-semibold text-text-secondary">Lleva:</label>
-									<input id="inputLleva" type="number" min="2" bind:value={lleva} required class="rounded-lg border border-[rgba(15,30,54,0.15)] bg-white px-4 py-3 text-sm text-text-primary outline-none transition-all duration-200 focus:border-accent focus:ring-2 focus:ring-accent/15 dark:bg-bg-primary" />
+									<input id="inputLleva" type="number" min="2" bind:value={lleva} required class="rounded-lg border border-[rgba(15,30,54,0.15)] bg-white px-4 py-3 text-sm text-text-primary outline-none transition-all duration-200 focus:border-primario focus:ring-1 focus:ring-primario dark:bg-bg-primary" style="color-scheme: dark;" />
 								</div>
 								<div class="flex-1 flex flex-col gap-1.5">
 									<label for="inputPaga" class="text-[0.85rem] font-semibold text-text-secondary">Paga:</label>
-									<input id="inputPaga" type="number" min="1" bind:value={paga} required class="rounded-lg border border-[rgba(15,30,54,0.15)] bg-white px-4 py-3 text-sm text-text-primary outline-none transition-all duration-200 focus:border-accent focus:ring-2 focus:ring-accent/15 dark:bg-bg-primary" />
+									<input id="inputPaga" type="number" min="1" bind:value={paga} required class="rounded-lg border border-[rgba(15,30,54,0.15)] bg-white px-4 py-3 text-sm text-text-primary outline-none transition-all duration-200 focus:border-primario focus:ring-1 focus:ring-primario dark:bg-bg-primary" style="color-scheme: dark;" />
 								</div>
 							</div>
-						{:else if tipoPromocion === 'precio_fijo'}
+						{:else if tipoPromocion === 'precio_fijo' || tipoPromocion === 'COMBO'}
 							<div class="flex flex-col gap-1.5">
-								<label for="inputDesc" class="text-[0.85rem] font-semibold text-text-secondary">Monto a descontar ($):</label>
-								<input id="inputDesc" type="number" min="1" bind:value={descuento} required class="rounded-lg border border-[rgba(15,30,54,0.15)] bg-white px-4 py-3 text-sm text-text-primary outline-none transition-all duration-200 focus:border-accent focus:ring-2 focus:ring-accent/15 dark:bg-bg-primary" />
+								<label for="inputDesc" class="text-[0.85rem] font-semibold text-text-secondary">{tipoPromocion === 'COMBO' ? 'Precio Final del Combo ($):' : 'Monto a descontar ($):'}</label>
+								<input id="inputDesc" type="number" min="1" bind:value={descuento} required class="rounded-lg border border-[rgba(15,30,54,0.15)] bg-white px-4 py-3 text-sm text-text-primary outline-none transition-all duration-200 focus:border-primario focus:ring-1 focus:ring-primario dark:bg-bg-primary" style="color-scheme: dark;" />
 							</div>
 						{:else if tipoPromocion === 'porcentaje'}
 							<div class="flex flex-col gap-1.5">
 								<label for="inputDescPorc" class="text-[0.85rem] font-semibold text-text-secondary">Porcentaje de descuento (%):</label>
-								<input id="inputDescPorc" type="number" min="1" max="100" bind:value={descuento} required class="rounded-lg border border-[rgba(15,30,54,0.15)] bg-white px-4 py-3 text-sm text-text-primary outline-none transition-all duration-200 focus:border-accent focus:ring-2 focus:ring-accent/15 dark:bg-bg-primary" />
+								<input id="inputDescPorc" type="number" min="1" max="100" bind:value={descuento} required class="rounded-lg border border-[rgba(15,30,54,0.15)] bg-white px-4 py-3 text-sm text-text-primary outline-none transition-all duration-200 focus:border-primario focus:ring-1 focus:ring-primario dark:bg-bg-primary" style="color-scheme: dark;" />
 							</div>
 						{/if}
 					</div>
@@ -488,32 +605,18 @@
 		</div>
 	</div>
 {/if}
+
 <style>
-	/*modo claro para la scrollbar*/
-	::-webkit-scrollbar {
-		width: 10px;
-		height: 10px;
-	}
-	::-webkit-scrollbar-track {
-		background: #f3f4f6; 
-	}
-	::-webkit-scrollbar-thumb {
-		background: #d1d5db; 
-		border-radius: 5px;
-		border: 2px solid #f3f4f6;
-	}
-	::-webkit-scrollbar-thumb:hover {
-		background: #9ca3af;
-	}
-	/*modo oscuro para la scrollbar*/
-	:global(.dark) ::-webkit-scrollbar-track {
-		background: #18181b; 
-	}
-	:global(.dark) ::-webkit-scrollbar-thumb {
-		background: #3f3f46;
-		border: 2px solid #18181b;
-	}
-	:global(.dark) ::-webkit-scrollbar-thumb:hover {
-		background: #52525b;
-	}
+	/* Scrollbar */
+	::-webkit-scrollbar { width: 10px; height: 10px; }
+	::-webkit-scrollbar-track { background: #f3f4f6; }
+	::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 5px; border: 2px solid #f3f4f6; }
+	::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+	
+	:global(.dark) ::-webkit-scrollbar-track { background: #18181b; }
+	:global(.dark) ::-webkit-scrollbar-thumb { background: #3f3f46; border: 2px solid #18181b; }
+	:global(.dark) ::-webkit-scrollbar-thumb:hover { background: #52525b; }
+	
+	.hide-scrollbar::-webkit-scrollbar { display: none; }
+	.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 </style>

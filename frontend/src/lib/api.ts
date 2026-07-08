@@ -30,6 +30,18 @@ export interface Producto {
     categoria?: Categoria;
 }
 
+export interface Promocion {
+    id_promocion?: string;
+    producto_id?: string | null;
+    productos_combo?: string[];
+    tipo: string;
+    lleva?: number;
+    paga?: number;
+    descuento?: number;
+    fecha_inicio?: string | null;
+    fecha_fin?: string | null;
+}
+
 export async function apiFetch(endpoint: string, options: RequestInit = {}) {
 	const headers = {
 		'Content-Type': 'application/json',
@@ -68,11 +80,11 @@ export async function checkSession(): Promise<Empleado> {
 }
 
 //promociones 
-export async function obtenerPromociones() {
+export async function obtenerPromociones(): Promise<Promocion[]> {
 	return apiFetch('/promociones/');
 }
 
-export async function crearPromocion(data: any) {
+export async function crearPromocion(data: Partial<Promocion>) {
 	return apiFetch('/promociones', {
 		method: 'POST',
 		body: JSON.stringify(data)
@@ -84,7 +96,8 @@ export async function eliminarPromocion(id: string) {
 		method: 'DELETE'
 	});
 }
-export async function actualizarPromocion(id: string, payload: any) {
+
+export async function actualizarPromocion(id: string, payload: Partial<Promocion>) {
 	return apiFetch(`/promociones/${id}`, {
 		method: 'PATCH',
 		headers: {
