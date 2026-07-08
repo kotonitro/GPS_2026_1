@@ -22,9 +22,9 @@
 
 	// Búsqueda Cliente-side
 	let searchQuery = $state('');
-    let selectedEstado = $state('Todos');
+	let selectedEstado = $state('Todos');
 
-	// Abono Modal 
+	// Abono Modal
 	let showAbonoModal = $state(false);
 	let selectedAbonoCliente = $state<Cliente | null>(null);
 	let abonoMonto = $state<number | ''>('');
@@ -33,12 +33,14 @@
 
 	let filteredClientes = $derived.by(() => {
 		let result = clientes;
-        
-        if (selectedEstado === 'Con deuda') {
-            result = result.filter(c => (c.fiado_actual || 0) > 0 && (c.fiado_actual || 0) < (c.fiado_maximo || 20000));
-        } else if (selectedEstado === 'Al límite') {
-            result = result.filter(c => (c.fiado_actual || 0) >= (c.fiado_maximo || 20000));
-        }
+
+		if (selectedEstado === 'Con deuda') {
+			result = result.filter(
+				(c) => (c.fiado_actual || 0) > 0 && (c.fiado_actual || 0) < (c.fiado_maximo || 20000)
+			);
+		} else if (selectedEstado === 'Al límite') {
+			result = result.filter((c) => (c.fiado_actual || 0) >= (c.fiado_maximo || 20000));
+		}
 
 		if (searchQuery.trim()) {
 			const query = searchQuery.toLowerCase().trim();
@@ -46,12 +48,17 @@
 
 			result = result.filter((c) => {
 				const matchNombre = c.nombre.toLowerCase().includes(query);
-				const matchRut = cleanQuery ? c.rut.toLowerCase().replace(/[^0-9kK]/g, '').includes(cleanQuery) : false;
+				const matchRut = cleanQuery
+					? c.rut
+							.toLowerCase()
+							.replace(/[^0-9kK]/g, '')
+							.includes(cleanQuery)
+					: false;
 				return matchNombre || matchRut;
 			});
 		}
-        
-        return result;
+
+		return result;
 	});
 
 	// Estadísticas
@@ -187,7 +194,7 @@
 			.toLowerCase()
 			.replace(/\s+/g, ' ')
 			.split(' ')
-			.map(word => word.charAt(0).toUpperCase() + word.slice(1))
+			.map((word) => word.charAt(0).toUpperCase() + word.slice(1))
 			.join(' ');
 	}
 
@@ -385,33 +392,58 @@
 	<div class="flex flex-col gap-3 sm:flex-row sm:items-center flex-1">
 		<!-- Buscador -->
 		<div class="relative w-full sm:max-w-xs">
-			<svg class="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-text-muted" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+			<svg
+				class="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-text-muted"
+				xmlns="http://www.w3.org/2000/svg"
+				width="20"
+				height="20"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+				><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg
+			>
 			<input
 				type="text"
 				placeholder="Buscar cliente..."
 				bind:value={searchQuery}
-				class="w-full rounded-xl border border-border-color bg-bg-card py-2.5 pl-10 pr-4 text-sm text-text-primary transition-colors focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario"
+				class="w-full rounded-xl border border-border-color bg-bg-card py-2.5 pl-10 pr-4 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario"
 			/>
 		</div>
 
 		<!-- Filtro de Estado -->
 		<select
 			bind:value={selectedEstado}
-			class="w-full sm:w-auto rounded-xl border border-border-color bg-bg-card py-2.5 pl-4 pr-10 text-sm text-text-primary transition-colors focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario cursor-pointer"
+			class="w-full sm:w-auto rounded-xl border border-border-color bg-bg-card py-2.5 pl-4 pr-10 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario cursor-pointer"
 		>
 			<option value="Todos">Todos los estados</option>
 			<option value="Con deuda">Con deuda</option>
 			<option value="Al límite">Al límite</option>
 		</select>
-		
+
 		<button
 			type="button"
 			title="Limpiar filtros"
-			class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-border-color hover:text-primario disabled:cursor-not-allowed disabled:opacity-50"
-			onclick={() => { searchQuery = ''; selectedEstado = 'Todos'; }}
+			class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-text-muted hover:bg-border-color hover:text-primario disabled:cursor-not-allowed disabled:opacity-50"
+			onclick={() => {
+				searchQuery = '';
+				selectedEstado = 'Todos';
+			}}
 			disabled={!searchQuery && selectedEstado === 'Todos'}
 		>
-			<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				width="14"
+				height="14"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2.5"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+			>
 				<line x1="18" y1="6" x2="6" y2="18"></line>
 				<line x1="6" y1="6" x2="18" y2="18"></line>
 			</svg>
@@ -424,7 +456,17 @@
 			onclick={openCreateModal}
 			class="flex w-full items-center justify-center gap-2 rounded-xl bg-primario px-5 py-2.5 text-sm font-semibold text-white transition-transform hover:scale-[1.02] active:scale-95 sm:w-auto"
 		>
-			<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				width="18"
+				height="18"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2.5"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+			>
 				<line x1="12" y1="5" x2="12" y2="19" />
 				<line x1="5" y1="12" x2="19" y2="12" />
 			</svg>
@@ -433,10 +475,22 @@
 	{/if}
 </div>
 
-
 {#if errorMsg}
-	<div class="mb-5 flex gap-3 rounded-lg border border-red-500/15 bg-danger-bg p-4 text-sm text-danger-color" role="alert">
-		<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+	<div
+		class="mb-5 flex gap-3 rounded-lg border border-red-500/15 bg-danger-bg p-4 text-sm text-danger-color"
+		role="alert"
+	>
+		<svg
+			xmlns="http://www.w3.org/2000/svg"
+			width="20"
+			height="20"
+			viewBox="0 0 24 24"
+			fill="none"
+			stroke="currentColor"
+			stroke-width="2"
+			stroke-linecap="round"
+			stroke-linejoin="round"
+		>
 			<circle cx="12" cy="12" r="10" />
 			<line x1="12" y1="8" x2="12" y2="12" />
 			<line x1="12" y1="16" x2="12.01" y2="16" />
@@ -445,38 +499,42 @@
 	</div>
 {/if}
 
-	<div class="overflow-x-auto rounded-xl border border-border-color bg-bg-card shadow-sm">
-		<table class="w-full whitespace-nowrap text-left text-sm text-text-primary">
-			<thead class="border-b border-border-color bg-bg-primary/50 text-text-muted">
+<div class="overflow-x-auto rounded-xl border border-border-color bg-bg-card shadow-sm">
+	<table class="w-full whitespace-nowrap text-left text-sm text-text-primary">
+		<thead class="border-b border-border-color bg-bg-primary/50 text-text-muted">
+			<tr>
+				<th class="px-6 py-4 font-semibold">Cliente</th>
+				<th class="px-6 py-4 font-semibold">Teléfono</th>
+				<th class="px-6 py-4 font-semibold min-w-[200px]">Fiado (Actual / Máx)</th>
+				<th class="px-6 py-4 font-semibold">Última Compra</th>
+				<th class="px-6 py-4 text-right font-semibold">Acciones</th>
+			</tr>
+		</thead>
+		<tbody class="divide-y divide-border-color">
+			{#if loading}
 				<tr>
-					<th class="px-6 py-4 font-semibold">Cliente</th>
-					<th class="px-6 py-4 font-semibold">Teléfono</th>
-					<th class="px-6 py-4 font-semibold min-w-[200px]">Fiado (Actual / Máx)</th>
-					<th class="px-6 py-4 font-semibold">Última Compra</th>
-					<th class="px-6 py-4 text-right font-semibold">Acciones</th>
+					<td colspan="5" class="px-6 py-12 text-center text-text-muted"> Cargando clientes... </td>
 				</tr>
-			</thead>
-			<tbody class="divide-y divide-border-color">
-				{#if loading}
-					<tr>
-						<td colspan="5" class="px-6 py-12 text-center text-text-muted">
-							Cargando clientes...
-						</td>
-					</tr>
-				{:else if filteredClientes.length === 0}
-					<tr>
-						<td colspan="5" class="px-6 py-12 text-center text-text-muted">
-							No se encontraron clientes con los filtros aplicados.
-						</td>
-					</tr>
-				{:else}
+			{:else if filteredClientes.length === 0}
+				<tr>
+					<td colspan="5" class="px-6 py-12 text-center text-text-muted">
+						No se encontraron clientes con los filtros aplicados.
+					</td>
+				</tr>
+			{:else}
 				{#each filteredClientes as client (client.id_cliente)}
-					{@const porcentaje = Math.min(((client.fiado_actual || 0) / (client.fiado_maximo || 20000)) * 100, 100)}
-					{@const colorClase = porcentaje >= 100 ? 'bg-danger-color' : porcentaje > 80 ? 'bg-orange-500' : 'bg-exito'}
-					<tr class="group transition-colors hover:bg-bg-primary/30">
+					{@const porcentaje = Math.min(
+						((client.fiado_actual || 0) / (client.fiado_maximo || 20000)) * 100,
+						100
+					)}
+					{@const colorClase =
+						porcentaje >= 100 ? 'bg-danger-color' : porcentaje > 80 ? 'bg-orange-500' : 'bg-exito'}
+					<tr class="group hover:bg-bg-primary/30">
 						<td class="px-6 py-4">
 							<div class="flex items-center gap-3">
-								<div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-border-color text-xs font-bold text-text-primary">
+								<div
+									class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-border-color text-xs font-bold text-text-primary"
+								>
 									{getInitials(client.nombre)}
 								</div>
 								<div class="flex flex-col">
@@ -489,11 +547,14 @@
 						<td class="px-6 py-4">
 							<div class="flex flex-col gap-1.5 w-full max-w-[200px]">
 								<div class="flex justify-between text-xs">
-									<span class="font-medium text-text-primary">{formatCurrency(client.fiado_actual || 0)}</span>
-									<span class="text-text-muted">{formatCurrency(client.fiado_maximo || 20000)}</span>
+									<span class="font-medium text-text-primary"
+										>{formatCurrency(client.fiado_actual || 0)}</span
+									>
+									<span class="text-text-muted">{formatCurrency(client.fiado_maximo || 20000)}</span
+									>
 								</div>
 								<div class="h-1.5 w-full overflow-hidden rounded-full bg-border-color">
-									<div class="h-full rounded-full {colorClase} transition-all duration-500" style="width: {porcentaje}%;"></div>
+									<div class="h-full rounded-full {colorClase}" style="width: {porcentaje}%;"></div>
 								</div>
 							</div>
 						</td>
@@ -505,7 +566,7 @@
 								{#if (client.fiado_actual || 0) > 0}
 									<button
 										onclick={() => openAbonoModal(client)}
-										class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 bg-exito/10 text-exito hover:bg-exito/20 text-xs font-bold transition-all"
+										class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 bg-exito/10 text-exito hover:bg-exito/20 text-xs font-bold"
 										title="Abonar Deuda"
 									>
 										<Coins size={14} />
@@ -515,14 +576,14 @@
 								{#if auth.user?.rol?.toLowerCase() === 'admin'}
 									<button
 										onclick={() => openEditModal(client)}
-										class="rounded-lg p-2 text-text-muted transition-colors hover:bg-border-color hover:text-primario"
+										class="rounded-lg p-2 text-text-muted hover:bg-border-color hover:text-primario"
 										title="Editar"
 									>
 										<Edit2 size={18} />
 									</button>
 									<button
 										onclick={() => openDeleteModal(client)}
-										class="rounded-lg p-2 text-text-muted transition-colors hover:bg-danger-bg hover:text-danger-color"
+										class="rounded-lg p-2 text-text-muted hover:bg-danger-bg hover:text-danger-color"
 										title="Eliminar"
 									>
 										<Trash2 size={18} />
@@ -532,59 +593,135 @@
 						</td>
 					</tr>
 				{/each}
-				{/if}
-			</tbody>
-		</table>
-	</div>
+			{/if}
+		</tbody>
+	</table>
+</div>
 
 <!-- Crear editar -->
 {#if showModal}
-	<div class="fixed inset-0 z-50 flex items-center justify-center bg-text-primary/40 p-4 backdrop-blur-[4px] animate-modal-enter" onclick={() => (showModal = false)} role="presentation">
-		<div class="w-full max-w-lg overflow-hidden rounded-2xl border border-border-color bg-bg-card shadow-2xl" onclick={(e) => e.stopPropagation()} role="dialog">
+	<div
+		class="fixed inset-0 z-50 flex items-center justify-center bg-text-primary/40 p-4 backdrop-blur-[4px] animate-modal-enter"
+		onclick={() => (showModal = false)}
+		role="presentation"
+	>
+		<div
+			class="w-full max-w-lg overflow-hidden rounded-2xl border border-border-color bg-bg-card shadow-2xl"
+			onclick={(e) => e.stopPropagation()}
+			role="dialog"
+		>
 			<header class="flex items-center justify-between border-b border-border-color px-6 py-4">
-				<h3 class="text-lg font-bold text-text-primary">{editingCliente ? 'Editar Cliente' : 'Añadir Nuevo Cliente'}</h3>
-				<button class="rounded-lg p-1 text-text-muted hover:bg-border-color hover:text-text-primary transition-colors" onclick={() => (showModal = false)}>
+				<h3 class="text-lg font-bold text-text-primary">
+					{editingCliente ? 'Editar Cliente' : 'Añadir Nuevo Cliente'}
+				</h3>
+				<button
+					class="rounded-lg p-1 text-text-muted hover:bg-border-color hover:text-text-primary"
+					onclick={() => (showModal = false)}
+				>
 					<X size={20} />
 				</button>
 			</header>
 			<form onsubmit={handleSubmit} autocomplete="off" class="p-6">
 				{#if formGeneralError}
-					<div class="mb-5 flex gap-3 rounded-lg border border-red-500/15 bg-danger-bg p-4 text-sm text-danger-color" role="alert">
+					<div
+						class="mb-5 flex gap-3 rounded-lg border border-red-500/15 bg-danger-bg p-4 text-sm text-danger-color"
+						role="alert"
+					>
 						<span>{formGeneralError}</span>
 					</div>
 				{/if}
-				
+
 				<div class="grid grid-cols-1 gap-5">
 					<div class="flex flex-col gap-1.5">
-						<label class="text-sm font-semibold text-text-primary" for="formNombre">Nombre Completo</label>
-						<input type="text" id="formNombre" autocomplete="off" class="rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50" placeholder="Ej: Juan Pérez Gómez" bind:value={formNombre} onblur={handleNombreBlur} disabled={submitLoading} required />
-						{#if errNombre}<span class="mt-1 text-xs font-medium text-danger-color">{errNombre}</span>{/if}
+						<label class="text-sm font-semibold text-text-primary" for="formNombre"
+							>Nombre Completo</label
+						>
+						<input
+							type="text"
+							id="formNombre"
+							autocomplete="off"
+							class="rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50"
+							placeholder="Ej: Juan Pérez Gómez"
+							bind:value={formNombre}
+							onblur={handleNombreBlur}
+							disabled={submitLoading}
+							required
+						/>
+						{#if errNombre}<span class="mt-1 text-xs font-medium text-danger-color"
+								>{errNombre}</span
+							>{/if}
 					</div>
 
 					<div class="flex flex-col gap-1.5">
 						<label class="text-sm font-semibold text-text-primary" for="formRut">RUT</label>
-						<input type="text" id="formRut" class="rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50" placeholder="Ej: 12.345.678-K" value={formRut} oninput={handleRutInput} disabled={submitLoading || editingCliente !== null} required />
-						{#if errRut}<span class="mt-1 text-xs font-medium text-danger-color">{errRut}</span>{/if}
+						<input
+							type="text"
+							id="formRut"
+							class="rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50"
+							placeholder="Ej: 12.345.678-K"
+							value={formRut}
+							oninput={handleRutInput}
+							disabled={submitLoading || editingCliente !== null}
+							required
+						/>
+						{#if errRut}<span class="mt-1 text-xs font-medium text-danger-color">{errRut}</span
+							>{/if}
 					</div>
 
 					<div class="flex flex-col gap-1.5">
-						<label class="text-sm font-semibold text-text-primary" for="formTelefono">Número Telefónico</label>
-						<input type="text" id="formTelefono" class="rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50" placeholder="Ej: +56912345678" bind:value={formTelefono} disabled={submitLoading} required />
-						{#if errTelefono}<span class="mt-1 text-xs font-medium text-danger-color">{errTelefono}</span>{/if}
+						<label class="text-sm font-semibold text-text-primary" for="formTelefono"
+							>Número Telefónico</label
+						>
+						<input
+							type="text"
+							id="formTelefono"
+							class="rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50"
+							placeholder="Ej: +56912345678"
+							bind:value={formTelefono}
+							disabled={submitLoading}
+							required
+						/>
+						{#if errTelefono}<span class="mt-1 text-xs font-medium text-danger-color"
+								>{errTelefono}</span
+							>{/if}
 					</div>
 
 					<div class="flex flex-col gap-1.5">
-						<label class="text-sm font-semibold text-text-primary" for="formFiadoActual">Fiado</label>
+						<label class="text-sm font-semibold text-text-primary" for="formFiadoActual"
+							>Fiado</label
+						>
 						<div class="relative flex items-center">
 							<span class="absolute left-4 text-text-muted font-medium">$</span>
-							<input type="number" min="0" step="1" id="formFiadoActual" class="w-full rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 pl-8 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" bind:value={formFiadoActual} disabled={submitLoading} required />
+							<input
+								type="number"
+								min="0"
+								step="1"
+								id="formFiadoActual"
+								class="w-full rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 pl-8 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+								bind:value={formFiadoActual}
+								disabled={submitLoading}
+								required
+							/>
 						</div>
 					</div>
 				</div>
 				<div class="mt-8 flex justify-end gap-4">
-					<button type="button" class="font-semibold text-text-muted transition-colors hover:text-text-primary" onclick={() => (showModal = false)} disabled={submitLoading}>Cancelar</button>
-					<button type="submit" class="rounded-xl bg-primario px-6 py-2.5 text-sm font-semibold text-white transition-transform hover:scale-[1.02] active:scale-95 disabled:cursor-not-allowed disabled:opacity-70" disabled={submitLoading}>
-						{#if submitLoading} Procesando... {:else} {editingCliente ? 'Guardar Cambios' : 'Crear Cliente'} {/if}
+					<button
+						type="button"
+						class="font-semibold text-text-muted hover:text-text-primary"
+						onclick={() => (showModal = false)}
+						disabled={submitLoading}>Cancelar</button
+					>
+					<button
+						type="submit"
+						class="rounded-xl bg-primario px-6 py-2.5 text-sm font-semibold text-white transition-transform hover:scale-[1.02] active:scale-95 disabled:cursor-not-allowed disabled:opacity-70"
+						disabled={submitLoading}
+					>
+						{#if submitLoading}
+							Procesando...
+						{:else}
+							{editingCliente ? 'Guardar Cambios' : 'Crear Cliente'}
+						{/if}
 					</button>
 				</div>
 			</form>
@@ -594,19 +731,43 @@
 
 <!-- borrar confirmacion del modal -->
 {#if showDeleteModal && clienteToDelete}
-	<div class="fixed inset-0 z-50 flex items-center justify-center bg-text-primary/40 p-5 backdrop-blur-[4px]" onclick={() => (showDeleteModal = false)} role="presentation">
-		<div class="w-full max-w-[500px] overflow-hidden rounded-xl border border-border-color bg-bg-card shadow-lg animate-modal-enter" onclick={(e) => e.stopPropagation()} role="dialog">
+	<div
+		class="fixed inset-0 z-50 flex items-center justify-center bg-text-primary/40 p-5 backdrop-blur-[4px]"
+		onclick={() => (showDeleteModal = false)}
+		role="presentation"
+	>
+		<div
+			class="w-full max-w-[500px] overflow-hidden rounded-xl border border-border-color bg-bg-card shadow-lg animate-modal-enter"
+			onclick={(e) => e.stopPropagation()}
+			role="dialog"
+		>
 			<header class="flex items-center justify-between border-b border-border-color p-5">
 				<h2 class="text-lg font-bold text-danger-color">Confirmar Eliminación</h2>
-				<button class="inline-flex cursor-pointer items-center justify-center rounded-lg border border-border-color bg-text-primary/3 p-2 text-text-secondary transition-all duration-200 hover:border-border-color-hover hover:bg-text-primary/7 hover:text-text-primary" onclick={() => (showDeleteModal = false)}>&times;</button>
+				<button
+					class="inline-flex cursor-pointer items-center justify-center rounded-lg border border-border-color bg-text-primary/3 p-2 text-text-secondary hover:border-border-color-hover hover:bg-text-primary/7 hover:text-text-primary"
+					onclick={() => (showDeleteModal = false)}>&times;</button
+				>
 			</header>
 			<div class="p-6 text-text-primary">
-				<p>¿Estás seguro de que deseas eliminar al cliente <strong>{clienteToDelete.nombre}</strong> de forma permanente?</p>
+				<p>
+					¿Estás seguro de que deseas eliminar al cliente <strong>{clienteToDelete.nombre}</strong> de
+					forma permanente?
+				</p>
 				<p class="mt-3 text-xs text-text-muted">No se podrá deshacer esta acción.</p>
 			</div>
-			<footer class="flex justify-end gap-3 border-t border-border-color bg-text-primary/2 p-4 px-6">
-				<button type="button" class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-border-color bg-bg-secondary px-5 py-2.5 text-sm font-semibold text-text-primary transition-all duration-200 hover:bg-text-primary/5" onclick={() => (showDeleteModal = false)}>Cancelar</button>
-				<button type="button" class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-red-500/15 bg-danger-bg px-5 py-2.5 text-sm font-semibold text-danger-color transition-all duration-200 hover:bg-danger-color hover:text-white" onclick={confirmDelete}>Eliminar Permanentemente</button>
+			<footer
+				class="flex justify-end gap-3 border-t border-border-color bg-text-primary/2 p-4 px-6"
+			>
+				<button
+					type="button"
+					class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-border-color bg-bg-secondary px-5 py-2.5 text-sm font-semibold text-text-primary hover:bg-text-primary/5"
+					onclick={() => (showDeleteModal = false)}>Cancelar</button
+				>
+				<button
+					type="button"
+					class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-red-500/15 bg-danger-bg px-5 py-2.5 text-sm font-semibold text-danger-color hover:bg-danger-color hover:text-white"
+					onclick={confirmDelete}>Eliminar Permanentemente</button
+				>
 			</footer>
 		</div>
 	</div>
@@ -614,31 +775,54 @@
 
 <!-- Abono Modal -->
 {#if showAbonoModal && selectedAbonoCliente}
-	<div class="fixed inset-0 z-50 flex items-center justify-center bg-text-primary/40 p-5 backdrop-blur-[4px]" onclick={() => (showAbonoModal = false)} role="presentation">
-		<div class="w-full max-w-[500px] overflow-hidden rounded-xl border border-border-color bg-bg-card shadow-lg animate-modal-enter" onclick={(e) => e.stopPropagation()} role="dialog">
+	<div
+		class="fixed inset-0 z-50 flex items-center justify-center bg-text-primary/40 p-5 backdrop-blur-[4px]"
+		onclick={() => (showAbonoModal = false)}
+		role="presentation"
+	>
+		<div
+			class="w-full max-w-[500px] overflow-hidden rounded-xl border border-border-color bg-bg-card shadow-lg animate-modal-enter"
+			onclick={(e) => e.stopPropagation()}
+			role="dialog"
+		>
 			<header class="flex items-center justify-between border-b border-border-color p-5">
 				<h2 class="text-lg font-bold text-text-primary">Registrar Abono / Pago</h2>
-				<button class="inline-flex cursor-pointer items-center justify-center rounded-lg border border-border-color bg-text-primary/3 p-2 text-text-secondary transition-all duration-200 hover:border-border-color-hover hover:bg-text-primary/7 hover:text-text-primary" onclick={() => (showAbonoModal = false)}>&times;</button>
+				<button
+					class="inline-flex cursor-pointer items-center justify-center rounded-lg border border-border-color bg-text-primary/3 p-2 text-text-secondary hover:border-border-color-hover hover:bg-text-primary/7 hover:text-text-primary"
+					onclick={() => (showAbonoModal = false)}>&times;</button
+				>
 			</header>
 			<form onsubmit={handleAbonoSubmit}>
 				<div class="p-6 flex flex-col gap-4 text-text-primary">
 					<p class="text-sm">
-						Registra un pago en efectivo o tarjeta para reducir la deuda de <strong>{selectedAbonoCliente.nombre}</strong>.
+						Registra un pago en efectivo o tarjeta para reducir la deuda de <strong
+							>{selectedAbonoCliente.nombre}</strong
+						>.
 					</p>
-					
-					<div class="rounded-lg border border-border-color bg-bg-primary/50 p-4 text-xs flex flex-col gap-2">
+
+					<div
+						class="rounded-lg border border-border-color bg-bg-primary/50 p-4 text-xs flex flex-col gap-2"
+					>
 						<div class="flex justify-between">
 							<span>Deuda Pendiente:</span>
-							<span class="font-bold text-danger-color">{formatCurrency(selectedAbonoCliente.fiado_actual)}</span>
+							<span class="font-bold text-danger-color"
+								>{formatCurrency(selectedAbonoCliente.fiado_actual)}</span
+							>
 						</div>
 						<div class="flex justify-between">
 							<span>Cupo Disponible:</span>
-							<span class="font-bold text-exito">{formatCurrency(selectedAbonoCliente.fiado_maximo - selectedAbonoCliente.fiado_actual)}</span>
+							<span class="font-bold text-exito"
+								>{formatCurrency(
+									selectedAbonoCliente.fiado_maximo - selectedAbonoCliente.fiado_actual
+								)}</span
+							>
 						</div>
 					</div>
 
 					<div class="flex flex-col gap-1.5 mt-2">
-						<label class="text-sm font-semibold text-text-primary" for="abonoMonto">Monto del Abono</label>
+						<label class="text-sm font-semibold text-text-primary" for="abonoMonto"
+							>Monto del Abono</label
+						>
 						<div class="relative flex items-center">
 							<span class="absolute left-4 text-text-muted font-medium">$</span>
 							<input
@@ -659,10 +843,25 @@
 						{/if}
 					</div>
 				</div>
-				<footer class="flex justify-end gap-3 border-t border-border-color bg-text-primary/2 p-4 px-6">
-					<button type="button" class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-border-color bg-bg-secondary px-5 py-2.5 text-sm font-semibold text-text-primary transition-all duration-200 hover:bg-text-primary/5" onclick={() => (showAbonoModal = false)} disabled={abonoLoading}>Cancelar</button>
-					<button type="submit" class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-primario px-5 py-2.5 text-sm font-semibold text-white transition-all duration-200 hover:bg-primario-hover shadow-md disabled:cursor-not-allowed disabled:opacity-70" disabled={abonoLoading}>
-						{#if abonoLoading} Procesando... {:else} Registrar Pago {/if}
+				<footer
+					class="flex justify-end gap-3 border-t border-border-color bg-text-primary/2 p-4 px-6"
+				>
+					<button
+						type="button"
+						class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-border-color bg-bg-secondary px-5 py-2.5 text-sm font-semibold text-text-primary hover:bg-text-primary/5"
+						onclick={() => (showAbonoModal = false)}
+						disabled={abonoLoading}>Cancelar</button
+					>
+					<button
+						type="submit"
+						class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-primario px-5 py-2.5 text-sm font-semibold text-white hover:bg-primario-hover shadow-md disabled:cursor-not-allowed disabled:opacity-70"
+						disabled={abonoLoading}
+					>
+						{#if abonoLoading}
+							Procesando...
+						{:else}
+							Registrar Pago
+						{/if}
 					</button>
 				</footer>
 			</form>

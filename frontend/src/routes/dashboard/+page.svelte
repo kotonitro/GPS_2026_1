@@ -205,7 +205,7 @@
 <div class="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
 	<!-- Ventas Hoy -->
 	<div
-		class="flex flex-col justify-center rounded-xl border border-border-color bg-bg-card p-6 shadow-sm transition-all hover:border-border-color-hover"
+		class="flex flex-col justify-center rounded-xl border border-border-color bg-bg-card p-6 shadow-sm hover:border-border-color-hover"
 	>
 		<div class="flex items-center justify-between mb-4">
 			<div
@@ -220,7 +220,7 @@
 
 	<!-- Clientes Atendidos -->
 	<div
-		class="flex flex-col justify-center rounded-xl border border-border-color bg-bg-card p-6 shadow-sm transition-all hover:border-border-color-hover"
+		class="flex flex-col justify-center rounded-xl border border-border-color bg-bg-card p-6 shadow-sm hover:border-border-color-hover"
 	>
 		<div class="flex items-center justify-between mb-4">
 			<div class="flex h-10 w-10 items-center justify-center rounded-lg bg-exito/10 text-exito">
@@ -235,7 +235,7 @@
 
 	<!-- Fiados Pendientes -->
 	<div
-		class="flex flex-col justify-center rounded-xl border border-border-color bg-bg-card p-6 shadow-sm transition-all hover:border-border-color-hover"
+		class="flex flex-col justify-center rounded-xl border border-border-color bg-bg-card p-6 shadow-sm hover:border-border-color-hover"
 	>
 		<div class="flex items-center justify-between mb-4">
 			<div
@@ -255,7 +255,7 @@
 
 	<!-- Agotados / Bajo Stock -->
 	<div
-		class="flex flex-col justify-center rounded-xl border border-border-color bg-bg-card p-6 shadow-sm transition-all hover:border-border-color-hover"
+		class="flex flex-col justify-center rounded-xl border border-border-color bg-bg-card p-6 shadow-sm hover:border-border-color-hover"
 	>
 		<div class="flex items-center justify-between mb-4">
 			<div
@@ -289,7 +289,7 @@
 		<div class="flex flex-col gap-0 p-0">
 			{#each ultimasVentas as venta}
 				<div
-					class="flex items-center justify-between border-b border-border-color p-5 last:border-0 hover:bg-text-primary/[0.015] transition-colors"
+					class="flex items-center justify-between border-b border-border-color p-5 last:border-0 hover:bg-text-primary/[0.015]"
 				>
 					<div>
 						<h4 class="font-bold text-text-primary">{venta.empleado}</h4>
@@ -328,7 +328,7 @@
 						? generarNombresCombo(promo)
 						: obtenerProducto(promo.producto_id)?.nombre || 'Producto'}
 				<div
-					class="flex items-center justify-between rounded-lg border border-border-color p-4 transition-colors hover:border-border-color-hover"
+					class="flex items-center justify-between rounded-lg border border-border-color p-4 hover:border-border-color-hover"
 				>
 					<div>
 						<h4
