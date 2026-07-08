@@ -1,6 +1,7 @@
 package ventas
 
 import (
+	"backend/internal/cajas"
 	"backend/internal/clientes"
 	"backend/internal/inventario"
 	"backend/internal/promociones"
@@ -16,19 +17,29 @@ import (
 func calcularDescuentoItem(cantidad int, precio float64, promo promociones.Promocion) float64 {
 	switch promo.Tipo {
 	case "NXM":
-		if promo.Lleva > 0 && promo.Paga > 0 && promo.Lleva > promo.Paga {
-			sets := cantidad / promo.Lleva
-			descuentoCant := sets * (promo.Lleva - promo.Paga)
-			return float64(descuentoCant) * precio
+		if promo.Lleva != nil && promo.Paga != nil {
+			lleva := *promo.Lleva
+			paga := *promo.Paga
+			if lleva > 0 && paga > 0 && lleva > paga {
+				sets := cantidad / lleva
+				descuentoCant := sets * (lleva - paga)
+				return float64(descuentoCant) * precio
+			}
 		}
 	case "porcentaje":
-		if promo.Descuento > 0 {
-			return float64(cantidad) * precio * (promo.Descuento / 100.0)
+		if promo.Descuento != nil {
+			descuento := *promo.Descuento
+			if descuento > 0 {
+				return float64(cantidad) * precio * (descuento / 100.0)
+			}
 		}
 	case "precio_fijo":
-		if promo.Descuento > 0 && precio > promo.Descuento {
-			unitDiscount := precio - promo.Descuento
-			return float64(cantidad) * unitDiscount
+		if promo.Descuento != nil {
+			descuento := *promo.Descuento
+			if descuento > 0 && precio > descuento {
+				unitDiscount := precio - descuento
+				return float64(cantidad) * unitDiscount
+			}
 		}
 	}
 	return 0
@@ -68,9 +79,12 @@ func (ctrl *VentasController) CrearVenta(c *gin.Context) {
 		}
 
 		var totalDescuento float64 = 0
-		var totalVenta float64 = 0
+		var subtotalTotal float64 = 0
 
-		// 1. Validar, descontar stock y calcular promociones por ítem
+		cantidades := make(map[string]int)
+		precios := make(map[string]float64)
+
+		// 1. Validar, descontar stock y preparar datos
 		for i, detalle := range nuevaVenta.Detalles {
 			var producto inventario.Producto
 			if err := tx.First(&producto, "id = ?", detalle.ProductoID).Error; err != nil {
@@ -86,24 +100,66 @@ func (ctrl *VentasController) CrearVenta(c *gin.Context) {
 				return err
 			}
 
-			// Buscar la promoción activa que otorgue el mayor descuento para este ítem
-			var bestDiscount float64 = 0
-			for _, promo := range activePromos {
-				if promo.ProductoID == detalle.ProductoID {
-					disc := calcularDescuentoItem(detalle.Cantidad, producto.Precio, promo)
-					if disc > bestDiscount {
-						bestDiscount = disc
+			cantidades[detalle.ProductoID] += detalle.Cantidad
+			precios[detalle.ProductoID] = producto.Precio
+
+			subtotalItem := producto.Precio * float64(detalle.Cantidad)
+			subtotalTotal += subtotalItem
+			nuevaVenta.Detalles[i].MontoFinal = subtotalItem // Monto base, el descuento se calcula globalmente
+		}
+
+		// 2. Calcular Descuentos de Combos
+		for _, promo := range activePromos {
+			if promo.Tipo == "COMBO" && len(promo.ProductosCombo) > 0 && promo.Descuento != nil {
+				sets := 999999
+				var costoNormalCombo float64 = 0
+
+				reqMap := make(map[string]int)
+				for _, pid := range promo.ProductosCombo {
+					reqMap[pid]++
+				}
+
+				for pid, reqQty := range reqMap {
+					if reqQty > 0 {
+						avail := cantidades[pid]
+						possible := avail / reqQty
+						if possible < sets {
+							sets = possible
+						}
+						costoNormalCombo += precios[pid] * float64(reqQty)
+					}
+				}
+
+				if sets > 0 && sets != 999999 {
+					// El descuento es la diferencia entre el precio normal y el precio final del combo
+					ahorroPorCombo := costoNormalCombo - *promo.Descuento
+					if ahorroPorCombo > 0 {
+						totalDescuento += ahorroPorCombo * float64(sets)
+						for pid, reqQty := range reqMap {
+							cantidades[pid] -= reqQty * sets
+						}
 					}
 				}
 			}
-
-			subtotalItem := producto.Precio * float64(detalle.Cantidad)
-			montoFinalItem := subtotalItem - bestDiscount
-			nuevaVenta.Detalles[i].MontoFinal = montoFinalItem
-
-			totalDescuento += bestDiscount
-			totalVenta += montoFinalItem
 		}
+
+		// 3. Calcular Descuentos Individuales para el remanente
+		for pid, remanente := range cantidades {
+			if remanente > 0 {
+				var bestDiscount float64 = 0
+				for _, promo := range activePromos {
+					if promo.Tipo != "COMBO" && promo.ProductoID != nil && *promo.ProductoID == pid {
+						disc := calcularDescuentoItem(remanente, precios[pid], promo)
+						if disc > bestDiscount {
+							bestDiscount = disc
+						}
+					}
+				}
+				totalDescuento += bestDiscount
+			}
+		}
+
+		totalVenta := subtotalTotal - totalDescuento
 
 		// Sobrescribir los montos totales calculados por seguridad en el backend
 		nuevaVenta.MontoDescuento = totalDescuento
@@ -134,6 +190,21 @@ func (ctrl *VentasController) CrearVenta(c *gin.Context) {
 				return err
 			}
 		}
+
+		// 4. Actualizar el saldo final de la caja
+		// Aumentamos el saldo de la caja (asumiendo que las ventas al contado o tarjeta suman al cuadre)
+		// Si es Fiado, el dinero no entra a la caja en este momento.
+		if nuevaVenta.MetodoID != "33333333-3333-3333-3333-333333333333" {
+			var caja cajas.Caja
+			if err := tx.First(&caja, "id = ?", nuevaVenta.CajaID).Error; err != nil {
+				return errors.New("Error al buscar la caja para actualizar el saldo: " + err.Error())
+			}
+			caja.SaldoFinal += uint(nuevaVenta.MontoTotal)
+			if err := tx.Save(&caja).Error; err != nil {
+				return errors.New("Error al actualizar el saldo de la caja: " + err.Error())
+			}
+		}
+
 		return nil
 	})
 
@@ -142,8 +213,8 @@ func (ctrl *VentasController) CrearVenta(c *gin.Context) {
 		return
 	}
 
-	// Preload MetodoPago y Fiado para consistencia en la respuesta
-	ctrl.db.Preload("MetodoPago").Preload("Fiado").First(&nuevaVenta, "id = ?", nuevaVenta.ID)
+	// Preload MetodoPago, Detalles, Fiado y Caja para consistencia en la respuesta
+	ctrl.db.Preload("MetodoPago").Preload("Detalles").Preload("Fiado").Preload("Caja").First(&nuevaVenta, "id = ?", nuevaVenta.ID)
 
 	c.JSON(http.StatusCreated, gin.H{
 		"mensaje": "Venta creada",
