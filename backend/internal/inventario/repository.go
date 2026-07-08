@@ -1,6 +1,9 @@
 package inventario
 
-import "gorm.io/gorm"
+import (
+	"errors"
+	"gorm.io/gorm"
+)
 
 // ---- PRODUCTOS ----
 // Recibe la BD y un puntero al producto para inyectarle el UUID
@@ -79,5 +82,16 @@ func ActualizarCategoria(db *gorm.DB, id string, datosNuevos *Categoria) error {
 
 // borra una categoría de la base de datos
 func EliminarCategoria(db *gorm.DB, id string) error {
+	// 1. Verificar si hay productos activos usando esta categoría
+	var count int64
+	db.Model(&Producto{}).Where("categoria_id = ? AND estado = ?", id, true).Count(&count)
+	if count > 0 {
+		return errors.New("hay productos activos")
+	}
+
+	// 2. Eliminar físicamente los productos descontinuados (estado = false)
+	db.Unscoped().Where("categoria_id = ? AND estado = ?", id, false).Delete(&Producto{})
+
+	// 3. Eliminar la categoría
 	return db.Where("id = ?", id).Delete(&Categoria{}).Error
 }

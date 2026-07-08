@@ -24,7 +24,7 @@ type InitialAdmin struct {
 	Usuario    string
 	Contrasena string
 	RolID      string
-	Telefono	string
+	Telefono   string
 }
 
 func (InitialAdmin) TableName() string {

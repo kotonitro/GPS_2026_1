@@ -9,8 +9,48 @@
 	let fiadosPendientes = $state(0);
 	let clientesDeudores = $state(0);
 	let productosAgotados = $state(0);
+	
 	let ultimasVentas = $state<any[]>([]);
-	let listaPromociones = $state<any[]>([]);
+	let productos = $state<any[]>([]);
+	let promociones = $state<any[]>([]);
+	let hoy = $derived(new Date());
+
+	let promocionesActivas = $derived(promociones.filter(p => {
+		if (!p.fecha_inicio || !p.fecha_fin) return true;
+		return new Date(p.fecha_inicio) <= hoy && new Date(p.fecha_fin) >= hoy;
+	}).slice(0, 3));
+
+	function obtenerProducto(id: string) {
+		return productos.find((p) => p.id_producto === id);
+	}
+	
+	function generarNombresCombo(promo: any) {
+		if (!promo.productos_combo || promo.productos_combo.length === 0) return 'Productos del combo';
+		const nombres = promo.productos_combo.map((id: string) => obtenerProducto(id)?.nombre || 'Producto').join(' + ');
+		return nombres;
+	}
+
+	function generarTitulo(promo: any, nombreProd: string) {
+		if (promo.tipo === 'NXM') return `${promo.lleva}x${promo.paga} en ${nombreProd}`;
+		if (promo.tipo === 'porcentaje') return `${promo.descuento}% en ${nombreProd}`;
+		if (promo.tipo === 'COMBO') return `Combo Especial`; 
+		return `$${promo.descuento} dcto. en ${nombreProd}`;
+	}
+
+	function calcularDestaque(promo: any, producto: any) {
+		if (promo.tipo === 'NXM') {
+			return `${promo.lleva}x${promo.paga}`;
+		} else if (promo.tipo === 'porcentaje') {
+			return `${promo.descuento}%`;
+		} else if (promo.tipo === 'COMBO') {
+			return `$${promo.descuento}`;
+		} else {
+			if (producto && producto.precio > 0) {
+				return Math.round((promo.descuento / producto.precio) * 100) + '%';
+			}
+			return `$${promo.descuento}`; 
+		}
+	}
 
 	onMount(async () => {
 		// 1. Cargar clientes y calcular fiados pendientes
@@ -36,7 +76,7 @@
 		// 2. Cargar productos y contar alertas de stock
 		try {
 			const resProductos = await apiProductos.getAll();
-			const productos = Array.isArray(resProductos) ? resProductos : [];
+			productos = Array.isArray(resProductos) ? resProductos : [];
 			let countAgotados = 0;
 			
 			for (const p of productos) {
@@ -122,24 +162,7 @@
 		// 4. Cargar promociones activas reales
 		try {
 			const resPromos = await obtenerPromociones();
-			const promos = Array.isArray(resPromos) ? resPromos : [];
-			
-			listaPromociones = promos.slice(0, 3).map(p => {
-				let desc = 'Descuento';
-				if (p.tipo === 'NXM') {
-					desc = `${p.lleva}x${p.paga}`;
-				} else if (p.tipo === 'porcentaje') {
-					desc = `${p.descuento}%`;
-				} else if (p.tipo === 'precio_fijo') {
-					desc = `$${p.descuento}`;
-				}
-				
-				return {
-					nombre: p.tipo === 'NXM' ? `Promo NxM (${p.lleva}x${p.paga})` : `Oferta Especial`,
-					descuento: desc,
-					vence: p.fecha_fin ? new Date(p.fecha_fin) : new Date(Date.now() + 86400000 * 7)
-				};
-			});
+			promociones = Array.isArray(resPromos) ? resPromos : [];
 		} catch (error) {
 			console.error('Error al cargar promociones para el dashboard:', error);
 		}
@@ -153,7 +176,7 @@
 		}).format(amount);
 	}
 
-	function formatDate(date: Date) {
+	function formatDate(date: Date | string) {
 		const d = new Date(date);
 		const day = String(d.getDate()).padStart(2, '0');
 		const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -245,18 +268,22 @@
 				<Package size={20} class="text-primario" />
 				Promociones Activas
 			</h2>
+			<a href="/dashboard/promociones" class="text-sm font-semibold text-text-secondary hover:text-primario">Ver todas</a>
 		</div>
 		<div class="flex flex-col gap-4 p-5">
-			{#each listaPromociones as promo}
+			{#each promocionesActivas as promo}
+				{@const nombreProd = promo.tipo === 'COMBO' ? generarNombresCombo(promo) : (obtenerProducto(promo.producto_id)?.nombre || 'Producto')}
 				<div class="flex items-center justify-between rounded-lg border border-border-color p-4 transition-colors hover:border-border-color-hover">
 					<div>
-						<h4 class="font-bold text-text-primary">{promo.nombre}</h4>
-						<p class="text-sm text-text-secondary">Vence: {formatDate(promo.vence)}</p>
+						<h4 class="font-bold text-text-primary line-clamp-1" title={generarTitulo(promo, nombreProd)}>{generarTitulo(promo, nombreProd)}</h4>
+						<p class="text-sm text-text-secondary">Vence: {promo.fecha_fin ? formatDate(promo.fecha_fin) : 'Sin límite'}</p>
 					</div>
-					<div class="flex h-10 w-16 items-center justify-center rounded-lg bg-primario/10 font-bold text-primario">
-						{promo.descuento}
+					<div class="flex h-10 min-w-[64px] px-3 items-center justify-center rounded-lg bg-primario/10 font-bold text-primario">
+						{calcularDestaque(promo, promo.tipo !== 'COMBO' ? obtenerProducto(promo.producto_id) : null)}
 					</div>
 				</div>
+			{:else}
+				<p class="text-sm text-text-secondary py-2 text-center">No hay promociones activas.</p>
 			{/each}
 		</div>
 	</div>

@@ -30,6 +30,18 @@ export interface Producto {
     categoria?: Categoria;
 }
 
+export interface Promocion {
+    id_promocion?: string;
+    producto_id?: string | null;
+    productos_combo?: string[];
+    tipo: string;
+    lleva?: number;
+    paga?: number;
+    descuento?: number;
+    fecha_inicio?: string | null;
+    fecha_fin?: string | null;
+}
+
 export async function apiFetch(endpoint: string, options: RequestInit = {}) {
 	const headers = {
 		'Content-Type': 'application/json',
@@ -44,7 +56,7 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}) {
 
 	if (!response.ok) {
 		const errorData = await response.json().catch(() => ({}));
-		throw new Error(errorData.error || 'Error de conexión con el servidor');
+		throw new Error(errorData.error || errorData.Error || errorData.mensaje || 'Error de conexión con el servidor');
 	}
 
 	return response.json();
@@ -68,11 +80,11 @@ export async function checkSession(): Promise<Empleado> {
 }
 
 //promociones 
-export async function obtenerPromociones() {
+export async function obtenerPromociones(): Promise<Promocion[]> {
 	return apiFetch('/promociones/');
 }
 
-export async function crearPromocion(data: any) {
+export async function crearPromocion(data: Partial<Promocion>) {
 	return apiFetch('/promociones', {
 		method: 'POST',
 		body: JSON.stringify(data)
@@ -85,7 +97,7 @@ export async function eliminarPromocion(id: string) {
 	});
 }
 
-export async function actualizarPromocion(id: string, payload: any) {
+export async function actualizarPromocion(id: string, payload: Partial<Promocion>) {
 	return apiFetch(`/promociones/${id}`, {
 		method: 'PATCH',
 		headers: {
@@ -144,6 +156,13 @@ export const apiCategorias = {
     create: (data: { nombre_categoria: string }) => apiFetch('/inventario/categorias', {
         method: 'POST',
         body: JSON.stringify(data)
+    }),
+    update: (id: string, data: { nombre_categoria: string }) => apiFetch(`/inventario/categorias/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data)
+    }),
+    delete: (id: string) => apiFetch(`/inventario/categorias/${id}`, {
+        method: 'DELETE'
     })
 };
 
