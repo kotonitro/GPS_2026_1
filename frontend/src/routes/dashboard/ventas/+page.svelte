@@ -260,6 +260,19 @@
 		if (selectedMetodoId !== 'fiado' || !selectedClientData) return false;
 		return selectedClientData.fiado_actual + total > selectedClientData.fiado_maximo;
 	});
+	let hasExpiredFiados = $derived.by(() => {
+		if (selectedMetodoId !== 'fiado' || !selectedClienteId) return false;
+		const now = new Date();
+		return ventas.some((v) => {
+			return (
+				v.id_cliente === selectedClienteId &&
+				v.id_metodo === '33333333-3333-3333-3333-333333333333' &&
+				v.fiado &&
+				!v.fiado.pagado &&
+				new Date(v.fiado.fecha_limite) < now
+			);
+		});
+	});
 
 	// Global Keyboard Listener for barcode scanning
 	function handleGlobalKeydown(e: KeyboardEvent) {
@@ -496,6 +509,7 @@
 		const payload = {
 			id_caja: selectedCajaId,
 			id_metodo: metodoIdForBackend,
+			id_cliente: selectedMetodoId === 'fiado' ? selectedClienteId : undefined,
 			pago:
 				selectedMetodoId === '11111111-1111-1111-1111-111111111111'
 					? (cashReceived as number)
@@ -927,7 +941,7 @@
 								</select>
 								{#if selectedClientData}
 									<div
-										class="mt-2 p-3 rounded-lg border text-xs flex flex-col gap-1 {isFiadoLimitExceeded
+										class="mt-2 p-3 rounded-lg border text-xs flex flex-col gap-1 {isFiadoLimitExceeded || hasExpiredFiados
 											? 'border-red-500/15 bg-danger-bg text-danger-color'
 											: 'border-border-color bg-text-primary/[0.01]'}"
 									>
@@ -952,6 +966,11 @@
 										{#if isFiadoLimitExceeded}
 											<p class="font-bold text-[10px] uppercase mt-1">
 												⚠️ Excede el saldo máximo permitido
+											</p>
+										{/if}
+										{#if hasExpiredFiados}
+											<p class="font-bold text-[10px] uppercase mt-1">
+												⚠️ Cliente bloqueado por fiados vencidos
 											</p>
 										{/if}
 									</div>
@@ -983,7 +1002,7 @@
 					<footer class="p-4 bg-text-primary/[0.02] border-t border-border-color">
 						<button
 							type="submit"
-							disabled={cart.length === 0 || submitting || isFiadoLimitExceeded || !selectedCajaId}
+							disabled={cart.length === 0 || submitting || isFiadoLimitExceeded || !selectedCajaId || hasExpiredFiados}
 							class="w-full inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-accent-light to-accent py-3 font-bold text-white shadow-md transition-all hover:bg-primario-hover hover:shadow-glow disabled:cursor-not-allowed disabled:opacity-50"
 						>
 							{#if submitting}
@@ -1172,6 +1191,14 @@
 							{getCajaName(selectedSale.id_caja)}
 						</p>
 					</div>
+					{#if selectedSale.fiado}
+						<div>
+							<p class="text-danger-color font-medium text-xs uppercase font-bold">Fecha Límite Pago</p>
+							<p class="font-semibold text-danger-color mt-0.5">
+								{new Date(selectedSale.fiado.fecha_limite).toLocaleDateString('es-CL')}
+							</p>
+						</div>
+					{/if}
 				</div>
 
 				<!-- Products table -->

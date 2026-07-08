@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { apiClientes } from '$lib/api';
+	import { apiClientes, apiFetch } from '$lib/api';
 	import { auth } from '$lib/authStore.svelte';
 	import { toast } from '$lib/toastStore.svelte';
 	import { onMount } from 'svelte';
-	import { Edit2, Trash2, X } from '@lucide/svelte';
+	import { Edit2, Trash2, X, Coins } from '@lucide/svelte';
 
 	interface Cliente {
 		id_cliente: string;
@@ -23,6 +23,13 @@
 	// Búsqueda Cliente-side
 	let searchQuery = $state('');
     let selectedEstado = $state('Todos');
+
+	// Abono Modal State
+	let showAbonoModal = $state(false);
+	let selectedAbonoCliente = $state<Cliente | null>(null);
+	let abonoMonto = $state<number | ''>('');
+	let abonoLoading = $state(false);
+	let abonoError = $state('');
 
 	let filteredClientes = $derived.by(() => {
 		let result = clientes;
@@ -227,6 +234,45 @@
 		showDeleteModal = true;
 	}
 
+	function openAbonoModal(cliente: Cliente) {
+		selectedAbonoCliente = cliente;
+		abonoMonto = '';
+		abonoError = '';
+		showAbonoModal = true;
+	}
+
+	async function handleAbonoSubmit(e: Event) {
+		e.preventDefault();
+		if (!selectedAbonoCliente || abonoMonto === '' || abonoMonto <= 0) {
+			abonoError = 'Por favor, ingresa un monto válido mayor a cero.';
+			return;
+		}
+
+		if (abonoMonto > selectedAbonoCliente.fiado_actual) {
+			abonoError = `El abono no puede superar la deuda actual de ${formatCurrency(selectedAbonoCliente.fiado_actual)}`;
+			return;
+		}
+
+		abonoLoading = true;
+		abonoError = '';
+
+		try {
+			await apiFetch(`/ventas/clientes/${selectedAbonoCliente.id_cliente}/abonar`, {
+				method: 'POST',
+				body: JSON.stringify({ monto: Number(abonoMonto) })
+			});
+
+			toast.show(`Abono de ${formatCurrency(Number(abonoMonto))} registrado con éxito.`, 'success');
+			showAbonoModal = false;
+			await loadClientes();
+		} catch (err: any) {
+			abonoError = err.message || 'Error al procesar el abono.';
+			toast.show(abonoError, 'error');
+		} finally {
+			abonoLoading = false;
+		}
+	}
+
 	function clearErrors() {
 		errNombre = '';
 		errRut = '';
@@ -407,9 +453,7 @@
 					<th class="px-6 py-4 font-semibold">Teléfono</th>
 					<th class="px-6 py-4 font-semibold min-w-[200px]">Fiado (Actual / Máx)</th>
 					<th class="px-6 py-4 font-semibold">Última Compra</th>
-					{#if auth.user?.rol?.toLowerCase() === 'admin'}
-						<th class="px-6 py-4 text-right font-semibold">Acciones</th>
-					{/if}
+					<th class="px-6 py-4 text-right font-semibold">Acciones</th>
 				</tr>
 			</thead>
 			<tbody class="divide-y divide-border-color">
@@ -456,9 +500,19 @@
 						<td class="px-6 py-4 text-text-muted">
 							{formatDate(client.ultima_compra)}
 						</td>
-						{#if auth.user?.rol?.toLowerCase() === 'admin'}
-							<td class="px-6 py-4 text-right">
-								<div class="flex items-center justify-end gap-2">
+						<td class="px-6 py-4 text-right">
+							<div class="flex items-center justify-end gap-2">
+								{#if (client.fiado_actual || 0) > 0}
+									<button
+										onclick={() => openAbonoModal(client)}
+										class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 bg-exito/10 text-exito hover:bg-exito/20 text-xs font-bold transition-all"
+										title="Abonar Deuda"
+									>
+										<Coins size={14} />
+										<span>Abonar</span>
+									</button>
+								{/if}
+								{#if auth.user?.rol?.toLowerCase() === 'admin'}
 									<button
 										onclick={() => openEditModal(client)}
 										class="rounded-lg p-2 text-text-muted transition-colors hover:bg-border-color hover:text-primario"
@@ -473,9 +527,9 @@
 									>
 										<Trash2 size={18} />
 									</button>
-								</div>
-							</td>
-						{/if}
+								{/if}
+							</div>
+						</td>
 					</tr>
 				{/each}
 				{/if}
@@ -554,6 +608,64 @@
 				<button type="button" class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-border-color bg-bg-secondary px-5 py-2.5 text-sm font-semibold text-text-primary transition-all duration-200 hover:bg-text-primary/5" onclick={() => (showDeleteModal = false)}>Cancelar</button>
 				<button type="button" class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-red-500/15 bg-danger-bg px-5 py-2.5 text-sm font-semibold text-danger-color transition-all duration-200 hover:bg-danger-color hover:text-white" onclick={confirmDelete}>Eliminar Permanentemente</button>
 			</footer>
+		</div>
+	</div>
+{/if}
+
+<!-- Abono Modal -->
+{#if showAbonoModal && selectedAbonoCliente}
+	<div class="fixed inset-0 z-50 flex items-center justify-center bg-text-primary/40 p-5 backdrop-blur-[4px]" onclick={() => (showAbonoModal = false)} role="presentation">
+		<div class="w-full max-w-[500px] overflow-hidden rounded-xl border border-border-color bg-bg-card shadow-lg animate-modal-enter" onclick={(e) => e.stopPropagation()} role="dialog">
+			<header class="flex items-center justify-between border-b border-border-color p-5">
+				<h2 class="text-lg font-bold text-text-primary">Registrar Abono / Pago</h2>
+				<button class="inline-flex cursor-pointer items-center justify-center rounded-lg border border-border-color bg-text-primary/3 p-2 text-text-secondary transition-all duration-200 hover:border-border-color-hover hover:bg-text-primary/7 hover:text-text-primary" onclick={() => (showAbonoModal = false)}>&times;</button>
+			</header>
+			<form onsubmit={handleAbonoSubmit}>
+				<div class="p-6 flex flex-col gap-4 text-text-primary">
+					<p class="text-sm">
+						Registra un pago en efectivo o tarjeta para reducir la deuda de <strong>{selectedAbonoCliente.nombre}</strong>.
+					</p>
+					
+					<div class="rounded-lg border border-border-color bg-bg-primary/50 p-4 text-xs flex flex-col gap-2">
+						<div class="flex justify-between">
+							<span>Deuda Pendiente:</span>
+							<span class="font-bold text-danger-color">{formatCurrency(selectedAbonoCliente.fiado_actual)}</span>
+						</div>
+						<div class="flex justify-between">
+							<span>Cupo Disponible:</span>
+							<span class="font-bold text-exito">{formatCurrency(selectedAbonoCliente.fiado_maximo - selectedAbonoCliente.fiado_actual)}</span>
+						</div>
+					</div>
+
+					<div class="flex flex-col gap-1.5 mt-2">
+						<label class="text-sm font-semibold text-text-primary" for="abonoMonto">Monto del Abono</label>
+						<div class="relative flex items-center">
+							<span class="absolute left-4 text-text-muted font-medium">$</span>
+							<input
+								type="number"
+								min="1"
+								step="1"
+								id="abonoMonto"
+								class="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none w-full rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 pl-8 text-sm text-text-primary focus:border-primario focus:outline-none disabled:opacity-50"
+								placeholder="Ingresa la cantidad a abonar..."
+								bind:value={abonoMonto}
+								disabled={abonoLoading}
+								required
+								autofocus
+							/>
+						</div>
+						{#if abonoError}
+							<span class="mt-1 text-xs font-medium text-danger-color">{abonoError}</span>
+						{/if}
+					</div>
+				</div>
+				<footer class="flex justify-end gap-3 border-t border-border-color bg-text-primary/2 p-4 px-6">
+					<button type="button" class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-border-color bg-bg-secondary px-5 py-2.5 text-sm font-semibold text-text-primary transition-all duration-200 hover:bg-text-primary/5" onclick={() => (showAbonoModal = false)} disabled={abonoLoading}>Cancelar</button>
+					<button type="submit" class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-primario px-5 py-2.5 text-sm font-semibold text-white transition-all duration-200 hover:bg-primario-hover shadow-md disabled:cursor-not-allowed disabled:opacity-70" disabled={abonoLoading}>
+						{#if abonoLoading} Procesando... {:else} Registrar Pago {/if}
+					</button>
+				</footer>
+			</form>
 		</div>
 	</div>
 {/if}

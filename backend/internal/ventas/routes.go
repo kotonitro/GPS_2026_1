@@ -18,6 +18,7 @@ func ConfigurarRutas(api *gin.RouterGroup, db *gorm.DB, authMiddleware gin.Handl
 		rutasVentas.POST("", ctrl.CrearVenta)
 		rutasVentas.GET("", ctrl.GetVentas)
 		rutasVentas.GET("/:id", ctrl.GetVentaByID)
+		rutasVentas.POST("/clientes/:id/abonar", ctrl.RegistrarAbono)
 
 		rutasAdmin := rutasVentas.Group("")
 		rutasAdmin.Use(auth.AdminMiddleware())
