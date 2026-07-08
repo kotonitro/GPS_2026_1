@@ -59,7 +59,7 @@ func main() {
 	clientes.RoutesConfig(api, db, authMiddleware)
 	empleados.RoutesConfig(api, db, authMiddleware)
 	inventario.RoutesConfig(api, db, authMiddleware)
-	ventas.RoutesConfig(api, db, authMiddleware)
+	ventas.ConfigurarRutas(api, db, authMiddleware)
 	promociones.RoutesConfig(api, db, authMiddleware)
 
 
