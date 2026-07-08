@@ -147,15 +147,18 @@
 			class="sidebar-scroll flex h-full w-[240px] shrink-0 flex-col justify-between overflow-y-auto border-r border-[#2a241f] bg-[#1a1512] px-5 py-6 text-[#a39b93]"
 		>
 			<div class="flex flex-col gap-8">
-				<div class="flex items-center gap-3 px-2">
+				<a
+					href="/dashboard"
+					class="flex items-center gap-3 px-2 transition-opacity hover:opacity-80"
+				>
 					<div class="flex items-center justify-center rounded-lg bg-[#382a1b] p-2 text-primario">
-						<Store size={22} strokeWidth={2.5} />
+						<Store size={30} strokeWidth={2.5} />
 					</div>
 					<div class="flex flex-col">
 						<h2 class="text-lg font-semibold leading-tight text-white">MinimarketGo</h2>
 						<p class="text-xs font-medium text-primario">Gestión comercial</p>
 					</div>
-				</div>
+				</a>
 
 				<nav class="flex flex-col gap-1">
 					<span class="mb-1 mt-2 px-3 text-xs font-bold uppercase tracking-wider text-[#7a7268]">
@@ -164,9 +167,7 @@
 
 					<a
 						href="/dashboard"
-						class="relative flex items-center gap-3 rounded-xl border p-3 {isActive(
-							'/dashboard'
-						)
+						class="relative flex items-center gap-3 rounded-xl border p-3 {isActive('/dashboard')
 							? 'border-[#4a3a28] bg-[#382a1b] text-primario'
 							: 'border-transparent hover:bg-[#241e1a] hover:text-white'}"
 					>
