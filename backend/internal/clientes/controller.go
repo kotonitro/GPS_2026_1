@@ -276,7 +276,7 @@ func normalizarTelefono(telefono string) string {
 
 	return telefonoLimpio
 }
-
+//ValidationErrorsFormat formatea los errores de validación de Gin y devuelve los mensajes de error correspondientes.
 func ValidationErrorsFormat(err error) map[string]string {
 	var errs validator.ValidationErrors
 	mensajes := make(map[string]string)

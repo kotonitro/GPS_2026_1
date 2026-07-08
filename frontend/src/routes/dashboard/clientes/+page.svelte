@@ -24,7 +24,7 @@
 	let searchQuery = $state('');
     let selectedEstado = $state('Todos');
 
-	// Abono Modal State
+	// Abono Modal 
 	let showAbonoModal = $state(false);
 	let selectedAbonoCliente = $state<Cliente | null>(null);
 	let abonoMonto = $state<number | ''>('');
@@ -381,7 +381,7 @@
 </svelte:head>
 
 <div class="mb-6 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-	<!-- Bloque de Búsqueda y Filtros -->
+	<!--Búsqueda y Filtros -->
 	<div class="flex flex-col gap-3 sm:flex-row sm:items-center flex-1">
 		<!-- Buscador -->
 		<div class="relative w-full sm:max-w-xs">
@@ -418,7 +418,7 @@
 		</button>
 	</div>
 
-	<!-- Add Button -->
+	<!-- agregar boton -->
 	{#if auth.user?.rol?.toLowerCase() === 'admin'}
 		<button
 			onclick={openCreateModal}
@@ -433,7 +433,7 @@
 	{/if}
 </div>
 
-<!-- Table View -->
+
 {#if errorMsg}
 	<div class="mb-5 flex gap-3 rounded-lg border border-red-500/15 bg-danger-bg p-4 text-sm text-danger-color" role="alert">
 		<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -537,7 +537,7 @@
 		</table>
 	</div>
 
-<!-- Form Dialog Modal (Create / Edit) -->
+<!-- Crear editar -->
 {#if showModal}
 	<div class="fixed inset-0 z-50 flex items-center justify-center bg-text-primary/40 p-4 backdrop-blur-[4px] animate-modal-enter" onclick={() => (showModal = false)} role="presentation">
 		<div class="w-full max-w-lg overflow-hidden rounded-2xl border border-border-color bg-bg-card shadow-2xl" onclick={(e) => e.stopPropagation()} role="dialog">
@@ -592,7 +592,7 @@
 	</div>
 {/if}
 
-<!-- Delete Confirmation Modal -->
+<!-- borrar confirmacion del modal -->
 {#if showDeleteModal && clienteToDelete}
 	<div class="fixed inset-0 z-50 flex items-center justify-center bg-text-primary/40 p-5 backdrop-blur-[4px]" onclick={() => (showDeleteModal = false)} role="presentation">
 		<div class="w-full max-w-[500px] overflow-hidden rounded-xl border border-border-color bg-bg-card shadow-lg animate-modal-enter" onclick={(e) => e.stopPropagation()} role="dialog">

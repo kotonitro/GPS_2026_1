@@ -441,7 +441,7 @@
 </svelte:head>
 
 <div class="h-full">
-	<!-- Search and Actions Row -->
+	<!-- busqueda y acciones -->
 	<div class="mb-6 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
 		<!-- Bloque de Búsqueda y Filtros -->
 		<div class="flex flex-col gap-3 sm:flex-row sm:items-center flex-1">
@@ -467,7 +467,7 @@
 				</button>
 			</div>
 
-			<!-- Category Filter -->
+			<!-- filtro categorias -->
 			<div class="flex items-center gap-2">
 				<select
 					bind:value={selectedCategoria}
@@ -490,7 +490,7 @@
 				{/if}
 			</div>
 
-			<!-- Status Filter -->
+			<!-- filtro estados -->
 			<select
 				bind:value={selectedEstado}
 				class="w-full sm:w-auto rounded-xl border border-border-color bg-bg-card py-2.5 pl-4 pr-10 text-sm text-text-primary transition-colors focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario cursor-pointer"
@@ -516,7 +516,7 @@
 			</button>
 		</div>
 
-		<!-- Add Button -->
+		<!-- boton  -->
 		{#if auth.user?.rol?.toLowerCase() === 'admin'}
 			<button
 				onclick={openCreateModal}
@@ -528,7 +528,7 @@
 		{/if}
 	</div>
 
-	<!-- Data Table -->
+	<!-- tabla de informacion -->
 	<div class="overflow-x-auto rounded-xl border border-border-color bg-bg-card shadow-sm">
 		<table class="w-full whitespace-nowrap text-left text-sm text-text-primary">
 			<thead class="border-b border-border-color bg-bg-primary/50 text-text-muted">
@@ -634,7 +634,7 @@
 	</div>
 </div>
 
-<!-- Modal Crear/Editar -->
+<!-- Crear/Editar -->
 {#if showModal}
 	<div
 		class="fixed inset-0 z-50 flex items-center justify-center bg-text-primary/40 p-4 backdrop-blur-[4px] animate-modal-enter"
@@ -850,7 +850,7 @@
 	</div>
 {/if}
 
-<!-- Delete Confirmation Modal -->
+<!-- borrar confirmacion modeal -->
 {#if showDeleteModal && productoToDelete}
 	<div
 		class="fixed inset-0 z-50 flex items-center justify-center bg-text-primary/40 p-5 backdrop-blur-[4px]"
@@ -901,7 +901,7 @@
 	</div>
 {/if}
 
-<!-- Categories Management Modal -->
+<!-- abrir la interfaz de categorias -->
 {#if showCategoriesModal}
 	<div
 		class="fixed inset-0 z-50 flex items-center justify-center bg-text-primary/40 p-4 backdrop-blur-[4px] animate-modal-enter"
@@ -1002,7 +1002,7 @@
 	</div>
 {/if}
 
-<!-- Scanner Modal -->
+<!-- Scanner Modal para la cam -->
 {#if modoEscaneo}
 	<div
 		class="fixed inset-0 z-50 flex items-center justify-center bg-text-primary/40 p-5 backdrop-blur-[4px]"

@@ -99,12 +99,12 @@
 		fecha_fin: string | null;
 	}
 
-	// State variables
+	// variables de estado
 	let activeTab = $state<'pos' | 'history'>('pos');
 	let loading = $state(true);
 	let submitting = $state(false);
 
-	// Data from API
+	// data de API
 	let productos = $state<Producto[]>([]);
 	let clientes = $state<Cliente[]>([]);
 	let promociones = $state<Promocion[]>([]);
@@ -112,7 +112,7 @@
 	let ventas = $state<Venta[]>([]);
 	let empleados = $state<any[]>([]);
 
-	// POS Cart & Register State
+	// estado del carrito y caja
 	let selectedCajaId = $state<string>('');
 	let selectedMetodoId = $state<string>('11111111-1111-1111-1111-111111111111'); // Default to Efectivo
 	let selectedClienteId = $state<string>('');
@@ -125,28 +125,28 @@
 	let manualBarcodeValue = $state('');
 	let modoEscaneo = $state(false);
 
-	// Cart Items
+	// tarjetas
 	interface CartItem {
 		producto: Producto;
 		cantidad: number;
 	}
 	let cart = $state<CartItem[]>([]);
 
-	// Last scanned item for visual feedback
+	// visualizacion del ultimo scanner
 	let lastScannedProduct = $state<Producto | null>(null);
 
-	// Global barcode scan variables
+	// scanner variables
 	let barcodeBuffer = '';
 	let lastKeyTime = 0;
 
-	// Search query for history
+	// historial
 	let searchHistoryQuery = $state('');
 
-	// Selected sale for detail modal
+	// buscar po detalle
 	let selectedSale = $state<Venta | null>(null);
 	let showDetailModal = $state(false);
 
-	// Filtered list for history
+	// Lista filtrada del historial
 	let filteredSales = $derived.by(() => {
 		const query = searchHistoryQuery.toLowerCase().trim();
 		return ventas.filter((v) => {
@@ -211,7 +211,7 @@
 		return { discount: maxDiscount, promo: bestPromo };
 	}
 
-	// Totals computations
+	// totales
 	let subtotal = $derived(
 		cart.reduce((acc, item) => acc + item.producto.precio * item.cantidad, 0)
 	);
@@ -225,7 +225,7 @@
 			: 0
 	);
 
-	// History statistics
+	// estadisticas
 	let totalVendidoHoy = $derived(
 		ventas
 			.filter((v) => {
@@ -254,7 +254,7 @@
 		cantidadVentasHoy > 0 ? Math.round(totalVendidoHoy / cantidadVentasHoy) : 0
 	);
 
-	// Selected client details
+	// cliente detalle
 	let selectedClientData = $derived(clientes.find((c) => c.id_cliente === selectedClienteId));
 	let isFiadoLimitExceeded = $derived.by(() => {
 		if (selectedMetodoId !== 'fiado' || !selectedClientData) return false;
@@ -274,11 +274,11 @@
 		});
 	});
 
-	// Global Keyboard Listener for barcode scanning
+	// Scanner global
 	function handleGlobalKeydown(e: KeyboardEvent) {
 		if (activeTab !== 'pos') return;
 
-		// Ignore keys if focus is inside any text input or selection elements
+		
 		const target = e.target as HTMLElement;
 		if (
 			target.tagName === 'INPUT' ||
@@ -291,7 +291,7 @@
 
 		const currentTime = Date.now();
 
-		// If delay is > 100ms, assume human typed and reset buffer
+		// delay > 100ms, asumomos que se esta utilizando por alguien
 		if (currentTime - lastKeyTime > 100) {
 			barcodeBuffer = '';
 		}
@@ -340,7 +340,7 @@
 			promociones = Array.isArray(resPromociones) ? resPromociones : [];
 			empleados = Array.isArray(resEmployees) ? resEmployees : [];
 
-			// Detect Caja using Local Storage
+			// detectar caja 
 			detectCaja();
 		} catch (err: any) {
 			toast.show(err.message || 'Error al cargar los datos del módulo de ventas.', 'error');
@@ -356,7 +356,7 @@
 		if (savedCajaId && activeCajaExists) {
 			selectedCajaId = savedCajaId;
 		} else {
-			// If not set, or selected caja is no longer active/exists
+			// Si no está configurado, o si la caja seleccionada ya no está activa o no existe
 			selectedCajaId = '';
 			showCajaConfigModal = true;
 		}
@@ -564,7 +564,7 @@
 		return c ? c.nombre : 'Caja desconocida';
 	}
 
-	// Get name of current caja
+	// obtener nombre de la caja reciente
 	let activeCajaName = $derived(
 		cajas.find((c) => c.id_caja === selectedCajaId)?.nombre || 'Ninguna'
 	);
@@ -575,7 +575,7 @@
 	<meta name="description" content="Registro y control de ventas" />
 </svelte:head>
 
-<!-- Tabs Navigation -->
+<!-- Navegacion -->
 <div class="mb-6 flex border-b border-border-color justify-between items-center">
 	<div class="flex">
 		<button
@@ -600,7 +600,7 @@
 		</button>
 	</div>
 
-	<!-- Caja Detection Indicator -->
+	<!-- indicador de la caja -->
 	<div class="flex items-center gap-3 pr-4">
 		<div
 			class="flex items-center gap-2 rounded-lg border border-border-color bg-bg-card px-3 py-1.5 text-xs text-text-secondary"
@@ -672,7 +672,7 @@
 					</p>
 				</div>
 
-				<!-- Visual Feedback: Last Scanned Item -->
+				<!-- feedback visual -->
 				{#if lastScannedProduct}
 					<div
 						class="w-full max-w-md rounded-xl border border-primario/30 bg-primario/5 p-4 text-left flex justify-between items-center animate-modal-enter"
@@ -699,7 +699,7 @@
 					</div>
 				{/if}
 
-				<!-- Manual Code & Camera Scan Buttons -->
+				<!-- botones scaner -->
 				<div class="mt-4 flex flex-wrap gap-3">
 					<button
 						type="button"
@@ -720,7 +720,7 @@
 				</div>
 			</div>
 
-			<!-- Cart & Checkout (Right side) -->
+			<!-- cartas y Checkout -->
 			<div class="lg:col-span-5">
 				<form
 					onsubmit={handleCheckout}
@@ -744,7 +744,7 @@
 						{/if}
 					</header>
 
-					<!-- Cart Items List -->
+					<!-- items -->
 					<div
 						class="p-4 flex flex-col gap-3 min-h-[220px] max-h-[300px] overflow-y-auto border-b border-border-color"
 					>
@@ -770,7 +770,7 @@
 										</p>
 									</div>
 
-									<!-- Quantity Control -->
+									<!--control cantidad -->
 									<div class="flex items-center gap-2">
 										<button
 											type="button"
@@ -791,7 +791,7 @@
 										</button>
 									</div>
 
-									<!-- Item Total & Delete -->
+									<!-- total item y borrar -->
 									<div class="text-right flex items-center gap-3">
 										<div class="flex flex-col min-w-[80px]">
 											{#if discount > 0}
@@ -829,7 +829,7 @@
 						{/if}
 					</div>
 
-					<!-- Checkout Options -->
+					<!-- Checkout opciones -->
 					<div class="p-4 flex flex-col gap-4 bg-text-primary/[0.005]">
 						<!-- Payment Method Selection -->
 						<div class="flex flex-col gap-1">
@@ -886,7 +886,7 @@
 							</div>
 						</div>
 
-						<!-- Conditional Fields -->
+						<!--verificacion de condiciones -->
 						{#if selectedMetodoId === '11111111-1111-1111-1111-111111111111'}
 							<!-- Cash Received -->
 							<div class="flex gap-4">
@@ -978,7 +978,7 @@
 							</div>
 						{/if}
 
-						<!-- Checkout Summary -->
+						<!-- Resumen compra -->
 						<div class="border-t border-border-color pt-4 flex flex-col gap-1">
 							<div class="flex justify-between text-xs text-text-secondary">
 								<span>Subtotal:</span>
@@ -1017,7 +1017,7 @@
 		</div>
 	{/if}
 
-	<!-- HISTORY TAB -->
+	<!-- Tabla historial -->
 	{#if activeTab === 'history'}
 		<!-- Stats -->
 		<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -1039,7 +1039,7 @@
 			</div>
 		</div>
 
-		<!-- Search Sales -->
+		<!-- Buscar ventas -->
 		<div class="mb-6">
 			<div class="relative w-full sm:max-w-xs">
 				<Search
@@ -1055,7 +1055,7 @@
 			</div>
 		</div>
 
-		<!-- Sales Table -->
+		<!-- Tabla ventas -->
 		{#if filteredSales.length === 0}
 			<div
 				class="flex flex-col items-center justify-center rounded-xl border border-border-color bg-bg-card p-16 text-center shadow-md"
@@ -1142,7 +1142,7 @@
 	{/if}
 {/if}
 
-<!-- Detail Modal -->
+<!-- Modal de detalle-->
 {#if showDetailModal && selectedSale}
 	<div
 		class="fixed inset-0 z-50 flex items-center justify-center bg-text-primary/40 p-5 backdrop-blur-[4px]"
@@ -1165,7 +1165,7 @@
 				>
 			</header>
 			<div class="p-6">
-				<!-- Meta info -->
+				<!-- info -->
 				<div class="grid grid-cols-2 gap-4 mb-6 text-sm border-b border-border-color pb-4">
 					<div>
 						<p class="text-text-muted font-medium text-xs uppercase">Fecha y Hora</p>
@@ -1201,7 +1201,7 @@
 					{/if}
 				</div>
 
-				<!-- Products table -->
+				<!-- tabla de Producto -->
 				<h4 class="font-bold text-xs uppercase text-text-secondary mb-3">Productos Vendidos</h4>
 				<div class="max-h-60 overflow-y-auto mb-6 border border-border-color rounded-lg">
 					<table class="w-full text-left border-collapse text-sm">
@@ -1242,7 +1242,7 @@
 					</table>
 				</div>
 
-				<!-- Money Breakdown -->
+				<!-- desglose del dinero -->
 				<div class="flex flex-col gap-2 border-t border-border-color pt-4 text-sm font-semibold">
 					{#if selectedSale.monto_descuento > 0}
 						<div class="flex justify-between text-text-secondary">
@@ -1279,7 +1279,7 @@
 	</div>
 {/if}
 
-<!-- Caja Config Configuration Modal -->
+<!-- configuracion de caja Modal -->
 {#if showCajaConfigModal}
 	<div
 		class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-5 backdrop-blur-sm"
@@ -1347,7 +1347,7 @@
 	</div>
 {/if}
 
-<!-- Manual Code Input Modal (For damaged labels) -->
+<!-- Codigo manual modal -->
 {#if showManualCodeModal}
 	<div
 		class="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-5 backdrop-blur-sm"

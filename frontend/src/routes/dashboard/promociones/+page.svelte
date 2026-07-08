@@ -293,7 +293,7 @@
 				<line x1="12" y1="5" x2="12" y2="19" />
 				<line x1="5" y1="12" x2="19" y2="12" />
 			</svg>
-			<span>Nueva promoción</span>
+			<span>Nueva Promoción</span>
 		</button>
 	</div>
 </div>
@@ -459,7 +459,7 @@
 		<div class="w-full max-w-[600px] overflow-hidden rounded-xl border border-border-color bg-bg-card shadow-lg animate-modal-enter" onclick={(e) => e.stopPropagation()} role="dialog">
 			
 			<header class="flex items-center justify-between border-b border-border-color p-5">
-				<h2 class="text-lg font-bold text-text-primary">{editandoId ? 'Editar Promoción' : 'Nueva Promoción'}</h2>
+				<h2 class="text-lg font-bold text-text-primary">{editandoId ? 'Editar Promoción' : 'Añadir Nueva Promoción'}</h2>
 				<button class="inline-flex cursor-pointer items-center justify-center rounded-lg border border-border-color bg-text-primary/3 p-2 text-text-secondary hover:border-border-color-hover hover:bg-text-primary/7 hover:text-text-primary" onclick={() => (mostrarFormulario = false)}>&times;</button>
 			</header>
 
