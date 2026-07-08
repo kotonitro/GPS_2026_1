@@ -94,7 +94,7 @@
 						id="usuario"
 						type="text"
 						bind:value={usuario}
-						oninput={(e) => { e.currentTarget.value = e.currentTarget.value.replace(/[^a-zA-Z]/g, ''); usuario = e.currentTarget.value; }}
+						oninput={(e) => { e.currentTarget.value = e.currentTarget.value.replace(/\s/g, ''); usuario = e.currentTarget.value; }}
 						placeholder="Ej: admin"
 						required
 						class="w-full rounded-lg border border-border-color bg-bg-card px-4 py-3 text-text-primary placeholder:text-text-muted/50 transition-all focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"

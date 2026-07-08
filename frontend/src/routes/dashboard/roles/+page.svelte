@@ -1,6 +1,16 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { Search, Plus, Edit2, Trash2, Shield, User, CheckCircle2, XCircle, X } from '@lucide/svelte';
+	import {
+		Search,
+		Plus,
+		Edit2,
+		Trash2,
+		Shield,
+		User,
+		CheckCircle2,
+		XCircle,
+		X
+	} from '@lucide/svelte';
 	import { toast } from '$lib/toastStore.svelte';
 	import { apiRoles } from '$lib/api';
 
@@ -15,6 +25,7 @@
 	let showDeleteModal = $state(false);
 	let isEditing = $state(false);
 	let rolToDelete = $state<any>(null);
+	let ultimoModificadoNombre = $state<string | null>(null);
 
 	// Formulario
 	let formData = $state({
@@ -32,21 +43,35 @@
 
 	// Filtro reactivo
 	let rolesFiltrados = $derived(
-		roles.filter((r) => {
-			// 1. Filtro de Búsqueda de texto (Nombre o Descripción)
-			const coincideTexto =
-				(r.nombre || r.Nombre || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-				(r.descripcion || r.Descripcion || '').toLowerCase().includes(searchQuery.toLowerCase());
+		roles
+			.filter((r) => {
+				const coincideTexto =
+					(r.nombre || r.Nombre || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+					(r.descripcion || r.Descripcion || '').toLowerCase().includes(searchQuery.toLowerCase());
 
-			// 2. Filtro de Permisos
-			const esAdmin = r.es_admin !== undefined ? r.es_admin : r.EsAdmin;
-			const coincidePermisos =
-				filtroPermisos === 'Todos' ||
-				(filtroPermisos === 'Admin' && esAdmin) ||
-				(filtroPermisos === 'Regular' && !esAdmin);
+				const esAdmin = r.es_admin !== undefined ? r.es_admin : r.EsAdmin;
+				const coincidePermisos =
+					filtroPermisos === 'Todos' ||
+					(filtroPermisos === 'Admin' && esAdmin) ||
+					(filtroPermisos === 'Regular' && !esAdmin);
 
-			return coincideTexto && coincidePermisos;
-		})
+				return coincideTexto && coincidePermisos;
+			})
+			.sort((a, b) => {
+				const nombreA = a.nombre || a.Nombre || '';
+				const nombreB = b.nombre || b.Nombre || '';
+
+				// 1. Prioridad Máxima: Rol Admin siempre primero
+				if (nombreA === 'Admin') return -1;
+				if (nombreB === 'Admin') return 1;
+
+				// 2. Prioridad Secundaria: El último creado o modificado
+				if (nombreA === ultimoModificadoNombre) return -1;
+				if (nombreB === ultimoModificadoNombre) return 1;
+
+				// 3. Resto: Orden alfabético por nombre
+				return nombreA.localeCompare(nombreB);
+			})
 	);
 
 	onMount(async () => {
@@ -121,6 +146,8 @@
 			// Si tu backend espera los nombres capitalizados (ej: Nombre, Descripcion, EsAdmin), ajustalos aquí si es necesario.
 			// Asumiremos que el backend de Go con GORM puede bindear el JSON en minúsculas sin problemas.
 
+			ultimoModificadoNombre = payload.nombre;
+
 			if (isEditing) {
 				await apiRoles.update(payload.id_rol, payload);
 				toast.show('Rol actualizado correctamente.', 'success');
@@ -180,25 +207,28 @@
 					type="text"
 					placeholder="Buscar rol..."
 					bind:value={searchQuery}
-					class="w-full rounded-xl border border-border-color bg-bg-card py-2.5 pl-10 pr-4 text-sm text-text-primary transition-colors focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario"
+					class="w-full rounded-xl border border-border-color bg-bg-card py-2.5 pl-10 pr-4 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario"
 				/>
 			</div>
 
 			<!-- Filtro por Nivel de Permisos -->
 			<select
 				bind:value={filtroPermisos}
-				class="w-full sm:w-48 rounded-xl border border-border-color bg-bg-card py-2.5 pl-4 pr-10 text-sm text-text-primary transition-colors focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario cursor-pointer"
+				class="w-full sm:w-48 rounded-xl border border-border-color bg-bg-card py-2.5 pl-4 pr-10 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario cursor-pointer"
 			>
 				<option value="Todos">Todos los permisos</option>
-				<option value="Admin">Administradores</option>
-				<option value="Regular">Regulares</option>
+				<option value="Admin">Administrativo</option>
+				<option value="Regular">Regular</option>
 			</select>
 
 			<button
 				type="button"
 				title="Limpiar filtros"
-				class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-border-color hover:text-primario disabled:cursor-not-allowed disabled:opacity-50"
-				onclick={() => { searchQuery = ''; filtroPermisos = 'Todos'; }}
+				class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-text-muted hover:bg-border-color hover:text-primario disabled:cursor-not-allowed disabled:opacity-50"
+				onclick={() => {
+					searchQuery = '';
+					filtroPermisos = 'Todos';
+				}}
 				disabled={!searchQuery && filtroPermisos === 'Todos'}
 			>
 				<X size={14} strokeWidth={2.5} />
@@ -216,15 +246,13 @@
 
 	<!-- Tabla -->
 	<div class="overflow-x-auto rounded-xl border border-border-color bg-bg-card shadow-sm">
-		<table class="w-full text-left text-sm text-text-primary border-collapse">
-			<thead class="border-b border-border-color bg-text-primary/4 text-text-muted">
+		<table class="w-full whitespace-nowrap text-left text-sm text-text-primary">
+			<thead class="border-b border-border-color bg-bg-primary/50 text-text-muted">
 				<tr>
-					<th class="px-6 py-4 font-bold uppercase tracking-wider text-xs">Rol</th>
-					<th class="px-6 py-4 font-bold uppercase tracking-wider text-xs">Descripción</th>
-					<th class="px-6 py-4 font-bold uppercase tracking-wider text-xs">Nivel de Acceso</th>
-					<th class="px-6 py-4 text-right font-bold uppercase tracking-wider text-xs w-[120px]"
-						>Acciones</th
-					>
+					<th class="px-6 py-4 font-semibold">Rol</th>
+					<th class="px-6 py-4 font-semibold">Descripción</th>
+					<th class="px-6 py-4 font-semibold">Permisos</th>
+					<th class="px-6 py-4 text-right font-semibold">Acciones</th>
 				</tr>
 			</thead>
 			<tbody class="divide-y divide-border-color">
@@ -234,14 +262,8 @@
 					</tr>
 				{:else if rolesFiltrados.length === 0}
 					<tr>
-						<td colspan="4" class="py-16 text-center">
-							<div class="flex flex-col items-center justify-center">
-								<Shield size={48} class="text-text-muted opacity-30 mb-4" />
-								<h3 class="mb-1 text-lg font-semibold text-text-primary">
-									No se encontraron roles
-								</h3>
-								<p class="text-sm text-text-secondary">Prueba con otro filtro o crea uno nuevo.</p>
-							</div>
+						<td colspan="4" class="py-8 text-center text-text-muted">
+							No se encontraron roles con los filtros aplicados.
 						</td>
 					</tr>
 				{:else}
@@ -249,10 +271,30 @@
 						{@const nombre = rol.nombre || rol.Nombre}
 						{@const desc = rol.descripcion || rol.Descripcion}
 						{@const esAdmin = rol.es_admin !== undefined ? rol.es_admin : rol.EsAdmin}
-						<tr class="transition-colors hover:bg-text-primary/[0.015]">
+						<tr class="hover:bg-bg-primary/30">
 							<!-- Nombre -->
 							<td class="px-6 py-4">
-								<span class="font-semibold">{nombre}</span>
+								<div class="flex items-center gap-2">
+									<span class="font-semibold">{nombre}</span>
+
+									<!-- Etiqueta del rol base del sistema -->
+									{#if nombre === 'Admin'}
+										<span
+											class="rounded-md bg-primario/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primario"
+										>
+											Sistema
+										</span>
+									{/if}
+
+									<!-- Etiqueta del último modificado -->
+									{#if nombre === ultimoModificadoNombre && nombre !== 'Admin'}
+										<span
+											class="rounded-md bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-600"
+										>
+											Reciente
+										</span>
+									{/if}
+								</div>
 							</td>
 
 							<!-- Descripción -->
@@ -264,24 +306,18 @@
 							<td class="px-6 py-4">
 								<div class="flex items-center gap-1.5">
 									{#if esAdmin}
-										<span
-											class="inline-flex items-center gap-1.5 rounded-full bg-primario/10 px-2.5 py-1 text-xs font-medium text-primario"
-										>
-											<Shield size={14} /> Acceso Total (Admin)
-										</span>
+										<Shield size={16} class="text-primario" />
+										<span class="font-medium text-text-primary">Acceso administrativo</span>
 									{:else}
-										<span
-											class="inline-flex items-center gap-1.5 rounded-full bg-border-color px-2.5 py-1 text-xs font-medium text-text-secondary"
-										>
-											<User size={14} /> Acceso Limitado
-										</span>
+										<User size={16} class="text-text-muted" />
+										<span class="font-medium text-text-primary">Acceso regular</span>
 									{/if}
 								</div>
 							</td>
 
 							<!-- Acciones -->
 							<td class="px-6 py-4 text-right">
-								<!-- Protección para no editar ni eliminar el super admin base (opcional, pero buena práctica) -->
+								<!-- Protección para no editar ni eliminar el super admin base -->
 								{#if nombre === 'Admin' && esAdmin}
 									<span class="text-xs text-text-muted italic px-2">Sistema</span>
 								{:else}
@@ -315,25 +351,19 @@
 {#if showModal}
 	<div
 		class="fixed inset-0 z-50 flex items-center justify-center bg-text-primary/40 p-4 backdrop-blur-sm animate-modal-enter"
-		onclick={() => (showModal = false)}
-		role="presentation"
 	>
-		<div
-			class="w-full max-w-[500px] overflow-hidden rounded-xl border border-border-color bg-bg-card shadow-lg"
-			onclick={(e) => e.stopPropagation()}
-			role="dialog"
-		>
-			<header class="flex items-center justify-between border-b border-border-color p-5">
-				<h2 class="text-lg font-bold text-text-primary">
+		<div class="w-full max-w-lg rounded-2xl border border-border-color bg-bg-card shadow-2xl">
+			<div class="flex items-center justify-between border-b border-border-color px-6 py-4">
+				<h3 class="text-lg font-bold text-text-primary">
 					{isEditing ? 'Editar Rol' : 'Añadir Nuevo Rol'}
-				</h2>
+				</h3>
 				<button
 					onclick={() => (showModal = false)}
-					class="inline-flex cursor-pointer items-center justify-center rounded-lg border border-border-color bg-text-primary/3 p-2 text-text-secondary transition-all duration-200 hover:border-border-color-hover hover:bg-text-primary/7 hover:text-text-primary"
+					class="rounded-lg p-1 text-text-muted hover:bg-border-color hover:text-text-primary"
 				>
-					&times;
+					<X size={20} />
 				</button>
-			</header>
+			</div>
 
 			<form onsubmit={guardarRol} class="p-6">
 				{#if formGeneralError}
@@ -348,7 +378,7 @@
 				<div class="flex flex-col gap-5">
 					<!-- Nombre del Rol -->
 					<div class="flex flex-col gap-1.5">
-						<label for="nombre" class="text-sm font-semibold text-text-secondary"
+						<label for="nombre" class="text-sm font-semibold text-text-primary"
 							>Nombre del Rol</label
 						>
 						<input
@@ -359,7 +389,7 @@
 							disabled={submitLoading}
 							required
 							placeholder="Ej: Supervisor"
-							class="rounded-xl border border-border-color bg-bg-primary px-4 py-3 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50"
+							class="rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50"
 						/>
 						{#if errNombre}<span class="text-xs font-medium text-danger-color">{errNombre}</span
 							>{/if}
@@ -367,7 +397,7 @@
 
 					<!-- Descripción -->
 					<div class="flex flex-col gap-1.5">
-						<label for="descripcion" class="text-sm font-semibold text-text-secondary"
+						<label for="descripcion" class="text-sm font-semibold text-text-primary"
 							>Descripción</label
 						>
 						<textarea
@@ -378,7 +408,7 @@
 							required
 							rows="3"
 							placeholder="Describe los permisos y funciones de este rol..."
-							class="rounded-xl border border-border-color bg-bg-primary px-4 py-3 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50 resize-none"
+							class="rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50 resize-none"
 						></textarea>
 						{#if errDescripcion}<span class="text-xs font-medium text-danger-color"
 								>{errDescripcion}</span
@@ -386,28 +416,26 @@
 					</div>
 
 					<!-- Permisos (Switch) -->
-					<div
-						class="flex items-start gap-4 rounded-xl border border-border-color bg-bg-primary/50 p-4 mt-2"
-					>
+					<div class="flex items-center gap-3 pt-2">
 						<input
 							id="es_admin"
 							type="checkbox"
 							bind:checked={formData.es_admin}
 							disabled={submitLoading}
-							class="mt-1 h-5 w-5 accent-primario cursor-pointer disabled:opacity-50 shrink-0"
+							class="h-4 w-4 accent-primario cursor-pointer disabled:opacity-50"
 						/>
 						<div class="flex flex-col">
 							<label
 								for="es_admin"
-								class="text-sm font-bold text-text-primary cursor-pointer {submitLoading
+								class="text-sm font-semibold text-text-primary cursor-pointer {submitLoading
 									? 'opacity-50'
 									: ''}"
 							>
-								Otorgar privilegios de Administrador
+								Otorgar permisos administrativos
 							</label>
-							<p class="text-xs text-text-muted mt-1 leading-relaxed">
-								Si está activado, los empleados con este rol tendrán acceso total al sistema
-								(incluyendo configuraciones, dashboard completo y gestión de otros usuarios).
+							<p class="text-xs text-text-muted mt-0.5">
+								Permite que los empleados que posean este rol tengan acceso administrativo en el
+								sistema.
 							</p>
 						</div>
 					</div>
@@ -418,14 +446,14 @@
 						type="button"
 						onclick={() => (showModal = false)}
 						disabled={submitLoading}
-						class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-border-color bg-bg-secondary px-5 py-2.5 text-sm font-semibold text-text-primary transition-all duration-200 hover:bg-text-primary/5 disabled:opacity-50"
+						class="rounded-xl px-5 py-2.5 text-sm font-semibold text-text-muted hover:bg-border-color hover:text-text-primary disabled:opacity-50"
 					>
 						Cancelar
 					</button>
 					<button
 						type="submit"
 						disabled={submitLoading}
-						class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-accent-light to-accent px-5 py-2.5 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-[1px] hover:shadow-glow disabled:cursor-not-allowed disabled:opacity-50"
+						class="rounded-xl bg-primario px-5 py-2.5 text-sm font-semibold text-white transition-transform hover:scale-[1.02] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
 					>
 						{#if submitLoading}
 							Procesando...
@@ -442,47 +470,53 @@
 <!-- Modal Confirmación de Eliminación -->
 {#if showDeleteModal && rolToDelete}
 	<div
-		class="fixed inset-0 z-50 flex items-center justify-center bg-text-primary/40 p-4 backdrop-blur-[4px]"
+		class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-modal-enter"
 		onclick={() => (showDeleteModal = false)}
 		role="presentation"
 	>
 		<div
-			class="w-full max-w-[500px] overflow-hidden rounded-xl border border-border-color bg-bg-card shadow-lg animate-modal-enter"
+			class="w-full max-w-lg rounded-2xl border border-border-color bg-bg-card shadow-2xl"
 			onclick={(e) => e.stopPropagation()}
 			role="dialog"
 		>
-			<header class="flex items-center justify-between border-b border-border-color p-5">
-				<h2 class="text-lg font-bold text-danger-color">Confirmar Eliminación</h2>
+			<div class="flex items-center justify-between border-b border-border-color px-6 py-4">
+				<h3 class="text-lg font-bold text-danger-color">Confirmar Eliminación</h3>
 				<button
-					class="inline-flex cursor-pointer items-center justify-center rounded-lg border border-border-color bg-text-primary/3 p-2 text-text-secondary transition-all duration-200 hover:border-border-color-hover hover:bg-text-primary/7 hover:text-text-primary"
-					onclick={() => (showDeleteModal = false)}>&times;</button
+					class="rounded-lg p-1 text-text-muted hover:bg-border-color hover:text-text-primary"
+					onclick={() => (showDeleteModal = false)}
 				>
-			</header>
+					<X size={20} />
+				</button>
+			</div>
+
 			<div class="p-6 text-text-primary">
 				<p>
 					¿Estás seguro de que deseas eliminar el rol <strong
 						>{rolToDelete.nombre || rolToDelete.Nombre}</strong
 					>?
 				</p>
-				<p class="mt-3 text-sm text-text-muted">
+				<p class="mt-3 text-xs text-text-muted">
 					Si hay empleados asignados a este rol, no podrás eliminarlo hasta que los reasignes a un
 					rol diferente.
 				</p>
 			</div>
-			<footer
-				class="flex justify-end gap-3 border-t border-border-color bg-text-primary/2 p-4 px-6"
-			>
+
+			<div class="flex justify-end gap-3 border-t border-border-color bg-bg-primary/30 px-6 py-4">
 				<button
 					type="button"
-					class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-border-color bg-bg-secondary px-5 py-2.5 text-sm font-semibold text-text-primary transition-all duration-200 hover:bg-text-primary/5"
-					onclick={() => (showDeleteModal = false)}>Cancelar</button
+					class="rounded-xl px-5 py-2.5 text-sm font-semibold text-text-muted hover:bg-border-color hover:text-text-primary"
+					onclick={() => (showDeleteModal = false)}
 				>
+					Cancelar
+				</button>
 				<button
 					type="button"
-					class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-red-500/15 bg-danger-bg px-5 py-2.5 text-sm font-semibold text-danger-color transition-all duration-200 hover:bg-danger-color hover:text-white"
-					onclick={confirmarEliminacion}>Eliminar Rol</button
+					class="rounded-xl bg-danger-color px-5 py-2.5 text-sm font-semibold text-white transition-transform hover:scale-[1.02] active:scale-95"
+					onclick={confirmarEliminacion}
 				>
-			</footer>
+					Eliminar Rol
+				</button>
+			</div>
 		</div>
 	</div>
 {/if}

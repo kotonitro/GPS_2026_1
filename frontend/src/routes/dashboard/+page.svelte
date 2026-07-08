@@ -1,7 +1,14 @@
 <script lang="ts">
 	import { ShoppingCart, Users, Wallet, Package, AlertCircle, Receipt } from '@lucide/svelte';
 	import { onMount } from 'svelte';
-	import { apiClientes, apiProductos, apiVentas, obtenerPromociones, apiCajas, apiEmpleados } from '$lib/api';
+	import {
+		apiClientes,
+		apiProductos,
+		apiVentas,
+		obtenerPromociones,
+		apiCajas,
+		apiEmpleados
+	} from '$lib/api';
 
 	let ventasHoy = $state(0);
 	let clientesAtendidos = $state(0);
@@ -9,31 +16,37 @@
 	let fiadosPendientes = $state(0);
 	let clientesDeudores = $state(0);
 	let productosAgotados = $state(0);
-	
+
 	let ultimasVentas = $state<any[]>([]);
 	let productos = $state<any[]>([]);
 	let promociones = $state<any[]>([]);
 	let hoy = $derived(new Date());
 
-	let promocionesActivas = $derived(promociones.filter(p => {
-		if (!p.fecha_inicio || !p.fecha_fin) return true;
-		return new Date(p.fecha_inicio) <= hoy && new Date(p.fecha_fin) >= hoy;
-	}).slice(0, 3));
+	let promocionesActivas = $derived(
+		promociones
+			.filter((p) => {
+				if (!p.fecha_inicio || !p.fecha_fin) return true;
+				return new Date(p.fecha_inicio) <= hoy && new Date(p.fecha_fin) >= hoy;
+			})
+			.slice(0, 3)
+	);
 
 	function obtenerProducto(id: string) {
 		return productos.find((p) => p.id_producto === id);
 	}
-	
+
 	function generarNombresCombo(promo: any) {
 		if (!promo.productos_combo || promo.productos_combo.length === 0) return 'Productos del combo';
-		const nombres = promo.productos_combo.map((id: string) => obtenerProducto(id)?.nombre || 'Producto').join(' + ');
+		const nombres = promo.productos_combo
+			.map((id: string) => obtenerProducto(id)?.nombre || 'Producto')
+			.join(' + ');
 		return nombres;
 	}
 
 	function generarTitulo(promo: any, nombreProd: string) {
 		if (promo.tipo === 'NXM') return `${promo.lleva}x${promo.paga} en ${nombreProd}`;
 		if (promo.tipo === 'porcentaje') return `${promo.descuento}% en ${nombreProd}`;
-		if (promo.tipo === 'COMBO') return `Combo Especial`; 
+		if (promo.tipo === 'COMBO') return `Combo Especial`;
 		return `$${promo.descuento} dcto. en ${nombreProd}`;
 	}
 
@@ -48,7 +61,7 @@
 			if (producto && producto.precio > 0) {
 				return Math.round((promo.descuento / producto.precio) * 100) + '%';
 			}
-			return `$${promo.descuento}`; 
+			return `$${promo.descuento}`;
 		}
 	}
 
@@ -59,14 +72,14 @@
 			const clientes = Array.isArray(res) ? res : [];
 			let totalFiados = 0;
 			let countDeudores = 0;
-			
+
 			for (const c of clientes) {
 				if ((c.fiado_actual || 0) > 0) {
-					totalFiados += (c.fiado_actual || 0);
+					totalFiados += c.fiado_actual || 0;
 					countDeudores++;
 				}
 			}
-			
+
 			fiadosPendientes = totalFiados;
 			clientesDeudores = countDeudores;
 		} catch (error) {
@@ -78,13 +91,13 @@
 			const resProductos = await apiProductos.getAll();
 			productos = Array.isArray(resProductos) ? resProductos : [];
 			let countAgotados = 0;
-			
+
 			for (const p of productos) {
 				if (p.stock <= (p.stock_minimo || 0)) {
 					countAgotados++;
 				}
 			}
-			
+
 			productosAgotados = countAgotados;
 		} catch (error) {
 			console.error('Error al cargar productos para el dashboard:', error);
@@ -136,14 +149,14 @@
 
 			ventasHoy = sumaHoy;
 			clientesAtendidos = cantidadHoy;
-			ticketPromedio = cantidadHoy > 0 ? (sumaHoy / cantidadHoy) : 0;
+			ticketPromedio = cantidadHoy > 0 ? sumaHoy / cantidadHoy : 0;
 
 			// Ordenar por fecha descendente y tomar las últimas 4
 			const ordenadas = [...ventas].sort((a, b) => {
 				return new Date(b.fecha_emision).getTime() - new Date(a.fecha_emision).getTime();
 			});
 
-			ultimasVentas = ordenadas.slice(0, 4).map(v => {
+			ultimasVentas = ordenadas.slice(0, 4).map((v) => {
 				const empNombre = mapaEmpleados.get(v.id_empleado) || 'Público general';
 				const cajaNombre = mapaCajas.get(v.id_caja) || 'Caja';
 				return {
@@ -151,7 +164,8 @@
 					caja: cajaNombre,
 					monto: v.monto_total,
 					fecha: new Date(v.fecha_emision),
-					estado: v.metodo_pago && v.metodo_pago.nombre_metodo ? v.metodo_pago.nombre_metodo : 'Efectivo',
+					estado:
+						v.metodo_pago && v.metodo_pago.nombre_metodo ? v.metodo_pago.nombre_metodo : 'Efectivo',
 					desc: `Venta #${v.id_venta.slice(0, 8)}...`
 				};
 			});
@@ -190,9 +204,13 @@
 
 <div class="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
 	<!-- Ventas Hoy -->
-	<div class="flex flex-col justify-center rounded-xl border border-border-color bg-bg-card p-6 shadow-sm transition-all hover:border-border-color-hover">
+	<div
+		class="flex flex-col justify-center rounded-xl border border-border-color bg-bg-card p-6 shadow-sm transition-all hover:border-border-color-hover"
+	>
 		<div class="flex items-center justify-between mb-4">
-			<div class="flex h-10 w-10 items-center justify-center rounded-lg bg-primario/10 text-primario">
+			<div
+				class="flex h-10 w-10 items-center justify-center rounded-lg bg-primario/10 text-primario"
+			>
 				<ShoppingCart size={20} />
 			</div>
 		</div>
@@ -201,85 +219,132 @@
 	</div>
 
 	<!-- Clientes Atendidos -->
-	<div class="flex flex-col justify-center rounded-xl border border-border-color bg-bg-card p-6 shadow-sm transition-all hover:border-border-color-hover">
+	<div
+		class="flex flex-col justify-center rounded-xl border border-border-color bg-bg-card p-6 shadow-sm transition-all hover:border-border-color-hover"
+	>
 		<div class="flex items-center justify-between mb-4">
 			<div class="flex h-10 w-10 items-center justify-center rounded-lg bg-exito/10 text-exito">
 				<Users size={20} />
 			</div>
 		</div>
 		<h3 class="text-3xl font-bold text-text-primary">{clientesAtendidos}</h3>
-		<p class="mt-1 text-xs font-bold uppercase tracking-wider text-text-secondary">Clientes Atendidos</p>
+		<p class="mt-1 text-xs font-bold uppercase tracking-wider text-text-secondary">
+			Clientes Atendidos
+		</p>
 	</div>
 
 	<!-- Fiados Pendientes -->
-	<div class="flex flex-col justify-center rounded-xl border border-border-color bg-bg-card p-6 shadow-sm transition-all hover:border-border-color-hover">
+	<div
+		class="flex flex-col justify-center rounded-xl border border-border-color bg-bg-card p-6 shadow-sm transition-all hover:border-border-color-hover"
+	>
 		<div class="flex items-center justify-between mb-4">
-			<div class="flex h-10 w-10 items-center justify-center rounded-lg bg-danger-color/10 text-danger-color">
+			<div
+				class="flex h-10 w-10 items-center justify-center rounded-lg bg-danger-color/10 text-danger-color"
+			>
 				<Wallet size={20} />
 			</div>
-			<span class="rounded-full bg-danger-color/10 px-2 py-0.5 text-xs font-bold text-danger-color">~ {clientesDeudores} clientes</span>
+			<span class="rounded-full bg-danger-color/10 px-2 py-0.5 text-xs font-bold text-danger-color"
+				>~ {clientesDeudores} clientes</span
+			>
 		</div>
 		<h3 class="text-3xl font-bold text-text-primary">{formatCurrency(fiadosPendientes)}</h3>
-		<p class="mt-1 text-xs font-bold uppercase tracking-wider text-text-secondary">Fiados Pendientes</p>
+		<p class="mt-1 text-xs font-bold uppercase tracking-wider text-text-secondary">
+			Fiados Pendientes
+		</p>
 	</div>
 
 	<!-- Agotados / Bajo Stock -->
-	<div class="flex flex-col justify-center rounded-xl border border-border-color bg-bg-card p-6 shadow-sm transition-all hover:border-border-color-hover">
+	<div
+		class="flex flex-col justify-center rounded-xl border border-border-color bg-bg-card p-6 shadow-sm transition-all hover:border-border-color-hover"
+	>
 		<div class="flex items-center justify-between mb-4">
-			<div class="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-500/10 text-orange-500">
+			<div
+				class="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-500/10 text-orange-500"
+			>
 				<AlertCircle size={20} />
 			</div>
-			<span class="rounded-full bg-danger-color/10 px-2 py-0.5 text-xs font-bold text-danger-color">~ requieren restock</span>
+			<span class="rounded-full bg-danger-color/10 px-2 py-0.5 text-xs font-bold text-danger-color"
+				>~ requieren restock</span
+			>
 		</div>
 		<h3 class="text-3xl font-bold text-text-primary">{productosAgotados}</h3>
-		<p class="mt-1 text-xs font-bold uppercase tracking-wider text-text-secondary">Agotados / Bajo Stock</p>
+		<p class="mt-1 text-xs font-bold uppercase tracking-wider text-text-secondary">
+			Agotados / Bajo Stock
+		</p>
 	</div>
 </div>
 
 <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-	
 	<div class="flex flex-col rounded-xl border border-border-color bg-bg-card shadow-md">
 		<div class="border-b border-border-color p-5">
-			<h2 class="flex items-center gap-2 text-lg font-bold text-text-primary">
-				Últimas Ventas
-			</h2>
-			<a href="/dashboard/ventas" class="text-sm font-semibold text-text-secondary hover:text-primario">Ver todas ↗</a>
+			<h2 class="flex items-center gap-2 text-lg font-bold text-text-primary">Últimas Ventas</h2>
+			<a
+				href="/dashboard/ventas"
+				class="text-sm font-semibold text-text-secondary hover:text-primario">Ver todas ↗</a
+			>
 		</div>
 		<div class="flex flex-col gap-0 p-0">
 			{#each ultimasVentas as venta}
-				<div class="flex items-center justify-between border-b border-border-color p-5 last:border-0 hover:bg-text-primary/[0.015] transition-colors">
+				<div
+					class="flex items-center justify-between border-b border-border-color p-5 last:border-0 hover:bg-text-primary/[0.015] transition-colors"
+				>
 					<div>
 						<h4 class="font-bold text-text-primary">{venta.empleado}</h4>
 						<p class="text-sm text-text-secondary">{venta.caja} • {venta.desc}</p>
 					</div>
 					<div class="text-right">
 						<h4 class="font-bold text-text-primary">{formatCurrency(venta.monto)}</h4>
-						<p class="text-xs font-bold {venta.estado === 'Fiado' ? 'text-danger-color' : 'text-text-secondary'}">{venta.estado}</p>
+						<p
+							class="text-xs font-bold {venta.estado === 'Fiado'
+								? 'text-danger-color'
+								: 'text-text-secondary'}"
+						>
+							{venta.estado}
+						</p>
 					</div>
 				</div>
 			{/each}
 		</div>
 	</div>
 
-	
 	<div class="flex flex-col rounded-xl border border-border-color bg-bg-card shadow-md">
 		<div class="border-b border-border-color p-5">
 			<h2 class="flex items-center gap-2 text-lg font-bold text-text-primary">
 				<Package size={20} class="text-primario" />
 				Promociones Activas
 			</h2>
-			<a href="/dashboard/promociones" class="text-sm font-semibold text-text-secondary hover:text-primario">Ver todas</a>
+			<a
+				href="/dashboard/promociones"
+				class="text-sm font-semibold text-text-secondary hover:text-primario">Ver todas</a
+			>
 		</div>
 		<div class="flex flex-col gap-4 p-5">
 			{#each promocionesActivas as promo}
-				{@const nombreProd = promo.tipo === 'COMBO' ? generarNombresCombo(promo) : (obtenerProducto(promo.producto_id)?.nombre || 'Producto')}
-				<div class="flex items-center justify-between rounded-lg border border-border-color p-4 transition-colors hover:border-border-color-hover">
+				{@const nombreProd =
+					promo.tipo === 'COMBO'
+						? generarNombresCombo(promo)
+						: obtenerProducto(promo.producto_id)?.nombre || 'Producto'}
+				<div
+					class="flex items-center justify-between rounded-lg border border-border-color p-4 transition-colors hover:border-border-color-hover"
+				>
 					<div>
-						<h4 class="font-bold text-text-primary line-clamp-1" title={generarTitulo(promo, nombreProd)}>{generarTitulo(promo, nombreProd)}</h4>
-						<p class="text-sm text-text-secondary">Vence: {promo.fecha_fin ? formatDate(promo.fecha_fin) : 'Sin límite'}</p>
+						<h4
+							class="font-bold text-text-primary line-clamp-1"
+							title={generarTitulo(promo, nombreProd)}
+						>
+							{generarTitulo(promo, nombreProd)}
+						</h4>
+						<p class="text-sm text-text-secondary">
+							Vence: {promo.fecha_fin ? formatDate(promo.fecha_fin) : 'Sin límite'}
+						</p>
 					</div>
-					<div class="flex h-10 min-w-[64px] px-3 items-center justify-center rounded-lg bg-primario/10 font-bold text-primario">
-						{calcularDestaque(promo, promo.tipo !== 'COMBO' ? obtenerProducto(promo.producto_id) : null)}
+					<div
+						class="flex h-10 min-w-[64px] px-3 items-center justify-center rounded-lg bg-primario/10 font-bold text-primario"
+					>
+						{calcularDestaque(
+							promo,
+							promo.tipo !== 'COMBO' ? obtenerProducto(promo.producto_id) : null
+						)}
 					</div>
 				</div>
 			{:else}
