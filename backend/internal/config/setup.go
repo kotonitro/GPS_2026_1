@@ -54,66 +54,76 @@ func (InitialMetodoPago) TableName() string {
 }
 
 func InitialSetup(db *gorm.DB) {
+	var countRoles int64
+	db.Model(&InitialRol{}).Count(&countRoles)
+
 	var rolAdmin InitialRol
 
-	errRol := db.Where(InitialRol{Nombre: "Admin"}).Attrs(InitialRol{
-		Descripcion: "Administrador principal del sistema.",
-		EsAdmin:     true,
-	}).FirstOrCreate(&rolAdmin).Error
-
-	if errRol != nil {
-		log.Fatal("Error al inicializar el rol de Admin: ", errRol)
-	}
-
-	var rolEmpleado InitialRol
-
-	errRolEmpleado := db.Where(InitialRol{Nombre: "Empleado"}).Attrs(InitialRol{
-		Descripcion: "Empleado regular del sistema.",
-		EsAdmin:     false,
-	}).FirstOrCreate(&rolEmpleado).Error
-
-	if errRolEmpleado != nil {
-		log.Println("Advertencia: No se pudo inicializar el rol de Empleado: ", errRolEmpleado)
-	}
-
-	var count int64
-	db.Model(&InitialAdmin{}).Where("rol_id = ?", rolAdmin.ID).Count(&count)
-
-	if count == 0 {
-		hashContrasena, err := bcrypt.GenerateFromPassword([]byte("Admin123."), bcrypt.DefaultCost)
-		if err != nil {
-			log.Fatal("Error al generar la contraseña del admin inicial.")
+	if countRoles == 0 {
+		rolAdmin = InitialRol{
+			Nombre:      "Admin",
+			Descripcion: "Administrador principal del sistema.",
+			EsAdmin:     true,
+		}
+		if err := db.Create(&rolAdmin).Error; err != nil {
+			log.Fatal("Error al inicializar el rol de Admin: ", err)
 		}
 
-		admin := InitialAdmin{
-			Rut:        "11111111-1",
-			Nombre:     "Admin A",
-			Usuario:    "admin",
-			Contrasena: string(hashContrasena),
-			RolID:      rolAdmin.ID,
-			Telefono:   "999999999",
+		rolEmpleado := InitialRol{
+			Nombre:      "Empleado",
+			Descripcion: "Empleado regular del sistema.",
+			EsAdmin:     false,
 		}
-
-		if err := db.Create(&admin).Error; err != nil {
-			log.Fatal("Error al crear el admin inicial: ", err)
+		if err := db.Create(&rolEmpleado).Error; err != nil {
+			log.Println("Advertencia: No se pudo inicializar el rol de Empleado: ", err)
 		}
-
-		log.Println("Administrador y rol inicial creados con éxito.")
-	}
-
-	var cajaInicial InitialCaja
-
-	errCaja := db.Where(InitialCaja{Nombre: "Caja Principal"}).Attrs(InitialCaja{
-		Ubicacion:    "Caja Central",
-		Activo:       true,
-		SaldoInicial: 0,
-		SaldoFinal:   0,
-	}).FirstOrCreate(&cajaInicial).Error
-
-	if errCaja != nil {
-		log.Println("Advertencia: No se pudo inicializar la caja principal: ", errCaja)
+		log.Println("Roles iniciales (Admin y Empleado) creados con éxito.")
 	} else {
-		log.Println("Caja inicial 'Caja Principal' creada con éxito.")
+		db.Where("nombre = ?", "Admin").First(&rolAdmin)
+	}
+
+	if rolAdmin.ID != "" {
+		var countAdmins int64
+		db.Model(&InitialAdmin{}).Where("rol_id = ?", rolAdmin.ID).Count(&countAdmins)
+
+		if countAdmins == 0 {
+			hashContrasena, err := bcrypt.GenerateFromPassword([]byte("Admin123."), bcrypt.DefaultCost)
+			if err != nil {
+				log.Fatal("Error al generar la contraseña del admin inicial.")
+			}
+
+			admin := InitialAdmin{
+				Rut:        "11111111-1",
+				Nombre:     "Admin A",
+				Usuario:    "admin",
+				Contrasena: string(hashContrasena),
+				RolID:      rolAdmin.ID,
+				Telefono:   "999999999",
+			}
+
+			if err := db.Create(&admin).Error; err != nil {
+				log.Fatal("Error al crear el admin inicial: ", err)
+			}
+			log.Println("Administrador inicial creado con éxito.")
+		}
+	}
+
+	var countCajas int64
+	db.Model(&InitialCaja{}).Count(&countCajas)
+
+	if countCajas == 0 {
+		cajaInicial := InitialCaja{
+			Nombre:       "Caja Principal",
+			Ubicacion:    "Caja Central",
+			Activo:       true,
+			SaldoInicial: 0,
+			SaldoFinal:   0,
+		}
+		if err := db.Create(&cajaInicial).Error; err != nil {
+			log.Println("Advertencia: No se pudo inicializar la caja principal: ", err)
+		} else {
+			log.Println("Caja inicial 'Caja Principal' creada con éxito.")
+		}
 	}
 
 	metodosBasicos := []InitialMetodoPago{
