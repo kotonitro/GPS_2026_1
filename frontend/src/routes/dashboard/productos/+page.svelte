@@ -3,13 +3,25 @@
 	import { auth } from '$lib/authStore.svelte';
 	import { toast } from '$lib/toastStore.svelte';
 	import { onMount } from 'svelte';
-	import { Search, Plus, Edit2, Trash2, X, AlertTriangle, ArrowUpDown, ArrowUp, ArrowDown, Camera } from '@lucide/svelte';
+	import { Search, Plus, Edit2, Trash2, X, AlertTriangle, ArrowUpDown, ArrowUp, ArrowDown, Settings, Camera } from '@lucide/svelte';
 	import Scanner from '$lib/components/Scanner.svelte';
 
 	let productos = $state<Producto[]>([]);
 	let categorias = $state<Categoria[]>([]);
 	let loading = $state(true);
 	let errorMsg = $state('');
+
+	// Gestión de Categorías Modal
+	let showCategoriesModal = $state(false);
+	let manageCatLoading = $state(false);
+	let editingCatId = $state<string | null>(null);
+	let editingCatName = $state('');
+	let catGeneralError = $state('');
+	let catSearchQuery = $state('');
+	
+	let filteredCategorias = $derived(
+		categorias.filter(c => c.nombre_categoria.toLowerCase().includes(catSearchQuery.toLowerCase()))
+	);
 
 	// Filtros y Búsqueda
 	let searchQuery = $state('');
@@ -90,7 +102,8 @@
 	// Errores de Formulario
 	let errNombre = $state('');
 	let errPrecio = $state('');
-    let errCategoria = $state('');
+	let errCategoria = $state('');
+	let errCodigoBarras = $state('');
 	let formGeneralError = $state('');
 	let submitLoading = $state(false);
 
@@ -169,6 +182,12 @@
 		}
 	}
 
+	function handleCategoriaBlur() {
+		if (formCategoriaNombre) {
+			formCategoriaNombre = formCategoriaNombre.replace(/\b\w/g, c => c.toUpperCase());
+		}
+	}
+
 	function handleCategoriaKeyDown(e: KeyboardEvent) {
 		if (e.key === 'Tab' && inlineSuggestion && inlineSuggestion !== formCategoriaNombre) {
 			e.preventDefault();
@@ -214,10 +233,77 @@
 		productoToDelete = null;
 	}
 
+	function openCategoriesModal() {
+        if (auth.user?.rol?.toLowerCase() !== 'admin') {
+            toast.show('Acción denegada, requiere rol Administrador.', 'error');
+            return;
+        }
+		showCategoriesModal = true;
+		catGeneralError = '';
+		editingCatId = null;
+		editingCatName = '';
+		catSearchQuery = '';
+	}
+
+	function closeCategoriesModal() {
+		showCategoriesModal = false;
+	}
+
+	function startEditCat(cat: Categoria) {
+		editingCatId = cat.id_categoria;
+		editingCatName = cat.nombre_categoria;
+		catGeneralError = '';
+	}
+
+	function cancelEditCat() {
+		editingCatId = null;
+		editingCatName = '';
+	}
+
+	async function saveEditCat(id: string) {
+		if (!editingCatName.trim()) {
+			catGeneralError = 'El nombre de la categoría no puede estar vacío.';
+			return;
+		}
+		manageCatLoading = true;
+		catGeneralError = '';
+		try {
+			const finalName = editingCatName.trim().replace(/\b\w/g, c => c.toUpperCase());
+			const res = await apiCategorias.update(id, { nombre_categoria: finalName });
+			
+			// Actualizamos el array local manualmente ya que el backend solo devuelve un mensaje
+			categorias = categorias.map(c => c.id_categoria === id ? { ...c, nombre_categoria: finalName } : c);
+			toast.show('Categoría actualizada con éxito.', 'success');
+			editingCatId = null;
+		} catch (err: any) {
+			catGeneralError = err.message || 'Error al actualizar la categoría.';
+		} finally {
+			manageCatLoading = false;
+		}
+	}
+
+	async function deleteCat(id: string) {
+		manageCatLoading = true;
+		catGeneralError = '';
+		try {
+			await apiCategorias.delete(id);
+			categorias = categorias.filter(c => c.id_categoria !== id);
+			if (selectedCategoria === id) {
+				selectedCategoria = 'Todas';
+			}
+			toast.show('Categoría eliminada con éxito.', 'success');
+		} catch (err: any) {
+			catGeneralError = err.message || 'Error al eliminar la categoría. Probablemente tenga productos asociados.';
+		} finally {
+			manageCatLoading = false;
+		}
+	}
+
 	function clearErrors() {
 		errNombre = '';
 		errPrecio = '';
         errCategoria = '';
+		errCodigoBarras = '';
 		formGeneralError = '';
 	}
 
@@ -238,6 +324,12 @@
             errCategoria = 'Debe especificar una categoría.';
             isValid = false;
         }
+		
+		const barcodeRegex = /^\d{13}$/;
+		if (!barcodeRegex.test(formCodigoBarras.trim())) {
+			errCodigoBarras = 'El código de barras debe tener exactamente 13 dígitos numéricos.';
+			isValid = false;
+		}
 
 		if (!isValid) return;
 
@@ -343,15 +435,27 @@
 			</div>
 
 			<!-- Category Filter -->
-			<select 
-				bind:value={selectedCategoria}
-				class="w-full sm:w-auto rounded-xl border border-border-color bg-bg-card py-2.5 pl-4 pr-10 text-sm text-text-primary transition-colors focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario cursor-pointer"
-			>
-				<option value="Todas">Todas las categorías</option>
-				{#each categorias as cat (cat.id_categoria)}
-					<option value={cat.id_categoria}>{cat.nombre_categoria}</option>
-				{/each}
-			</select>
+			<div class="flex items-center gap-2">
+				<select 
+					bind:value={selectedCategoria}
+					class="w-full sm:w-auto rounded-xl border border-border-color bg-bg-card py-2.5 pl-4 pr-10 text-sm text-text-primary transition-colors focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario cursor-pointer"
+				>
+					<option value="Todas">Todas las categorías</option>
+					{#each categorias as cat}
+						<option value={cat.id_categoria}>{cat.nombre_categoria}</option>
+					{/each}
+				</select>
+				{#if auth.user?.rol?.toLowerCase() === 'admin'}
+					<button
+						type="button"
+						title="Gestionar categorías"
+						onclick={openCategoriesModal}
+						class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-border-color hover:text-primario disabled:cursor-not-allowed disabled:opacity-50"
+					>
+						<Settings size={14} strokeWidth={2.5} />
+					</button>
+				{/if}
+			</div>
 			
 			<!-- Status Filter -->
 			<select 
@@ -507,18 +611,18 @@
 				<div class="grid grid-cols-1 gap-5 md:grid-cols-2">
 					<div class="flex flex-col gap-1.5 md:col-span-2">
 						<label class="text-sm font-semibold text-text-primary" for="formNombre">Nombre del Producto *</label>
-						<input type="text" id="formNombre" autocomplete="off" class="rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none disabled:opacity-50" placeholder="Ej: Manzana Roja" bind:value={formNombre} onblur={handleNombreBlur} disabled={submitLoading} required />
+						<input type="text" id="formNombre" autocomplete="off" class="rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50" placeholder="Ej: Manzana Roja" bind:value={formNombre} onblur={handleNombreBlur} disabled={submitLoading} required />
 						{#if errNombre}<span class="mt-1 text-xs font-medium text-danger-color">{errNombre}</span>{/if}
 					</div>
 
 					<div class="flex flex-col gap-1.5 md:col-span-2">
 						<label class="text-sm font-semibold text-text-primary" for="formDescripcion">Descripción</label>
-						<textarea id="formDescripcion" rows="2" class="rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none disabled:opacity-50 resize-none" placeholder="Breve descripción del producto..." bind:value={formDescripcion} disabled={submitLoading}></textarea>
+						<textarea id="formDescripcion" rows="2" class="rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50 resize-none" placeholder="Breve descripción del producto..." bind:value={formDescripcion} disabled={submitLoading}></textarea>
 					</div>
 					
 					<div class="flex flex-col gap-1.5 md:col-span-1">
 						<label class="text-sm font-semibold text-text-primary" for="formUnidad">Unidad *</label>
-						<select id="formUnidad" class="rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none disabled:opacity-50" bind:value={formUnidad} disabled={submitLoading} required>
+						<select id="formUnidad" class="rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50" bind:value={formUnidad} disabled={submitLoading} required>
 							<option value="unidades">Unidades</option>
 							<option value="kg">Kilogramos (kg)</option>
 						</select>
@@ -528,35 +632,36 @@
 						<label class="text-sm font-semibold text-text-primary" for="formCategoria">Categoría *</label>
 						<div class="relative flex items-center">
 							<input type="text" class="absolute inset-0 z-0 w-full rounded-xl border border-transparent bg-transparent px-4 py-2.5 text-sm text-text-secondary/40 outline-none" value={inlineSuggestion} disabled />
-							<input type="text" id="formCategoria" autocomplete="off" class="relative z-10 w-full rounded-xl border border-border-color bg-transparent px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none disabled:opacity-50" placeholder="Ej: Frutas, Abarrotes..." bind:value={formCategoriaNombre} onkeydown={handleCategoriaKeyDown} disabled={submitLoading} required />
+							<input type="text" id="formCategoria" autocomplete="off" class="relative z-10 w-full rounded-xl border border-border-color bg-transparent px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50" placeholder="Ej: Frutas, Abarrotes..." bind:value={formCategoriaNombre} onkeydown={handleCategoriaKeyDown} onblur={handleCategoriaBlur} disabled={submitLoading} required />
 						</div>
 						{#if errCategoria}<span class="mt-1 text-xs font-medium text-danger-color">{errCategoria}</span>{/if}
 					</div>
 					
 					<div class="flex flex-col gap-1.5">
 						<label class="text-sm font-semibold text-text-primary" for="formPrecio">Precio (CLP) *</label>
-						<input type="number" min="0" id="formPrecio" class="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none disabled:opacity-50" bind:value={formPrecio} disabled={submitLoading} required onfocus={(e) => e.currentTarget.select()} />
+						<input type="number" min="0" id="formPrecio" class="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50" bind:value={formPrecio} disabled={submitLoading} required onfocus={(e) => e.currentTarget.select()} />
 						{#if errPrecio}<span class="mt-1 text-xs font-medium text-danger-color">{errPrecio}</span>{/if}
 					</div>
 
 					<div class="flex flex-col gap-1.5">
 						<label class="text-sm font-semibold text-text-primary" for="formStock">Stock Actual</label>
-						<input type="number" id="formStock" class="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none disabled:opacity-50" bind:value={formStock} disabled={submitLoading} required onfocus={(e) => e.currentTarget.select()} />
+						<input type="number" id="formStock" class="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50" bind:value={formStock} disabled={submitLoading} required onfocus={(e) => e.currentTarget.select()} />
 					</div>
 					
 					<div class="flex flex-col gap-1.5">
 						<label class="text-sm font-semibold text-text-primary" for="formStockMinimo">Alerta Stock Mínimo</label>
-						<input type="number" id="formStockMinimo" min="0" class="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none disabled:opacity-50" bind:value={formStockMinimo} disabled={submitLoading || !!editingProducto} onfocus={(e) => e.currentTarget.select()} />
+						<input type="number" id="formStockMinimo" min="0" class="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50" bind:value={formStockMinimo} disabled={submitLoading || !!editingProducto} onfocus={(e) => e.currentTarget.select()} />
 					</div>
 
 					<div class="flex flex-col gap-1.5">
 						<label class="text-sm font-semibold text-text-primary" for="formMarca">Marca</label>
-						<input type="text" id="formMarca" class="rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none disabled:opacity-50" placeholder="Ej: Coca-Cola" bind:value={formMarca} disabled={submitLoading} />
+						<input type="text" id="formMarca" class="rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50" placeholder="Ej: Coca-Cola" bind:value={formMarca} disabled={submitLoading} />
 					</div>
 					
 					<div class="flex flex-col gap-1.5">
 						<label class="text-sm font-semibold text-text-primary" for="formCodigoBarras">Código de Barras *</label>
-						<input type="text" id="formCodigoBarras" autocomplete="off" class="rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none disabled:opacity-50" placeholder="Ej: 780123456789" bind:value={formCodigoBarras} disabled={submitLoading} required />
+						<input type="text" id="formCodigoBarras" autocomplete="off" class="rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50" placeholder="Ej: 7801234567890" bind:value={formCodigoBarras} disabled={submitLoading} required />
+						{#if errCodigoBarras}<span class="mt-1 text-xs font-medium text-danger-color">{errCodigoBarras}</span>{/if}
 					</div>
 				</div>
 				
@@ -589,6 +694,63 @@
 					{#if submitLoading} Procesando... {:else} Eliminar Permanentemente {/if}
 				</button>
 			</footer>
+		</div>
+	</div>
+{/if}
+
+<!-- Categories Management Modal -->
+{#if showCategoriesModal}
+	<div class="fixed inset-0 z-50 flex items-center justify-center bg-text-primary/40 p-4 backdrop-blur-[4px] animate-modal-enter" onclick={closeCategoriesModal} role="presentation">
+		<div class="w-full max-w-md overflow-hidden rounded-2xl border border-border-color bg-bg-card shadow-2xl" onclick={(e) => e.stopPropagation()} role="dialog">
+			<header class="flex items-center justify-between border-b border-border-color px-6 py-4">
+				<h3 class="text-lg font-bold text-text-primary">Gestionar Categorías</h3>
+				<button class="rounded-lg p-1 text-text-muted hover:bg-border-color hover:text-text-primary transition-colors" onclick={closeCategoriesModal}>
+					<X size={20} />
+				</button>
+			</header>
+
+			<div class="p-6">
+				{#if catGeneralError}
+					<div class="mb-5 flex gap-3 rounded-lg border border-red-500/15 bg-danger-bg p-4 text-sm text-danger-color" role="alert">
+						<span>{catGeneralError}</span>
+					</div>
+				{/if}
+
+				<div class="mb-4 relative">
+					<Search size={16} class="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
+					<input type="text" class="w-full rounded-xl border border-border-color bg-bg-primary py-2.5 pl-9 pr-4 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario" placeholder="Buscar categoría..." bind:value={catSearchQuery} />
+				</div>
+
+				{#if filteredCategorias.length === 0}
+					<p class="text-center text-sm text-text-muted py-4">
+						{catSearchQuery ? 'No se encontraron categorías.' : 'No hay categorías registradas.'}
+					</p>
+				{:else}
+					<ul class="flex flex-col gap-3 max-h-60 overflow-y-auto pr-2">
+						{#each filteredCategorias as cat (cat.id_categoria)}
+							<li class="flex items-center justify-between rounded-xl border border-border-color bg-bg-primary px-4 py-3">
+								{#if editingCatId === cat.id_categoria}
+									<div class="flex flex-1 items-center gap-2 mr-2">
+										<input type="text" class="w-full rounded-lg border border-border-color bg-bg-card px-3 py-1.5 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario" bind:value={editingCatName} disabled={manageCatLoading} />
+										<button class="shrink-0 rounded-lg bg-primario px-3 py-1.5 text-xs font-semibold text-white hover:bg-primario-hover transition-colors disabled:opacity-50" onclick={() => saveEditCat(cat.id_categoria)} disabled={manageCatLoading}>Guardar</button>
+										<button class="shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold text-text-muted hover:text-text-primary transition-colors disabled:opacity-50" onclick={cancelEditCat} disabled={manageCatLoading}>Cancelar</button>
+									</div>
+								{:else}
+									<span class="text-sm font-medium text-text-primary">{cat.nombre_categoria}</span>
+									<div class="flex items-center gap-1">
+										<button class="rounded-lg p-2 text-text-muted transition-colors hover:bg-border-color hover:text-primario disabled:opacity-50" title="Editar" onclick={() => startEditCat(cat)} disabled={manageCatLoading || editingCatId !== null}>
+											<Edit2 size={16} />
+										</button>
+										<button class="rounded-lg p-2 text-text-muted transition-colors hover:bg-danger-bg hover:text-danger-color disabled:opacity-50" title="Eliminar" onclick={() => deleteCat(cat.id_categoria)} disabled={manageCatLoading || editingCatId !== null}>
+											<Trash2 size={16} />
+										</button>
+									</div>
+								{/if}
+							</li>
+						{/each}
+					</ul>
+				{/if}
+			</div>
 		</div>
 	</div>
 {/if}

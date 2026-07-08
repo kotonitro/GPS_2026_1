@@ -354,11 +354,12 @@
 						<input
 							id="nombre"
 							type="text"
+							autocomplete="off"
 							bind:value={formData.nombre}
 							disabled={submitLoading}
 							required
 							placeholder="Ej: Supervisor"
-							class="rounded-xl border border-border-color bg-bg-primary px-4 py-3 text-sm text-text-primary focus:border-primario focus:outline-none disabled:opacity-50"
+							class="rounded-xl border border-border-color bg-bg-primary px-4 py-3 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50"
 						/>
 						{#if errNombre}<span class="text-xs font-medium text-danger-color">{errNombre}</span
 							>{/if}
@@ -371,12 +372,13 @@
 						>
 						<textarea
 							id="descripcion"
+							autocomplete="off"
 							bind:value={formData.descripcion}
 							disabled={submitLoading}
 							required
 							rows="3"
 							placeholder="Describe los permisos y funciones de este rol..."
-							class="rounded-xl border border-border-color bg-bg-primary px-4 py-3 text-sm text-text-primary focus:border-primario focus:outline-none disabled:opacity-50 resize-none"
+							class="rounded-xl border border-border-color bg-bg-primary px-4 py-3 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50 resize-none"
 						></textarea>
 						{#if errDescripcion}<span class="text-xs font-medium text-danger-color"
 								>{errDescripcion}</span

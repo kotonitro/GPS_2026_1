@@ -44,7 +44,7 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}) {
 
 	if (!response.ok) {
 		const errorData = await response.json().catch(() => ({}));
-		throw new Error(errorData.error || 'Error de conexión con el servidor');
+		throw new Error(errorData.error || errorData.Error || errorData.mensaje || 'Error de conexión con el servidor');
 	}
 
 	return response.json();
@@ -144,6 +144,13 @@ export const apiCategorias = {
     create: (data: { nombre_categoria: string }) => apiFetch('/inventario/categorias', {
         method: 'POST',
         body: JSON.stringify(data)
+    }),
+    update: (id: string, data: { nombre_categoria: string }) => apiFetch(`/inventario/categorias/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data)
+    }),
+    delete: (id: string) => apiFetch(`/inventario/categorias/${id}`, {
+        method: 'DELETE'
     })
 };
 
