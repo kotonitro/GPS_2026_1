@@ -19,7 +19,6 @@
 		Sun,
 		Moon,
 		Bell,
-		ClipboardList,
 		Shield
 	} from '@lucide/svelte';
 
@@ -50,7 +49,6 @@
 		if (path.startsWith('/dashboard/empleados')) return 'Empleados';
 		if (path.startsWith('/dashboard/roles')) return 'Roles';
 		if (path.startsWith('/dashboard/cajas')) return 'Cajas';
-		if (path.startsWith('/dashboard/turnos')) return 'Registro turnos';
 		return 'Dashboard';
 	});
 
@@ -289,21 +287,6 @@
 							<MonitorSmartphone size={20} />
 							<span class="font-medium">Cajas</span>
 							{#if isActive('/dashboard/cajas')}
-								<span class="absolute right-4 h-1.5 w-1.5 rounded-full bg-primario"></span>
-							{/if}
-						</a>
-
-						<a
-							href="/dashboard/turnos"
-							class="relative flex items-center gap-3 rounded-xl border p-3 {isActive(
-								'/dashboard/turnos'
-							)
-								? 'border-[#4a3a28] bg-[#382a1b] text-primario'
-								: 'border-transparent hover:bg-[#241e1a] hover:text-white'}"
-						>
-							<ClipboardList size={20} />
-							<span class="font-medium">Registro turnos</span>
-							{#if isActive('/dashboard/turnos')}
 								<span class="absolute right-4 h-1.5 w-1.5 rounded-full bg-primario"></span>
 							{/if}
 						</a>
