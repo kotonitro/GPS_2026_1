@@ -441,7 +441,7 @@
 </svelte:head>
 
 <div class="h-full">
-	<!-- Search and Actions Row -->
+	<!-- busqueda y acciones -->
 	<div class="mb-6 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
 		<!-- Bloque de Búsqueda y Filtros -->
 		<div class="flex flex-col gap-3 sm:flex-row sm:items-center flex-1">
@@ -455,7 +455,7 @@
 					type="text"
 					placeholder="Buscar producto..."
 					bind:value={searchQuery}
-					class="w-full rounded-xl border border-border-color bg-bg-card py-2.5 pl-10 pr-12 text-sm text-text-primary transition-colors focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario"
+					class="w-full rounded-xl border border-border-color bg-bg-card py-2.5 pl-10 pr-12 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario"
 				/>
 				<button
 					type="button"
@@ -467,11 +467,11 @@
 				</button>
 			</div>
 
-			<!-- Category Filter -->
+			<!-- filtro categorias -->
 			<div class="flex items-center gap-2">
 				<select
 					bind:value={selectedCategoria}
-					class="w-full sm:w-auto rounded-xl border border-border-color bg-bg-card py-2.5 pl-4 pr-10 text-sm text-text-primary transition-colors focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario cursor-pointer"
+					class="w-full sm:w-auto rounded-xl border border-border-color bg-bg-card py-2.5 pl-4 pr-10 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario cursor-pointer"
 				>
 					<option value="Todas">Todas las categorías</option>
 					{#each categorias as cat}
@@ -483,17 +483,17 @@
 						type="button"
 						title="Gestionar categorías"
 						onclick={openCategoriesModal}
-						class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-border-color hover:text-primario disabled:cursor-not-allowed disabled:opacity-50"
+						class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-text-muted hover:bg-border-color hover:text-primario disabled:cursor-not-allowed disabled:opacity-50"
 					>
 						<Settings size={14} strokeWidth={2.5} />
 					</button>
 				{/if}
 			</div>
 
-			<!-- Status Filter -->
+			<!-- filtro estados -->
 			<select
 				bind:value={selectedEstado}
-				class="w-full sm:w-auto rounded-xl border border-border-color bg-bg-card py-2.5 pl-4 pr-10 text-sm text-text-primary transition-colors focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario cursor-pointer"
+				class="w-full sm:w-auto rounded-xl border border-border-color bg-bg-card py-2.5 pl-4 pr-10 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario cursor-pointer"
 			>
 				<option value="Todas">Todos los estados</option>
 				<option value="Disponible">Disponible</option>
@@ -504,7 +504,7 @@
 			<button
 				type="button"
 				title="Limpiar filtros"
-				class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-border-color hover:text-primario disabled:cursor-not-allowed disabled:opacity-50"
+				class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-text-muted hover:bg-border-color hover:text-primario disabled:cursor-not-allowed disabled:opacity-50"
 				onclick={() => {
 					searchQuery = '';
 					selectedCategoria = 'Todas';
@@ -516,7 +516,7 @@
 			</button>
 		</div>
 
-		<!-- Add Button -->
+		<!-- boton  -->
 		{#if auth.user?.rol?.toLowerCase() === 'admin'}
 			<button
 				onclick={openCreateModal}
@@ -528,7 +528,7 @@
 		{/if}
 	</div>
 
-	<!-- Data Table -->
+	<!-- tabla de informacion -->
 	<div class="overflow-x-auto rounded-xl border border-border-color bg-bg-card shadow-sm">
 		<table class="w-full whitespace-nowrap text-left text-sm text-text-primary">
 			<thead class="border-b border-border-color bg-bg-primary/50 text-text-muted">
@@ -574,7 +574,7 @@
 				{:else}
 					{#each filteredProductos as producto (producto.id_producto)}
 						{@const estado = getEstadoBadge(producto)}
-						<tr class="group transition-colors hover:bg-bg-primary/30">
+						<tr class="group hover:bg-bg-primary/30">
 							<td class="px-6 py-4">
 								<div class="flex flex-col">
 									<span class="font-bold text-text-primary">{producto.nombre}</span>
@@ -610,14 +610,14 @@
 								<td class="px-6 py-4 text-right">
 									<div class="flex items-center justify-end gap-2">
 										<button
-											class="rounded-lg p-2 text-text-muted transition-colors hover:bg-border-color hover:text-primario"
+											class="rounded-lg p-2 text-text-muted hover:bg-border-color hover:text-primario"
 											onclick={() => openEditModal(producto)}
 											title="Editar"
 										>
 											<Edit2 size={18} />
 										</button>
 										<button
-											class="rounded-lg p-2 text-text-muted transition-colors hover:bg-danger-bg hover:text-danger-color"
+											class="rounded-lg p-2 text-text-muted hover:bg-danger-bg hover:text-danger-color"
 											onclick={() => confirmDelete(producto)}
 											title="Eliminar"
 										>
@@ -634,7 +634,7 @@
 	</div>
 </div>
 
-<!-- Modal Crear/Editar -->
+<!-- Crear/Editar -->
 {#if showModal}
 	<div
 		class="fixed inset-0 z-50 flex items-center justify-center bg-text-primary/40 p-4 backdrop-blur-[4px] animate-modal-enter"
@@ -651,7 +651,7 @@
 					{editingProducto ? 'Editar Producto' : 'Añadir Nuevo Producto'}
 				</h3>
 				<button
-					class="rounded-lg p-1 text-text-muted hover:bg-border-color hover:text-text-primary transition-colors"
+					class="rounded-lg p-1 text-text-muted hover:bg-border-color hover:text-text-primary"
 					onclick={closeModal}
 				>
 					<X size={20} />
@@ -829,7 +829,7 @@
 				<div class="mt-8 flex justify-end gap-4">
 					<button
 						type="button"
-						class="font-semibold text-text-muted transition-colors hover:text-text-primary"
+						class="font-semibold text-text-muted hover:text-text-primary"
 						onclick={closeModal}
 						disabled={submitLoading}>Cancelar</button
 					>
@@ -850,7 +850,7 @@
 	</div>
 {/if}
 
-<!-- Delete Confirmation Modal -->
+<!-- borrar confirmacion modeal -->
 {#if showDeleteModal && productoToDelete}
 	<div
 		class="fixed inset-0 z-50 flex items-center justify-center bg-text-primary/40 p-5 backdrop-blur-[4px]"
@@ -865,7 +865,7 @@
 			<header class="flex items-center justify-between border-b border-border-color p-5">
 				<h2 class="text-lg font-bold text-danger-color">Confirmar Eliminación</h2>
 				<button
-					class="inline-flex cursor-pointer items-center justify-center rounded-lg border border-border-color bg-text-primary/3 p-2 text-text-secondary transition-all duration-200 hover:border-border-color-hover hover:bg-text-primary/7 hover:text-text-primary"
+					class="inline-flex cursor-pointer items-center justify-center rounded-lg border border-border-color bg-text-primary/3 p-2 text-text-secondary hover:border-border-color-hover hover:bg-text-primary/7 hover:text-text-primary"
 					onclick={closeDeleteModal}>&times;</button
 				>
 			</header>
@@ -881,12 +881,12 @@
 				class="flex justify-end gap-3 border-t border-border-color bg-text-primary/2 p-4 px-6"
 			>
 				<button
-					class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-border-color bg-bg-secondary px-5 py-2.5 text-sm font-semibold text-text-primary transition-all duration-200 hover:bg-text-primary/5"
+					class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-border-color bg-bg-secondary px-5 py-2.5 text-sm font-semibold text-text-primary hover:bg-text-primary/5"
 					onclick={closeDeleteModal}
 					disabled={submitLoading}>Cancelar</button
 				>
 				<button
-					class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-red-500/20 bg-danger-bg px-5 py-2.5 text-sm font-semibold text-danger-color transition-all duration-200 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+					class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-red-500/20 bg-danger-bg px-5 py-2.5 text-sm font-semibold text-danger-color hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-50"
 					onclick={handleDelete}
 					disabled={submitLoading}
 				>
@@ -901,7 +901,7 @@
 	</div>
 {/if}
 
-<!-- Categories Management Modal -->
+<!-- abrir la interfaz de categorias -->
 {#if showCategoriesModal}
 	<div
 		class="fixed inset-0 z-50 flex items-center justify-center bg-text-primary/40 p-4 backdrop-blur-[4px] animate-modal-enter"
@@ -916,7 +916,7 @@
 			<header class="flex items-center justify-between border-b border-border-color px-6 py-4">
 				<h3 class="text-lg font-bold text-text-primary">Gestionar Categorías</h3>
 				<button
-					class="rounded-lg p-1 text-text-muted hover:bg-border-color hover:text-text-primary transition-colors"
+					class="rounded-lg p-1 text-text-muted hover:bg-border-color hover:text-text-primary"
 					onclick={closeCategoriesModal}
 				>
 					<X size={20} />
@@ -962,12 +962,12 @@
 											disabled={manageCatLoading}
 										/>
 										<button
-											class="shrink-0 rounded-lg bg-primario px-3 py-1.5 text-xs font-semibold text-white hover:bg-primario-hover transition-colors disabled:opacity-50"
+											class="shrink-0 rounded-lg bg-primario px-3 py-1.5 text-xs font-semibold text-white hover:bg-primario-hover disabled:opacity-50"
 											onclick={() => saveEditCat(cat.id_categoria)}
 											disabled={manageCatLoading}>Guardar</button
 										>
 										<button
-											class="shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold text-text-muted hover:text-text-primary transition-colors disabled:opacity-50"
+											class="shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold text-text-muted hover:text-text-primary disabled:opacity-50"
 											onclick={cancelEditCat}
 											disabled={manageCatLoading}>Cancelar</button
 										>
@@ -976,7 +976,7 @@
 									<span class="text-sm font-medium text-text-primary">{cat.nombre_categoria}</span>
 									<div class="flex items-center gap-1">
 										<button
-											class="rounded-lg p-2 text-text-muted transition-colors hover:bg-border-color hover:text-primario disabled:opacity-50"
+											class="rounded-lg p-2 text-text-muted hover:bg-border-color hover:text-primario disabled:opacity-50"
 											title="Editar"
 											onclick={() => startEditCat(cat)}
 											disabled={manageCatLoading || editingCatId !== null}
@@ -984,7 +984,7 @@
 											<Edit2 size={16} />
 										</button>
 										<button
-											class="rounded-lg p-2 text-text-muted transition-colors hover:bg-danger-bg hover:text-danger-color disabled:opacity-50"
+											class="rounded-lg p-2 text-text-muted hover:bg-danger-bg hover:text-danger-color disabled:opacity-50"
 											title="Eliminar"
 											onclick={() => deleteCat(cat.id_categoria)}
 											disabled={manageCatLoading || editingCatId !== null}
@@ -1002,7 +1002,7 @@
 	</div>
 {/if}
 
-<!-- Scanner Modal -->
+<!-- Scanner Modal para la cam -->
 {#if modoEscaneo}
 	<div
 		class="fixed inset-0 z-50 flex items-center justify-center bg-text-primary/40 p-5 backdrop-blur-[4px]"
@@ -1017,7 +1017,7 @@
 			<header class="flex items-center justify-between border-b border-border-color p-5">
 				<h2 class="text-base font-bold text-text-primary">Escanear Código de Barras</h2>
 				<button
-					class="inline-flex cursor-pointer items-center justify-center rounded-lg border border-border-color bg-text-primary/3 p-2 text-text-secondary transition-all duration-200 hover:border-border-color-hover hover:bg-text-primary/7 hover:text-text-primary"
+					class="inline-flex cursor-pointer items-center justify-center rounded-lg border border-border-color bg-text-primary/3 p-2 text-text-secondary hover:border-border-color-hover hover:bg-text-primary/7 hover:text-text-primary"
 					onclick={() => (modoEscaneo = false)}>&times;</button
 				>
 			</header>

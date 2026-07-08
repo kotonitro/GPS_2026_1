@@ -286,14 +286,14 @@
 	</div>
 	<div class="flex items-start">
 		<button
-			class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-accent-light to-accent px-5 py-2.5 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-[1px] hover:shadow-glow"
+			class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-accent-light to-accent px-5 py-2.5 text-sm font-semibold text-white hover:-translate-y-[1px] hover:shadow-glow"
 			onclick={abrirModalNuevo}
 		>
 			<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 				<line x1="12" y1="5" x2="12" y2="19" />
 				<line x1="5" y1="12" x2="19" y2="12" />
 			</svg>
-			<span>Nueva promoción</span>
+			<span>Nueva Promoción</span>
 		</button>
 	</div>
 </div>
@@ -309,7 +309,7 @@
 	{@const prod = promo.tipo !== 'COMBO' ? obtenerProducto(promo.producto_id) : null}
 	{@const nombreProd = promo.tipo === 'COMBO' ? generarNombresCombo(promo) : (prod?.nombre || 'Producto sin nombre')}
 	
-	<div class="min-w-[300px] w-[300px] sm:w-[320px] flex-none snap-start bg-bg-card border border-border-color rounded-xl p-5 shadow-sm hover:border-border-color-hover transition-all flex flex-col justify-between {estado === 'expirada' ? 'opacity-60 grayscale' : ''}">
+	<div class="min-w-[300px] w-[300px] sm:w-[320px] flex-none snap-start bg-bg-card border border-border-color rounded-xl p-5 shadow-sm hover:border-border-color-hover flex flex-col justify-between {estado === 'expirada' ? 'opacity-60 grayscale' : ''}">
 		
 		<div>
 			<div class="flex justify-between items-start mb-4">
@@ -362,13 +362,13 @@
 			<div class="grid grid-cols-2 gap-3">
 				<button 
 					onclick={() => handleEditar(promo)}
-					class="inline-flex cursor-pointer items-center justify-center rounded-lg border border-border-color bg-text-primary/3 p-2 text-xs font-semibold text-text-secondary transition-all duration-200 hover:border-border-color-hover hover:bg-text-primary/7 hover:text-text-primary"
+					class="inline-flex cursor-pointer items-center justify-center rounded-lg border border-border-color bg-text-primary/3 p-2 text-xs font-semibold text-text-secondary hover:border-border-color-hover hover:bg-text-primary/7 hover:text-text-primary"
 				>
 					Editar
 				</button>
 				<button 
 					onclick={() => pedirConfirmacionEliminar(promo.id_promocion)}
-					class="inline-flex cursor-pointer items-center justify-center rounded-lg border border-red-500/15 bg-danger-bg p-2 text-xs font-semibold text-danger-color transition-all duration-200 hover:bg-danger-color hover:text-white"
+					class="inline-flex cursor-pointer items-center justify-center rounded-lg border border-red-500/15 bg-danger-bg p-2 text-xs font-semibold text-danger-color hover:bg-danger-color hover:text-white"
 				>
 					Cancelar
 				</button>
@@ -387,7 +387,7 @@
 		<p class="text-text-secondary text-sm py-4">No hay promociones activas.</p>
 	{:else}
 		<div class="relative group">
-			<button onclick={() => moverCarrusel(carruselActivas, 'izq')} class="absolute -left-5 top-1/2 -translate-y-1/2 z-10 bg-bg-card border border-border-color shadow-md rounded-full p-2 text-text-secondary opacity-0 group-hover:opacity-100 transition-all hidden sm:block hover:bg-text-primary/5 focus:outline-none">
+			<button onclick={() => moverCarrusel(carruselActivas, 'izq')} class="absolute -left-5 top-1/2 -translate-y-1/2 z-10 bg-bg-card border border-border-color shadow-md rounded-full p-2 text-text-secondary opacity-0 group-hover:opacity-100 hidden sm:block hover:bg-text-primary/5 focus:outline-none">
 				<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
 			</button>
 			
@@ -397,7 +397,7 @@
 				{/each}
 			</div>
 
-			<button onclick={() => moverCarrusel(carruselActivas, 'der')} class="absolute -right-5 top-1/2 -translate-y-1/2 z-10 bg-bg-card border border-border-color shadow-md rounded-full p-2 text-text-secondary opacity-0 group-hover:opacity-100 transition-all hidden sm:block hover:bg-text-primary/5 focus:outline-none">
+			<button onclick={() => moverCarrusel(carruselActivas, 'der')} class="absolute -right-5 top-1/2 -translate-y-1/2 z-10 bg-bg-card border border-border-color shadow-md rounded-full p-2 text-text-secondary opacity-0 group-hover:opacity-100 hidden sm:block hover:bg-text-primary/5 focus:outline-none">
 				<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
 			</button>
 		</div>
@@ -412,7 +412,7 @@
 		</div>
 		
 		<div class="relative group">
-			<button onclick={() => moverCarrusel(carruselProximas, 'izq')} class="absolute -left-5 top-1/2 -translate-y-1/2 z-10 bg-bg-card border border-border-color shadow-md rounded-full p-2 text-text-secondary opacity-0 group-hover:opacity-100 transition-all hidden sm:block hover:bg-text-primary/5 focus:outline-none">
+			<button onclick={() => moverCarrusel(carruselProximas, 'izq')} class="absolute -left-5 top-1/2 -translate-y-1/2 z-10 bg-bg-card border border-border-color shadow-md rounded-full p-2 text-text-secondary opacity-0 group-hover:opacity-100 hidden sm:block hover:bg-text-primary/5 focus:outline-none">
 				<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
 			</button>
 			
@@ -422,7 +422,7 @@
 				{/each}
 			</div>
 
-			<button onclick={() => moverCarrusel(carruselProximas, 'der')} class="absolute -right-5 top-1/2 -translate-y-1/2 z-10 bg-bg-card border border-border-color shadow-md rounded-full p-2 text-text-secondary opacity-0 group-hover:opacity-100 transition-all hidden sm:block hover:bg-text-primary/5 focus:outline-none">
+			<button onclick={() => moverCarrusel(carruselProximas, 'der')} class="absolute -right-5 top-1/2 -translate-y-1/2 z-10 bg-bg-card border border-border-color shadow-md rounded-full p-2 text-text-secondary opacity-0 group-hover:opacity-100 hidden sm:block hover:bg-text-primary/5 focus:outline-none">
 				<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
 			</button>
 		</div>
@@ -437,7 +437,7 @@
 		</div>
 		
 		<div class="relative group">
-			<button onclick={() => moverCarrusel(carruselExpiradas, 'izq')} class="absolute -left-5 top-1/2 -translate-y-1/2 z-10 bg-bg-card border border-border-color shadow-md rounded-full p-2 text-text-secondary opacity-0 group-hover:opacity-100 transition-all hidden sm:block hover:bg-text-primary/5 focus:outline-none">
+			<button onclick={() => moverCarrusel(carruselExpiradas, 'izq')} class="absolute -left-5 top-1/2 -translate-y-1/2 z-10 bg-bg-card border border-border-color shadow-md rounded-full p-2 text-text-secondary opacity-0 group-hover:opacity-100 hidden sm:block hover:bg-text-primary/5 focus:outline-none">
 				<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
 			</button>
 			
@@ -447,7 +447,7 @@
 				{/each}
 			</div>
 
-			<button onclick={() => moverCarrusel(carruselExpiradas, 'der')} class="absolute -right-5 top-1/2 -translate-y-1/2 z-10 bg-bg-card border border-border-color shadow-md rounded-full p-2 text-text-secondary opacity-0 group-hover:opacity-100 transition-all hidden sm:block hover:bg-text-primary/5 focus:outline-none">
+			<button onclick={() => moverCarrusel(carruselExpiradas, 'der')} class="absolute -right-5 top-1/2 -translate-y-1/2 z-10 bg-bg-card border border-border-color shadow-md rounded-full p-2 text-text-secondary opacity-0 group-hover:opacity-100 hidden sm:block hover:bg-text-primary/5 focus:outline-none">
 				<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
 			</button>
 		</div>
@@ -459,8 +459,8 @@
 		<div class="w-full max-w-[600px] overflow-hidden rounded-xl border border-border-color bg-bg-card shadow-lg animate-modal-enter" onclick={(e) => e.stopPropagation()} role="dialog">
 			
 			<header class="flex items-center justify-between border-b border-border-color p-5">
-				<h2 class="text-lg font-bold text-text-primary">{editandoId ? 'Editar Promoción' : 'Nueva Promoción'}</h2>
-				<button class="inline-flex cursor-pointer items-center justify-center rounded-lg border border-border-color bg-text-primary/3 p-2 text-text-secondary transition-all duration-200 hover:border-border-color-hover hover:bg-text-primary/7 hover:text-text-primary" onclick={() => (mostrarFormulario = false)}>&times;</button>
+				<h2 class="text-lg font-bold text-text-primary">{editandoId ? 'Editar Promoción' : 'Añadir Nueva Promoción'}</h2>
+				<button class="inline-flex cursor-pointer items-center justify-center rounded-lg border border-border-color bg-text-primary/3 p-2 text-text-secondary hover:border-border-color-hover hover:bg-text-primary/7 hover:text-text-primary" onclick={() => (mostrarFormulario = false)}>&times;</button>
 			</header>
 
 			<form onsubmit={handleCrearPromocion}>
@@ -468,7 +468,7 @@
 					
 					<div class="flex flex-col gap-1.5 mb-5">
 						<label for="tipoPromo" class="text-[0.85rem] font-semibold text-text-secondary">Tipo de Oferta:</label>
-						<select id="tipoPromo" bind:value={tipoPromocion} class="rounded-lg border border-[rgba(15,30,54,0.15)] bg-white px-4 py-3 text-sm text-text-primary outline-none transition-all duration-200 focus:border-primario focus:ring-1 focus:ring-primario dark:bg-bg-primary">
+						<select id="tipoPromo" bind:value={tipoPromocion} class="rounded-lg border border-[rgba(15,30,54,0.15)] bg-white px-4 py-3 text-sm text-text-primary outline-none focus:border-primario focus:ring-1 focus:ring-primario dark:bg-bg-primary">
 							<option value="NXM">Lleva X, Paga Y (Ej. 3x2)</option>
 							<option value="precio_fijo">Descuento Directo ($)</option>
 							<option value="porcentaje">Descuento por Porcentaje (%)</option>
@@ -482,7 +482,7 @@
 						</label>
 						
 						{#if tipoPromocion !== 'COMBO'}
-							<select bind:value={categoriaSeleccionada} class="w-full mb-3 rounded-lg border border-[rgba(15,30,54,0.15)] bg-white px-4 py-2 text-sm text-text-primary outline-none transition-all duration-200 focus:border-primario focus:ring-1 focus:ring-primario dark:bg-bg-primary">
+							<select bind:value={categoriaSeleccionada} class="w-full mb-3 rounded-lg border border-[rgba(15,30,54,0.15)] bg-white px-4 py-2 text-sm text-text-primary outline-none focus:border-primario focus:ring-1 focus:ring-primario dark:bg-bg-primary">
 								<option value="">Todas las categorías</option>
 								{#each categoriasUnicas.filter(Boolean) as cat}
 									<option value={cat}>{cat}</option>
@@ -490,7 +490,7 @@
 							</select>
 						{/if}
 
-						<div class="flex w-full overflow-hidden rounded-lg border border-[rgba(15,30,54,0.15)] bg-white transition-all duration-200 focus-within:border-primario focus-within:ring-1 focus-within:ring-primario dark:bg-bg-primary mb-3">
+						<div class="flex w-full overflow-hidden rounded-lg border border-[rgba(15,30,54,0.15)] bg-white focus-within:border-primario focus-within:ring-1 focus-within:ring-primario dark:bg-bg-primary mb-3">
 							<div class="flex items-center justify-center pl-3 pr-2 text-text-muted">
 								<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
 							</div>
@@ -542,11 +542,11 @@
 					<div class="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-5">
 						<div class="flex flex-col gap-1.5">
 							<label for="fechaInicio" class="text-[0.85rem] font-semibold text-text-secondary">Fecha de Inicio:</label>
-							<input type="date" id="fechaInicio" bind:value={fechaInicio} min={hoyStr} required class="rounded-lg border border-[rgba(15,30,54,0.15)] bg-white px-4 py-3 text-sm text-text-primary outline-none transition-all duration-200 focus:border-primario focus:ring-1 focus:ring-primario dark:bg-bg-primary" style="color-scheme: dark;" />
+							<input type="date" id="fechaInicio" bind:value={fechaInicio} min={hoyStr} required class="rounded-lg border border-[rgba(15,30,54,0.15)] bg-white px-4 py-3 text-sm text-text-primary outline-none focus:border-primario focus:ring-1 focus:ring-primario dark:bg-bg-primary" style="color-scheme: dark;" />
 						</div>
 						<div class="flex flex-col gap-1.5">
 							<label for="fechaFin" class="text-[0.85rem] font-semibold text-text-secondary">Fecha de Fin:</label>
-							<input type="date" id="fechaFin" bind:value={fechaFin} min={fechaInicio || hoyStr} required class="rounded-lg border border-[rgba(15,30,54,0.15)] bg-white px-4 py-3 text-sm text-text-primary outline-none transition-all duration-200 focus:border-primario focus:ring-1 focus:ring-primario dark:bg-bg-primary" style="color-scheme: dark;" />
+							<input type="date" id="fechaFin" bind:value={fechaFin} min={fechaInicio || hoyStr} required class="rounded-lg border border-[rgba(15,30,54,0.15)] bg-white px-4 py-3 text-sm text-text-primary outline-none focus:border-primario focus:ring-1 focus:ring-primario dark:bg-bg-primary" style="color-scheme: dark;" />
 						</div>
 					</div>
 
@@ -555,30 +555,30 @@
 							<div class="flex gap-4">
 								<div class="flex-1 flex flex-col gap-1.5">
 									<label for="inputLleva" class="text-[0.85rem] font-semibold text-text-secondary">Lleva:</label>
-									<input id="inputLleva" type="number" min="2" bind:value={lleva} required class="rounded-lg border border-[rgba(15,30,54,0.15)] bg-white px-4 py-3 text-sm text-text-primary outline-none transition-all duration-200 focus:border-primario focus:ring-1 focus:ring-primario dark:bg-bg-primary" style="color-scheme: dark;" />
+									<input id="inputLleva" type="number" min="2" bind:value={lleva} required class="rounded-lg border border-[rgba(15,30,54,0.15)] bg-white px-4 py-3 text-sm text-text-primary outline-none focus:border-primario focus:ring-1 focus:ring-primario dark:bg-bg-primary" style="color-scheme: dark;" />
 								</div>
 								<div class="flex-1 flex flex-col gap-1.5">
 									<label for="inputPaga" class="text-[0.85rem] font-semibold text-text-secondary">Paga:</label>
-									<input id="inputPaga" type="number" min="1" bind:value={paga} required class="rounded-lg border border-[rgba(15,30,54,0.15)] bg-white px-4 py-3 text-sm text-text-primary outline-none transition-all duration-200 focus:border-primario focus:ring-1 focus:ring-primario dark:bg-bg-primary" style="color-scheme: dark;" />
+									<input id="inputPaga" type="number" min="1" bind:value={paga} required class="rounded-lg border border-[rgba(15,30,54,0.15)] bg-white px-4 py-3 text-sm text-text-primary outline-none focus:border-primario focus:ring-1 focus:ring-primario dark:bg-bg-primary" style="color-scheme: dark;" />
 								</div>
 							</div>
 						{:else if tipoPromocion === 'precio_fijo' || tipoPromocion === 'COMBO'}
 							<div class="flex flex-col gap-1.5">
 								<label for="inputDesc" class="text-[0.85rem] font-semibold text-text-secondary">{tipoPromocion === 'COMBO' ? 'Precio Final del Combo ($):' : 'Monto a descontar ($):'}</label>
-								<input id="inputDesc" type="number" min="1" bind:value={descuento} required class="rounded-lg border border-[rgba(15,30,54,0.15)] bg-white px-4 py-3 text-sm text-text-primary outline-none transition-all duration-200 focus:border-primario focus:ring-1 focus:ring-primario dark:bg-bg-primary" style="color-scheme: dark;" />
+								<input id="inputDesc" type="number" min="1" bind:value={descuento} required class="rounded-lg border border-[rgba(15,30,54,0.15)] bg-white px-4 py-3 text-sm text-text-primary outline-none focus:border-primario focus:ring-1 focus:ring-primario dark:bg-bg-primary" style="color-scheme: dark;" />
 							</div>
 						{:else if tipoPromocion === 'porcentaje'}
 							<div class="flex flex-col gap-1.5">
 								<label for="inputDescPorc" class="text-[0.85rem] font-semibold text-text-secondary">Porcentaje de descuento (%):</label>
-								<input id="inputDescPorc" type="number" min="1" max="100" bind:value={descuento} required class="rounded-lg border border-[rgba(15,30,54,0.15)] bg-white px-4 py-3 text-sm text-text-primary outline-none transition-all duration-200 focus:border-primario focus:ring-1 focus:ring-primario dark:bg-bg-primary" style="color-scheme: dark;" />
+								<input id="inputDescPorc" type="number" min="1" max="100" bind:value={descuento} required class="rounded-lg border border-[rgba(15,30,54,0.15)] bg-white px-4 py-3 text-sm text-text-primary outline-none focus:border-primario focus:ring-1 focus:ring-primario dark:bg-bg-primary" style="color-scheme: dark;" />
 							</div>
 						{/if}
 					</div>
 				</div>
 
 				<footer class="flex justify-end gap-3 border-t border-border-color bg-text-primary/2 p-4 px-6">
-					<button type="button" class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-border-color bg-bg-secondary px-5 py-2.5 text-sm font-semibold text-text-primary transition-all duration-200 hover:bg-text-primary/5" onclick={() => (mostrarFormulario = false)} disabled={submitLoading}>Cancelar</button>
-					<button type="submit" class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-accent-light to-accent px-5 py-2.5 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-[1px] hover:shadow-glow disabled:cursor-not-allowed disabled:opacity-50" disabled={submitLoading}>
+					<button type="button" class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-border-color bg-bg-secondary px-5 py-2.5 text-sm font-semibold text-text-primaryl hover:bg-text-primary/5" onclick={() => (mostrarFormulario = false)} disabled={submitLoading}>Cancelar</button>
+					<button type="submit" class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-accent-light to-accent px-5 py-2.5 text-sm font-semibold text-white hover:-translate-y-[1px] hover:shadow-glow disabled:cursor-not-allowed disabled:opacity-50" disabled={submitLoading}>
 						{#if submitLoading} Procesando... {:else} {editandoId ? 'Actualizar Promoción' : 'Activar Promoción'} {/if}
 					</button>
 				</footer>
@@ -592,15 +592,15 @@
 		<div class="w-full max-w-[500px] overflow-hidden rounded-xl border border-border-color bg-bg-card shadow-lg animate-modal-enter" onclick={(e) => e.stopPropagation()} role="dialog">
 			<header class="flex items-center justify-between border-b border-border-color p-5">
 				<h2 class="text-lg font-bold text-danger-color">Confirmar Eliminación</h2>
-				<button class="inline-flex cursor-pointer items-center justify-center rounded-lg border border-border-color bg-text-primary/3 p-2 text-text-secondary transition-all duration-200 hover:border-border-color-hover hover:bg-text-primary/7 hover:text-text-primary" onclick={() => (mostrarModalEliminar = false)}>&times;</button>
+				<button class="inline-flex cursor-pointer items-center justify-center rounded-lg border border-border-color bg-text-primary/3 p-2 text-text-secondary hover:border-border-color-hover hover:bg-text-primary/7 hover:text-text-primary" onclick={() => (mostrarModalEliminar = false)}>&times;</button>
 			</header>
 			<div class="p-6 text-text-primary">
 				<p>¿Estás seguro de que deseas cancelar esta promoción de forma permanente?</p>
 				<p class="mt-3 text-xs text-text-muted">La promoción pasará a estar inactiva y los clientes ya no podrán usar este descuento.</p>
 			</div>
 			<footer class="flex justify-end gap-3 border-t border-border-color bg-text-primary/2 p-4 px-6">
-				<button type="button" class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-border-color bg-bg-secondary px-5 py-2.5 text-sm font-semibold text-text-primary transition-all duration-200 hover:bg-text-primary/5" onclick={() => (mostrarModalEliminar = false)}>Mantener promoción</button>
-				<button type="button" class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-red-500/15 bg-danger-bg px-5 py-2.5 text-sm font-semibold text-danger-color transition-all duration-200 hover:bg-danger-color hover:text-white" onclick={confirmarEliminacion}>Sí, cancelar ahora</button>
+				<button type="button" class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-border-color bg-bg-secondary px-5 py-2.5 text-sm font-semibold text-text-primary hover:bg-text-primary/5" onclick={() => (mostrarModalEliminar = false)}>Mantener promoción</button>
+				<button type="button" class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-red-500/15 bg-danger-bg px-5 py-2.5 text-sm font-semibold text-danger-color hover:bg-danger-color hover:text-white" onclick={confirmarEliminacion}>Sí, cancelar ahora</button>
 			</footer>
 		</div>
 	</div>

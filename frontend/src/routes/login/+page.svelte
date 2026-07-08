@@ -40,7 +40,7 @@
 <div class="flex min-h-screen w-full bg-bg-primary">
 	<!-- Left Side - Image/Banner -->
 	<div class="relative hidden w-1/2 bg-black lg:flex">
-		<!-- Placeholder para imagen de fondo (Supermercado) -->
+		<!-- Placeholder para imagen de fondo -->
 		<img 
 			src="https://images.unsplash.com/photo-1542838132-92c53300491e?q=80&w=1974&auto=format&fit=crop" 
 			alt="Fondo de supermercado" 
@@ -56,7 +56,7 @@
 		</div>
 	</div>
 
-	<!-- Right Side - Login Form -->
+	<!--Login -->
 	<div class="flex w-full items-center justify-center bg-bg-primary p-8 lg:w-1/2">
 		<div class="w-full max-w-md">
 			<!-- Logo -->
@@ -94,7 +94,7 @@
 						id="usuario"
 						type="text"
 						bind:value={usuario}
-						oninput={(e) => { e.currentTarget.value = e.currentTarget.value.replace(/[^a-zA-Z]/g, ''); usuario = e.currentTarget.value; }}
+						oninput={(e) => { e.currentTarget.value = e.currentTarget.value.replace(/\s/g, ''); usuario = e.currentTarget.value; }}
 						placeholder="Ej: admin"
 						required
 						class="w-full rounded-lg border border-border-color bg-bg-card px-4 py-3 text-text-primary placeholder:text-text-muted/50 transition-all focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"

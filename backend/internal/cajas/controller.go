@@ -3,7 +3,7 @@ package cajas
 import (
 	"errors"
 	"net/http"
-	"time"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
@@ -75,10 +75,14 @@ func (ctrl *CajaController) CreateCajaController(c *gin.Context) {
 
 	err := CreateCaja(ctrl.db, &nuevaCaja)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":   "No se pudo registrar la caja.",
-			"detalle": "La ubicación ya se encuentra registrada en el sistema.",
-		})
+		if errors.Is(err, gorm.ErrDuplicatedKey) || strings.Contains(err.Error(), "23505") || strings.Contains(err.Error(), "duplicate key") {
+			c.JSON(http.StatusConflict, gin.H{
+				"error":   "No se pudo registrar la caja.",
+				"detalle": "Ya existe una caja con ese nombre o ubicación registrada en el sistema.",
+			})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error interno al registrar la caja en la base de datos."})
 		return
 	}
 
@@ -86,7 +90,6 @@ func (ctrl *CajaController) CreateCajaController(c *gin.Context) {
 		"mensaje": "Caja creada exitosamente.",
 		"id_caja": nuevaCaja.ID,
 	})
-
 }
 
 func (ctrl *CajaController) DeleteCajaByIDController(c *gin.Context) {
@@ -97,6 +100,13 @@ func (ctrl *CajaController) DeleteCajaByIDController(c *gin.Context) {
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.JSON(http.StatusNotFound, gin.H{"error": "La caja que intenta eliminar no existe."})
+			return
+		}
+		if strings.Contains(err.Error(), "23503") || strings.Contains(err.Error(), "foreign key constraint") {
+			c.JSON(http.StatusConflict, gin.H{
+				"error":   "No se pudo eliminar la caja.",
+				"detalle": "Esta caja tiene registros históricos asociados y no puede ser eliminada.",
+			})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error interno al eliminar la caja."})
@@ -139,6 +149,13 @@ func (ctrl *CajaController) UpdateCajaByIDController(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"Error": "La caja a modificar no existe."})
 			return
 		}
+		if errors.Is(err, gorm.ErrDuplicatedKey) || strings.Contains(err.Error(), "23505") || strings.Contains(err.Error(), "duplicate key") {
+			c.JSON(http.StatusConflict, gin.H{
+				"error":   "No se pudo modificar la caja.",
+				"detalle": "Ya existe otra caja registrada con ese mismo nombre o ubicación.",
+			})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"Error": "Error interno al modificar la caja."})
 		return
 	}
@@ -164,128 +181,4 @@ func ValidationErrorsFormat(err error) map[string]string {
 
 	mensajes["error"] = "El cuerpo de la petición es inválido."
 	return mensajes
-}
-
-func (ctrl *CajaController) GetRegistrosController(c *gin.Context) {
-	listaRegistros, err := GetRegistros(ctrl.db)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error interno al obtener los registros."})
-		return
-	}
-
-	c.JSON(http.StatusOK, listaRegistros)
-}
-
-func (ctrl *CajaController) GetRegistroByIDController(c *gin.Context) {
-
-	id := c.Param("id")
-
-	registro, err := GetRegistroByID(ctrl.db, id)
-	if err != nil {
-
-		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "El registro solicitado no existe."})
-			return
-		}
-
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error interno al buscar el registro en la base de datos."})
-		return
-	}
-
-	c.JSON(http.StatusOK, registro)
-}
-
-type CreateRegistroInput struct {
-	CajaID      string    `json:"id_caja" binding:"required"`
-	EmpleadoID  string    `json:"id_empleado" binding:"required"`
-	FechaInicio time.Time `json:"fecha_inicio" binding:"required"`
-	FechaFin    time.Time `json:"fecha_fin" binding:"required"`
-}
-
-func (ctrl *CajaController) CreateRegistroController(c *gin.Context) {
-	var input CreateRegistroInput
-
-	if err := c.ShouldBindJSON(&input); err != nil {
-
-		errores := ValidationErrorsFormat(err)
-		c.JSON(http.StatusBadRequest, gin.H{"errores": errores})
-		return
-	}
-
-	nuevoRegistro := RegistroTurno{
-		CajaID:      input.CajaID,
-		EmpleadoID:  input.EmpleadoID,
-		FechaInicio: input.FechaInicio,
-		FechaFin:    input.FechaFin,
-	}
-
-	err := CreateRegistro(ctrl.db, &nuevoRegistro)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "No se pudo crear el registro.",
-		})
-		return
-	}
-
-	c.JSON(http.StatusCreated, gin.H{
-		"mensaje":     "Registro creado exitosamente.",
-		"id_registro": nuevoRegistro.ID,
-	})
-
-}
-
-func (ctrl *CajaController) DeleteRegistroByIDController(c *gin.Context) {
-	id := c.Param("id")
-
-	err := DeleteRegistroByID(ctrl.db, id)
-
-	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "El registro que intenta eliminar no existe."})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error interno al eliminar el registro."})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"mensaje": "Registro eliminado exitosamente."})
-}
-
-type UpdateRegistroInput struct {
-	CajaID      *string    `json:"id_caja"`
-	EmpleadoID  *string    `json:"id_empleado"`
-	FechaInicio *time.Time `json:"fecha_inicio"`
-	FechaFin    *time.Time `json:"fecha_fin"`
-}
-
-func (ctrl *CajaController) UpdateRegistroByIDController(c *gin.Context) {
-	id := c.Param("id")
-
-	var input UpdateRegistroInput
-
-	if err := c.ShouldBindJSON(&input); err != nil {
-		errores := ValidationErrorsFormat(err)
-		c.JSON(http.StatusBadRequest, gin.H{"errores": errores})
-		return
-	}
-
-	if input.CajaID == nil && input.EmpleadoID == nil && input.FechaInicio == nil && input.FechaFin == nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Se requiere al menos un campo válido para modificar.",
-		})
-		return
-	}
-
-	err := UpdateRegistroByID(ctrl.db, id, input)
-
-	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"Error": "El registro a modificar no existe."})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"Error": "Error interno al modificar el registro."})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"mensaje": "Registro modificado exitosamente."})
 }

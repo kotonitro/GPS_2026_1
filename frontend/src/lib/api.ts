@@ -43,23 +43,34 @@ export interface Promocion {
 }
 
 export async function apiFetch(endpoint: string, options: RequestInit = {}) {
-	const headers = {
-		'Content-Type': 'application/json',
-		...options.headers
-	};
+    const headers = {
+        'Content-Type': 'application/json',
+        ...options.headers
+    };
 
-	const response = await fetch(`${API_URL}${endpoint}`, {
-		...options,
-		headers,
-		credentials: 'include'
-	});
+    const response = await fetch(`${API_URL}${endpoint}`, {
+        ...options,
+        headers,
+        credentials: 'include'
+    });
 
-	if (!response.ok) {
-		const errorData = await response.json().catch(() => ({}));
-		throw new Error(errorData.error || errorData.Error || errorData.mensaje || 'Error de conexión con el servidor');
-	}
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        
+        const mensajePrincipal = errorData.detalle || errorData.error || errorData.Error || errorData.mensaje || 'Error de conexión con el servidor';
+        
+        const errorObj = new Error(mensajePrincipal);
+        
+        Object.assign(errorObj, errorData);
+        
+        if (errorData.errores) {
+            (errorObj as any).errors = errorData.errores;
+        }
 
-	return response.json();
+        throw errorObj;
+    }
+
+    return response.json();
 }
 
 export async function login(usuario: string, contrasena: string): Promise<Empleado> {

@@ -23,11 +23,6 @@ func RoutesConfig(api *gin.RouterGroup, db *gorm.DB, authMiddleware gin.HandlerF
 			adminGroup.POST("", ctrl.CreateCajaController)
 			adminGroup.DELETE("/:id", ctrl.DeleteCajaByIDController)
 			adminGroup.PATCH("/:id", ctrl.UpdateCajaByIDController)
-			adminGroup.GET("/registros", ctrl.GetRegistrosController)
-			adminGroup.GET("/registros/:id", ctrl.GetRegistroByIDController)
-			adminGroup.POST("/registros", ctrl.CreateRegistroController)
-			adminGroup.DELETE("/registros/:id", ctrl.DeleteRegistroByIDController)
-			adminGroup.PATCH("/registros/:id", ctrl.UpdateRegistroByIDController)
 		}
 	}
 }
