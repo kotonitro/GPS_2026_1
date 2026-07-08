@@ -102,7 +102,8 @@
 	// Errores de Formulario
 	let errNombre = $state('');
 	let errPrecio = $state('');
-    let errCategoria = $state('');
+	let errCategoria = $state('');
+	let errCodigoBarras = $state('');
 	let formGeneralError = $state('');
 	let submitLoading = $state(false);
 
@@ -302,6 +303,7 @@
 		errNombre = '';
 		errPrecio = '';
         errCategoria = '';
+		errCodigoBarras = '';
 		formGeneralError = '';
 	}
 
@@ -322,6 +324,12 @@
             errCategoria = 'Debe especificar una categoría.';
             isValid = false;
         }
+		
+		const barcodeRegex = /^\d{13}$/;
+		if (!barcodeRegex.test(formCodigoBarras.trim())) {
+			errCodigoBarras = 'El código de barras debe tener exactamente 13 dígitos numéricos.';
+			isValid = false;
+		}
 
 		if (!isValid) return;
 
@@ -652,7 +660,8 @@
 					
 					<div class="flex flex-col gap-1.5">
 						<label class="text-sm font-semibold text-text-primary" for="formCodigoBarras">Código de Barras *</label>
-						<input type="text" id="formCodigoBarras" autocomplete="off" class="rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50" placeholder="Ej: 780123456789" bind:value={formCodigoBarras} disabled={submitLoading} required />
+						<input type="text" id="formCodigoBarras" autocomplete="off" class="rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50" placeholder="Ej: 7801234567890" bind:value={formCodigoBarras} disabled={submitLoading} required />
+						{#if errCodigoBarras}<span class="mt-1 text-xs font-medium text-danger-color">{errCodigoBarras}</span>{/if}
 					</div>
 				</div>
 				

@@ -2,6 +2,7 @@ package inventario
 
 import (
 	"net/http"
+	"regexp"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -31,6 +32,12 @@ func (ctrl *InventarioController) CrearProducto(c *gin.Context) {
 	}
 	if nuevoProducto.Precio <= 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": "El precio debe ser mayor a cero"})
+		return
+	}
+	
+	validBarcode := regexp.MustCompile(`^\d{13}$`)
+	if !validBarcode.MatchString(nuevoProducto.CodigoBarras) {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "El código de barras debe tener exactamente 13 dígitos"})
 		return
 	}
 
@@ -107,6 +114,12 @@ func (ctrl *InventarioController) UpdateProducto(c *gin.Context) {
 	}
 	if datosNuevos.Precio <= 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Operación rechazada: El precio debe ser mayor a cero"})
+		return
+	}
+
+	validBarcode := regexp.MustCompile(`^\d{13}$`)
+	if !validBarcode.MatchString(datosNuevos.CodigoBarras) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Operación rechazada: El código de barras debe tener exactamente 13 dígitos"})
 		return
 	}
 
