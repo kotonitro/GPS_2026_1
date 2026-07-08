@@ -244,7 +244,7 @@
 				<Wallet size={20} />
 			</div>
 			<span class="rounded-full bg-danger-color/10 px-2 py-0.5 text-xs font-bold text-danger-color"
-				>~ {clientesDeudores} clientes</span
+				>{clientesDeudores} clientes</span
 			>
 		</div>
 		<h3 class="text-3xl font-bold text-text-primary">{formatCurrency(fiadosPendientes)}</h3>
@@ -264,12 +264,12 @@
 				<AlertCircle size={20} />
 			</div>
 			<span class="rounded-full bg-danger-color/10 px-2 py-0.5 text-xs font-bold text-danger-color"
-				>~ requieren restock</span
+				>requieren restock</span
 			>
 		</div>
 		<h3 class="text-3xl font-bold text-text-primary">{productosAgotados}</h3>
 		<p class="mt-1 text-xs font-bold uppercase tracking-wider text-text-secondary">
-			Agotados / Bajo Stock
+			Productos Agotados / Bajo Stock
 		</p>
 	</div>
 </div>
@@ -280,7 +280,7 @@
 			<h2 class="flex items-center gap-2 text-lg font-bold text-text-primary">Últimas Ventas</h2>
 			<a
 				href="/dashboard/ventas"
-				class="text-sm font-semibold text-text-secondary hover:text-primario">Ver todas ↗</a
+				class="text-sm font-semibold text-text-secondary hover:text-primario">Ver todas</a
 			>
 		</div>
 		<div class="flex flex-col gap-0 p-0">

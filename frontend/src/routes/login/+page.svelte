@@ -40,7 +40,7 @@
 <div class="flex min-h-screen w-full bg-bg-primary">
 	<!-- Left Side - Image/Banner -->
 	<div class="relative hidden w-1/2 bg-black lg:flex">
-		<!-- Placeholder para imagen de fondo (Supermercado) -->
+		<!-- Placeholder para imagen de fondo -->
 		<img 
 			src="https://images.unsplash.com/photo-1542838132-92c53300491e?q=80&w=1974&auto=format&fit=crop" 
 			alt="Fondo de supermercado" 
@@ -56,7 +56,7 @@
 		</div>
 	</div>
 
-	<!-- Right Side - Login Form -->
+	<!--Login -->
 	<div class="flex w-full items-center justify-center bg-bg-primary p-8 lg:w-1/2">
 		<div class="w-full max-w-md">
 			<!-- Logo -->
