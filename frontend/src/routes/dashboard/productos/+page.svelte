@@ -3,7 +3,8 @@
 	import { auth } from '$lib/authStore.svelte';
 	import { toast } from '$lib/toastStore.svelte';
 	import { onMount } from 'svelte';
-	import { Search, Plus, Edit2, Trash2, X, AlertTriangle, ArrowUpDown, ArrowUp, ArrowDown, Settings } from '@lucide/svelte';
+	import { Search, Plus, Edit2, Trash2, X, AlertTriangle, ArrowUpDown, ArrowUp, ArrowDown, Settings, Camera } from '@lucide/svelte';
+	import Scanner from '$lib/components/Scanner.svelte';
 
 	let productos = $state<Producto[]>([]);
 	let categorias = $state<Categoria[]>([]);
@@ -24,6 +25,7 @@
 
 	// Filtros y Búsqueda
 	let searchQuery = $state('');
+	let modoEscaneo = $state(false);
 	let selectedCategoria = $state('Todas');
 	let selectedEstado = $state('Todas');
     
@@ -105,6 +107,12 @@
 	let submitLoading = $state(false);
 
 	onMount(loadData);
+
+	function manejarEscaneo(codigo: string) {
+		searchQuery = codigo;
+		modoEscaneo = false;
+		toast.show(`Código escaneado: ${codigo}`, 'success');
+	}
 
 	async function loadData() {
 		loading = true;
@@ -406,8 +414,16 @@
 					type="text"
 					placeholder="Buscar producto..."
 					bind:value={searchQuery}
-					class="w-full rounded-xl border border-border-color bg-bg-card py-2.5 pl-10 pr-4 text-sm text-text-primary transition-colors focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario"
+					class="w-full rounded-xl border border-border-color bg-bg-card py-2.5 pl-10 pr-12 text-sm text-text-primary transition-colors focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario"
 				/>
+				<button
+					type="button"
+					onclick={() => (modoEscaneo = true)}
+					class="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-text-muted hover:text-primario flex items-center justify-center"
+					title="Escanear con cámara"
+				>
+					<Camera size={18} />
+				</button>
 			</div>
 
 			<!-- Category Filter -->
@@ -725,6 +741,21 @@
 						{/each}
 					</ul>
 				{/if}
+			</div>
+		</div>
+	</div>
+{/if}
+
+<!-- Scanner Modal -->
+{#if modoEscaneo}
+	<div class="fixed inset-0 z-50 flex items-center justify-center bg-text-primary/40 p-5 backdrop-blur-[4px]" onclick={() => (modoEscaneo = false)} role="presentation">
+		<div class="w-full max-w-[460px] overflow-hidden rounded-xl border border-border-color bg-bg-card shadow-lg animate-modal-enter" onclick={(e) => e.stopPropagation()} role="dialog">
+			<header class="flex items-center justify-between border-b border-border-color p-5">
+				<h2 class="text-base font-bold text-text-primary">Escanear Código de Barras</h2>
+				<button class="inline-flex cursor-pointer items-center justify-center rounded-lg border border-border-color bg-text-primary/3 p-2 text-text-secondary transition-all duration-200 hover:border-border-color-hover hover:bg-text-primary/7 hover:text-text-primary" onclick={() => (modoEscaneo = false)}>&times;</button>
+			</header>
+			<div class="p-6 flex flex-col items-center justify-center">
+				<Scanner onScan={manejarEscaneo} onClose={() => (modoEscaneo = false)} />
 			</div>
 		</div>
 	</div>

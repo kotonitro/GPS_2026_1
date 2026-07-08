@@ -1,66 +1,122 @@
 package ventas
 
 import (
+	"backend/internal/inventario"
+	"backend/internal/promociones"
+	"errors"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
 
+func calcularDescuentoItem(cantidad int, precio float64, promo promociones.Promocion) float64 {
+	switch promo.Tipo {
+	case "NXM":
+		if promo.Lleva > 0 && promo.Paga > 0 && promo.Lleva > promo.Paga {
+			sets := cantidad / promo.Lleva
+			descuentoCant := sets * (promo.Lleva - promo.Paga)
+			return float64(descuentoCant) * precio
+		}
+	case "porcentaje":
+		if promo.Descuento > 0 {
+			return float64(cantidad) * precio * (promo.Descuento / 100.0)
+		}
+	case "precio_fijo":
+		if promo.Descuento > 0 && precio > promo.Descuento {
+			unitDiscount := precio - promo.Descuento
+			return float64(cantidad) * unitDiscount
+		}
+	}
+	return 0
+}
+
 func CrearVenta(c *gin.Context) {
 	var nuevaVenta Venta
 
 	if err := c.ShouldBindJSON(&nuevaVenta); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": "Datos inválidos"})
-		return
-	}
-	if nuevaVenta.MontoTotal <= 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": "El monto total de la venta debe ser mayor a cero"})
-		return
-	}
-	if nuevaVenta.MetodoID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": "El ID del método de pago no puede estar vacío"})
-		return
-	}
-	if nuevaVenta.EmpleadoID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": "El ID del empleado no puede estar vacío"})
-		return
-	}
-	if nuevaVenta.CajaID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": "El ID de la caja no puede estar vacío"})
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "Datos inválidos: " + err.Error()})
 		return
 	}
 
-	if len(nuevaVenta.Detalles) == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": "La venta debe contener al menos un producto en el detalle"})
+	// Extraer empleado del contexto
+	idEmpleado, existe := c.Get("id_empleado")
+	if !existe {
+		c.JSON(http.StatusUnauthorized, gin.H{"Error": "No se encontró sesión de empleado"})
 		return
 	}
+	nuevaVenta.EmpleadoID = idEmpleado.(string)
+	nuevaVenta.FechaEmision = time.Now()
 
-	for _, detalle := range nuevaVenta.Detalles {
-		if detalle.ProductoID == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"Error": "Hay un producto en la lista que no tiene un ID válido"})
-			return
-		}
-		if detalle.Cantidad <= 0 {
-			c.JSON(http.StatusBadRequest, gin.H{"Error": "La cantidad de cada producto debe ser mayor a cero"})
-			return
-		}
-		if detalle.MontoFinal <= 0 {
-			c.JSON(http.StatusBadRequest, gin.H{"Error": "El monto final de cada detalle debe ser mayor a cero"})
-			return
-		}
-	}
+	// Obtener la base de datos desde el contexto (arquitectura dev)
 	dbInstance, _ := c.Get("db")
 	db := dbInstance.(*gorm.DB)
 
-	err := GuardarVenta(db, &nuevaVenta)
+	err := db.Transaction(func(tx *gorm.DB) error {
+		// Cargar todas las promociones activas
+		var activePromos []promociones.Promocion
+		now := time.Now()
+		if err := tx.Where("(fecha_inicio IS NULL OR fecha_inicio <= ?) AND (fecha_fin IS NULL OR fecha_fin >= ?)", now, now).Find(&activePromos).Error; err != nil {
+			return err
+		}
+
+		var totalDescuento float64 = 0
+		var totalVenta float64 = 0
+
+		// 1. Validar, descontar stock y calcular promociones por ítem
+		for i, detalle := range nuevaVenta.Detalles {
+			var producto inventario.Producto
+			if err := tx.First(&producto, "id = ?", detalle.ProductoID).Error; err != nil {
+				return errors.New("El producto " + detalle.ProductoID + " no existe")
+			}
+
+			if producto.Stock < detalle.Cantidad {
+				return errors.New("Stock insuficiente para: " + producto.Nombre)
+			}
+
+			producto.Stock -= detalle.Cantidad
+			if err := tx.Save(&producto).Error; err != nil {
+				return err
+			}
+
+			// Buscar la promoción activa que otorgue el mayor descuento para este ítem
+			var bestDiscount float64 = 0
+			for _, promo := range activePromos {
+				if promo.ProductoID == detalle.ProductoID {
+					disc := calcularDescuentoItem(detalle.Cantidad, producto.Precio, promo)
+					if disc > bestDiscount {
+						bestDiscount = disc
+					}
+				}
+			}
+
+			subtotalItem := producto.Precio * float64(detalle.Cantidad)
+			montoFinalItem := subtotalItem - bestDiscount
+			nuevaVenta.Detalles[i].MontoFinal = montoFinalItem
+
+			totalDescuento += bestDiscount
+			totalVenta += montoFinalItem
+		}
+
+		// Sobrescribir los montos totales calculados por seguridad en el backend
+		nuevaVenta.MontoDescuento = totalDescuento
+		nuevaVenta.MontoTotal = totalVenta
+
+		// 2. Guardar la venta
+		return tx.Create(&nuevaVenta).Error
+	})
+
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"Error": "No se pudo guardar la venta"})
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
 
+	// Preload MetodoPago para consistencia en la respuesta
+	db.Preload("MetodoPago").First(&nuevaVenta, "id = ?", nuevaVenta.ID)
+
 	c.JSON(http.StatusCreated, gin.H{
-		"mensaje": "Venta agregada",
+		"mensaje": "Venta creada",
 		"venta":   nuevaVenta,
 	})
 }
