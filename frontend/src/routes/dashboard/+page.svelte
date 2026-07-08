@@ -1,16 +1,19 @@
 <script lang="ts">
-	import { ShoppingCart, Users, Wallet, Package, AlertCircle } from '@lucide/svelte';
+	import { ShoppingCart, Users, Wallet, Package, AlertCircle, Receipt } from '@lucide/svelte';
 	import { onMount } from 'svelte';
-	import { apiClientes, apiProductos } from '$lib/api';
+	import { apiClientes, apiProductos, apiVentas, obtenerPromociones } from '$lib/api';
 
-
-	let ventasHoy = $state(3830);
-	let clientesAtendidos = $state(47);
+	let ventasHoy = $state(0);
+	let clientesAtendidos = $state(0);
+	let ticketPromedio = $state(0);
 	let fiadosPendientes = $state(0);
 	let clientesDeudores = $state(0);
 	let productosAgotados = $state(0);
+	let ultimasVentas = $state<any[]>([]);
+	let listaPromociones = $state<any[]>([]);
 
 	onMount(async () => {
+		// 1. Cargar clientes y calcular fiados pendientes
 		try {
 			const res = await apiClientes.getAll();
 			const clientes = Array.isArray(res) ? res : [];
@@ -30,6 +33,7 @@
 			console.error('Error al cargar clientes para el dashboard:', error);
 		}
 
+		// 2. Cargar productos y contar alertas de stock
 		try {
 			const resProductos = await apiProductos.getAll();
 			const productos = Array.isArray(resProductos) ? resProductos : [];
@@ -45,20 +49,74 @@
 		} catch (error) {
 			console.error('Error al cargar productos para el dashboard:', error);
 		}
+
+		// 3. Cargar ventas para Ventas Hoy, Clientes Atendidos, Ticket Promedio y últimas ventas
+		try {
+			const resVentas = await apiVentas.getAll();
+			const ventas = Array.isArray(resVentas) ? resVentas : [];
+
+			// Filtrar las de hoy (desde las 00:00:00 local)
+			const inicioHoy = new Date();
+			inicioHoy.setHours(0, 0, 0, 0);
+
+			let sumaHoy = 0;
+			let cantidadHoy = 0;
+
+			for (const v of ventas) {
+				const fechaVenta = new Date(v.fecha_emision);
+				if (fechaVenta >= inicioHoy) {
+					sumaHoy += v.monto_total || 0;
+					cantidadHoy++;
+				}
+			}
+
+			ventasHoy = sumaHoy;
+			clientesAtendidos = cantidadHoy;
+			ticketPromedio = cantidadHoy > 0 ? (sumaHoy / cantidadHoy) : 0;
+
+			// Ordenar por fecha descendente y tomar las últimas 4
+			const ordenadas = [...ventas].sort((a, b) => {
+				return new Date(b.fecha_emision).getTime() - new Date(a.fecha_emision).getTime();
+			});
+
+			ultimasVentas = ordenadas.slice(0, 4).map(v => {
+				return {
+					cliente: v.id_empleado ? `Empleado: ${v.id_empleado.slice(0, 8)}...` : 'Público general',
+					monto: v.monto_total,
+					fecha: new Date(v.fecha_emision),
+					estado: v.metodo_pago && v.metodo_pago.nombre_metodo ? v.metodo_pago.nombre_metodo : 'Efectivo',
+					desc: `Venta #${v.id_venta.slice(0, 8)}...`
+				};
+			});
+		} catch (error) {
+			console.error('Error al cargar ventas para el dashboard:', error);
+		}
+
+		// 4. Cargar promociones activas reales
+		try {
+			const resPromos = await obtenerPromociones();
+			const promos = Array.isArray(resPromos) ? resPromos : [];
+			
+			listaPromociones = promos.slice(0, 3).map(p => {
+				let desc = 'Descuento';
+				if (p.tipo === 'NXM') {
+					desc = `${p.lleva}x${p.paga}`;
+				} else if (p.tipo === 'porcentaje') {
+					desc = `${p.descuento}%`;
+				} else if (p.tipo === 'precio_fijo') {
+					desc = `$${p.descuento}`;
+				}
+				
+				return {
+					nombre: p.tipo === 'NXM' ? `Promo NxM (${p.lleva}x${p.paga})` : `Oferta Especial`,
+					descuento: desc,
+					vence: p.fecha_fin ? new Date(p.fecha_fin) : new Date(Date.now() + 86400000 * 7)
+				};
+			});
+		} catch (error) {
+			console.error('Error al cargar promociones para el dashboard:', error);
+		}
 	});
-
-	let ultimasVentas = $state([
-		{ cliente: 'Jorge Mendoza', monto: 102, fecha: new Date(), estado: 'Efectivo', desc: 'Manzana 2kg + Leche + Pan' },
-		{ cliente: 'Doña Rosa López', monto: 56, fecha: new Date(Date.now() - 3600000), estado: 'Fiado', desc: 'Jitomate 1kg + Cebolla + Refresco' },
-		{ cliente: 'Público general', monto: 66, fecha: new Date(Date.now() - 7200000), estado: 'Efectivo', desc: 'Gansito x3 + Agua x2' },
-		{ cliente: 'Lucía Ramírez', monto: 141, fecha: new Date(Date.now() - 10800000), estado: 'Efectivo', desc: 'Huevo + Leche + Pan Bimbo' }
-	]);
-
-	let listaPromociones = $state([
-		{ nombre: 'Promo Verano 2x1', descuento: '50%', vence: new Date(Date.now() + 86400000 * 5) },
-		{ nombre: 'Descuento Bebidas', descuento: '20%', vence: new Date(Date.now() + 86400000 * 2) },
-		{ nombre: 'Pack Asado', descuento: '15%', vence: new Date(Date.now() + 86400000 * 10) }
-	]);
 
 	function formatCurrency(amount: number) {
 		return new Intl.NumberFormat('es-CL', {
@@ -80,33 +138,30 @@
 	<title>Dashboard General - GPSproject</title>
 </svelte:head>
 
-
 <div class="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-	
+	<!-- Ventas Hoy -->
 	<div class="flex flex-col justify-center rounded-xl border border-border-color bg-bg-card p-6 shadow-sm transition-all hover:border-border-color-hover">
 		<div class="flex items-center justify-between mb-4">
 			<div class="flex h-10 w-10 items-center justify-center rounded-lg bg-primario/10 text-primario">
 				<ShoppingCart size={20} />
 			</div>
-			<span class="rounded-full bg-exito/10 px-2 py-0.5 text-xs font-bold text-exito">+12%</span>
 		</div>
 		<h3 class="text-3xl font-bold text-text-primary">{formatCurrency(ventasHoy)}</h3>
 		<p class="mt-1 text-xs font-bold uppercase tracking-wider text-text-secondary">Ventas Hoy</p>
 	</div>
 
-	
+	<!-- Clientes Atendidos -->
 	<div class="flex flex-col justify-center rounded-xl border border-border-color bg-bg-card p-6 shadow-sm transition-all hover:border-border-color-hover">
 		<div class="flex items-center justify-between mb-4">
 			<div class="flex h-10 w-10 items-center justify-center rounded-lg bg-exito/10 text-exito">
 				<Users size={20} />
 			</div>
-			<span class="rounded-full bg-exito/10 px-2 py-0.5 text-xs font-bold text-exito">+5 vs ayer</span>
 		</div>
 		<h3 class="text-3xl font-bold text-text-primary">{clientesAtendidos}</h3>
 		<p class="mt-1 text-xs font-bold uppercase tracking-wider text-text-secondary">Clientes Atendidos</p>
 	</div>
 
-	
+	<!-- Fiados Pendientes -->
 	<div class="flex flex-col justify-center rounded-xl border border-border-color bg-bg-card p-6 shadow-sm transition-all hover:border-border-color-hover">
 		<div class="flex items-center justify-between mb-4">
 			<div class="flex h-10 w-10 items-center justify-center rounded-lg bg-danger-color/10 text-danger-color">
@@ -118,7 +173,7 @@
 		<p class="mt-1 text-xs font-bold uppercase tracking-wider text-text-secondary">Fiados Pendientes</p>
 	</div>
 
-	
+	<!-- Agotados / Bajo Stock -->
 	<div class="flex flex-col justify-center rounded-xl border border-border-color bg-bg-card p-6 shadow-sm transition-all hover:border-border-color-hover">
 		<div class="flex items-center justify-between mb-4">
 			<div class="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-500/10 text-orange-500">

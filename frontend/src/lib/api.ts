@@ -118,7 +118,7 @@ export const apiClientes = {
 };
 
 export const apiVentas = {
-	getAll: () => apiFetch('/ventas/'),
+	getAll: () => apiFetch('/ventas'),
 	getById: (id: string) => apiFetch(`/ventas/${id}`),
 	create: (data: {
 		id_caja: string;
@@ -132,7 +132,7 @@ export const apiVentas = {
 			cantidad: number;
 			monto_final: number;
 		}>;
-	}) => apiFetch('/ventas/', {
+	}) => apiFetch('/ventas', {
 		method: 'POST',
 		body: JSON.stringify(data)
 	})

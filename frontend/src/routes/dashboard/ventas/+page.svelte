@@ -1039,7 +1039,17 @@
 <!-- Caja Config Configuration Modal -->
 {#if showCajaConfigModal}
 	<div class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-5 backdrop-blur-sm">
-		<div class="w-full max-w-[450px] overflow-hidden rounded-xl border border-border-color bg-bg-card p-6 shadow-2xl animate-modal-enter text-center">
+		<div class="w-full max-w-[450px] overflow-hidden rounded-xl border border-border-color bg-bg-card p-6 shadow-2xl animate-modal-enter text-center relative">
+			{#if selectedCajaId}
+				<button 
+					type="button" 
+					class="absolute top-4 right-4 text-text-muted hover:text-text-primary text-xl transition-colors"
+					onclick={() => (showCajaConfigModal = false)}
+				>
+					&times;
+				</button>
+			{/if}
+			
 			<div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primario/10 text-primario">
 				<Laptop size={28} />
 			</div>
@@ -1053,12 +1063,24 @@
 				<select id="cajaConfigSelect" class="w-full rounded-lg border border-border-color bg-bg-card p-3 text-sm text-text-primary outline-none focus:border-primario" onchange={(e) => handleCajaSelection((e.target as HTMLSelectElement).value)}>
 					<option value="" disabled selected={!selectedCajaId}>-- Selecciona una caja --</option>
 					{#each cajas as c}
-						<option value={c.id_caja}>{c.nombre} ({c.ubicacion})</option>
+						<option value={c.id_caja} selected={c.id_caja === selectedCajaId}>{c.nombre} ({c.ubicacion})</option>
 					{/each}
 				</select>
 			</div>
 
-			<p class="text-[10px] text-text-muted">
+			<div class="flex flex-col gap-3">
+				{#if selectedCajaId}
+					<button
+						type="button"
+						class="w-full rounded-lg border border-border-color bg-bg-secondary py-2.5 text-sm font-semibold text-text-primary transition-all duration-200 hover:bg-text-primary/5"
+						onclick={() => (showCajaConfigModal = false)}
+					>
+						Cancelar
+					</button>
+				{/if}
+			</div>
+
+			<p class="text-[10px] text-text-muted mt-4">
 				Podrás cambiar esta asignación más tarde desde la esquina superior derecha si es necesario.
 			</p>
 		</div>
