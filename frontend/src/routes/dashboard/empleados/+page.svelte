@@ -15,9 +15,9 @@
 		EyeOff
 	} from '@lucide/svelte';
 	import { toast } from '$lib/toastStore.svelte';
-	import { apiEmpleados, apiRoles } from '$lib/api';
+	import { apiEmpleados, apiRoles, checkSession } from '$lib/api';
+	import { goto } from '$app/navigation';
 
-	// Estados
 	let empleados = $state<any[]>([]);
 	let roles = $state<any[]>([]);
 	let searchQuery = $state('');
@@ -25,11 +25,9 @@
 	let isEditing = $state(false);
 	let isLoading = $state(true);
 
-	// Nuevos estados para los filtros
-	let filtroEstado = $state('Todos'); // 'Todos', 'Activos', 'Inactivos'
-	let filtroRol = $state('Todos'); // 'Todos', 'Admin', 'Cajero', etc.
+	let filtroEstado = $state('Todos');
+	let filtroRol = $state('Todos');
 
-	// Formulario
 	let formData = $state({
 		id_empleado: '',
 		rut: '',
@@ -53,7 +51,6 @@
 	let empleadoToDelete = $state<any>(null);
 	let ultimoModificadoRut = $state<string | null>(null);
 
-	// NUEVO: Lista de roles filtrada para el formulario (Oculta Admin a menos que ya lo tenga asignado)
 	let rolesDisponibles = $derived(
 		roles.filter((r) => {
 			const esRolAdmin = (r.nombre || r.Nombre) === 'Admin';
@@ -152,13 +149,11 @@
 
 	function handleUsuarioInput(e: Event) {
 		const target = e.target as HTMLInputElement;
-		// Reemplaza cualquier tipo de espacio en blanco por nada
 		const sinEspacios = target.value.replace(/\s/g, '');
 		formData.usuario = sinEspacios;
 		target.value = sinEspacios;
 	}
 
-	// Filtro reactivo actualizado (Texto + Estado + Rol)
 	let empleadosFiltrados = $derived(
 		empleados
 			.filter((emp) => {
@@ -180,28 +175,37 @@
 				return coincideTexto && coincideEstado && coincideRol;
 			})
 			.sort((a, b) => {
-				// Identificar los IDs para comparar con el usuario actual
 				const idA = a.id_empleado || a.ID;
 				const idB = b.id_empleado || b.ID;
 
-				// Ajusta esto dependiendo de cómo se llame el ID en tu auth.user
 				const miId = auth.user?.id_empleado || auth.user?.id || '';
 
-				// 1. Prioridad Máxima: El usuario logueado siempre primero
 				if (idA === miId) return -1;
 				if (idB === miId) return 1;
 
-				// 2. Prioridad Secundaria: El último creado o modificado
 				if (a.rut === ultimoModificadoRut) return -1;
 				if (b.rut === ultimoModificadoRut) return 1;
 
-				// 3. Resto: Orden alfabético por nombre
 				return a.nombre.localeCompare(b.nombre);
 			})
 	);
 
 	onMount(async () => {
-		await cargarDatos();
+		try {
+			const empleado = await checkSession();
+
+			const objRol = empleado?.es_admin;
+			const esAdmin = objRol === true;
+
+			if (!esAdmin) {
+				toast.show('Acceso denegado. Se requieren privilegios de administrador.', 'error');
+				goto('/dashboard');
+				return;
+			}
+			await cargarDatos();
+		} catch (error) {
+			goto('/login');
+		}
 	});
 
 	async function cargarDatos() {
@@ -226,7 +230,6 @@
 		showPassword = false;
 		clearErrors();
 
-		// NUEVO: Usa el primer rol de rolesDisponibles por defecto
 		const primerRolValido =
 			rolesDisponibles.length > 0
 				? rolesDisponibles[0].id_rol || rolesDisponibles[0].id || rolesDisponibles[0].ID
@@ -374,12 +377,13 @@
 	}
 </script>
 
+<svelte:head>
+	<title>Gestión de Empleados - MinimarketGo</title>
+</svelte:head>
+
 <div class="flex flex-col gap-6">
-	<!-- Barra Superior de Herramientas -->
 	<div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-		<!-- Bloque de Búsqueda y Filtros -->
 		<div class="flex flex-col gap-3 sm:flex-row sm:items-center flex-1">
-			<!-- Buscador -->
 			<div class="relative w-full sm:max-w-xs">
 				<Search class="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-text-muted" />
 				<input
@@ -390,7 +394,6 @@
 				/>
 			</div>
 
-			<!-- Filtro de roles de la página (Usa la lista completa de roles) -->
 			<select
 				bind:value={filtroRol}
 				class="w-full sm:w-auto rounded-xl border border-border-color bg-bg-card py-2.5 pl-4 pr-10 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario cursor-pointer"
@@ -401,7 +404,6 @@
 				{/each}
 			</select>
 
-			<!-- Filtro por Estado -->
 			<select
 				bind:value={filtroEstado}
 				class="w-full sm:w-auto rounded-xl border border-border-color bg-bg-card py-2.5 pl-4 pr-10 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario cursor-pointer"
@@ -435,7 +437,6 @@
 		</button>
 	</div>
 
-	<!-- Tabla -->
 	<div class="overflow-x-auto rounded-xl border border-border-color bg-bg-card shadow-sm">
 		<table class="w-full whitespace-nowrap text-left text-sm text-text-primary">
 			<thead class="border-b border-border-color bg-bg-primary/50 text-text-muted">
@@ -474,7 +475,6 @@
 										<div class="flex items-center gap-2">
 											<span class="font-semibold">{emp.nombre}</span>
 
-											<!-- Etiqueta del usuario logueado -->
 											{#if (emp.id_empleado || emp.ID) === (auth.user?.id_empleado || auth.user?.id)}
 												<span
 													class="rounded-md bg-primario/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primario"
@@ -483,7 +483,6 @@
 												</span>
 											{/if}
 
-											<!-- Etiqueta del último modificado (solo si no eres tú mismo) -->
 											{#if emp.rut === ultimoModificadoRut && (emp.id_empleado || emp.ID) !== (auth.user?.id_empleado || auth.user?.id)}
 												<span
 													class="rounded-md bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-600"
@@ -558,7 +557,6 @@
 	</div>
 </div>
 
-<!-- Modal Formulario -->
 {#if isModalOpen}
 	<div
 		class="fixed inset-0 z-50 flex items-center justify-center bg-text-primary/40 p-4 backdrop-blur-sm animate-modal-enter"
@@ -587,7 +585,6 @@
 				{/if}
 
 				<div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
-					<!-- RUT -->
 					<div class="flex flex-col gap-1.5">
 						<label for="rut" class="text-sm font-semibold text-text-primary">RUT</label>
 						<input
@@ -599,12 +596,11 @@
 							disabled={submitLoading || isEditing}
 							required
 							class="rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50"
-							placeholder="12.345.678-9"
+							placeholder="Ej: 12.345.678-9"
 						/>
 						{#if errRut}<span class="text-xs font-medium text-danger-color">{errRut}</span>{/if}
 					</div>
 
-					<!-- Nombre -->
 					<div class="flex flex-col gap-1.5">
 						<label for="nombre" class="text-sm font-semibold text-text-primary"
 							>Nombre Completo</label
@@ -618,12 +614,12 @@
 							disabled={submitLoading}
 							required
 							class="rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50"
+							placeholder="Ej: Juan Pérez Gómez"
 						/>
 						{#if errNombre}<span class="text-xs font-medium text-danger-color">{errNombre}</span
 							>{/if}
 					</div>
 
-					<!-- Usuario -->
 					<div class="flex flex-col gap-1.5">
 						<label for="usuario" class="text-sm font-semibold text-text-primary"
 							>Alias de Usuario</label
@@ -637,12 +633,12 @@
 							disabled={submitLoading}
 							required
 							class="rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50"
+							placeholder="Ej: usuario123"
 						/>
 						{#if errUsuario}<span class="text-xs font-medium text-danger-color">{errUsuario}</span
 							>{/if}
 					</div>
 
-					<!-- Contraseña -->
 					<div class="flex flex-col gap-1.5">
 						<label for="contrasena" class="text-sm font-semibold text-text-primary">
 							Contraseña {isEditing ? '(Dejar vacía para mantener)' : ''}
@@ -678,7 +674,6 @@
 							>{/if}
 					</div>
 
-					<!-- Teléfono -->
 					<div class="flex flex-col gap-1.5">
 						<label for="telefono" class="text-sm font-semibold text-text-primary">Teléfono</label>
 						<input
@@ -689,13 +684,12 @@
 							disabled={submitLoading}
 							required
 							class="rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50"
-							placeholder="+56 9 1234 5678"
+							placeholder="Ej: +56912345678"
 						/>
 						{#if errTelefono}<span class="text-xs font-medium text-danger-color">{errTelefono}</span
 							>{/if}
 					</div>
 
-					<!-- Rol Dinámico (NUEVO: Usa rolesDisponibles en vez de roles) -->
 					<div class="flex flex-col gap-1.5">
 						<label for="rol" class="text-sm font-semibold text-text-primary">Rol del Sistema</label>
 						<select
@@ -715,7 +709,6 @@
 						</select>
 					</div>
 
-					<!-- Estado (Switch) -->
 					<div class="col-span-1 sm:col-span-2 flex items-center gap-3 pt-2">
 						<input
 							id="activo"
@@ -724,14 +717,19 @@
 							disabled={submitLoading}
 							class="h-4 w-4 accent-primario cursor-pointer disabled:opacity-50"
 						/>
-                        <div class="flex flex-col">
-                            <label for="activo" class="text-sm font-semibold text-text-primary cursor-pointer {submitLoading ? 'opacity-50' : ''}">
-                                Empleado activo en el sistema
-                            </label>
-                            <p class="text-xs text-text-muted mt-0.5">
-                                Permite que el empleado pueda ingresar al sistema.
-                            </p>
-                        </div>
+						<div class="flex flex-col">
+							<label
+								for="activo"
+								class="text-sm font-semibold text-text-primary cursor-pointer {submitLoading
+									? 'opacity-50'
+									: ''}"
+							>
+								Empleado activo en el sistema
+							</label>
+							<p class="text-xs text-text-muted mt-0.5">
+								Permite que el empleado pueda ingresar al sistema.
+							</p>
+						</div>
 					</div>
 				</div>
 
