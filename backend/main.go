@@ -20,23 +20,30 @@ import (
 
 func main() {
 
-	// variables de entorno
 	cfg := config.LoadConfig()
 
-	// base de datos
 	db := database.Connect(cfg)
 	database.Migrations(db)
 
-	// setup inicial
 	config.InitialSetup(db)
 
-	// validaciones
 	validations.ValidationsConfig()
 
-	// router
 	r := gin.Default()
 
-	//CORS
+	r.GET("/health", func(c *gin.Context) {
+		sqlDB, err := db.DB()
+		if err != nil {
+			c.JSON(500, gin.H{"status": "error", "message": "database connection failed"})
+			return
+		}
+		if err := sqlDB.Ping(); err != nil {
+			c.JSON(500, gin.H{"status": "error", "message": "database ping failed"})
+			return
+		}
+		c.JSON(200, gin.H{"status": "ok"})
+	})
+
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{cfg.FrontURL, "http://localhost:5173", "http://127.0.0.1:5173"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
@@ -46,14 +53,10 @@ func main() {
 		MaxAge:           12 * time.Hour,
 	}))
 
-	// api
 	api := r.Group("/api")
 
-	// auth middleware
 	authCtrl := auth.NewAuthController(db, cfg.JWTSecret, cfg.CookieDomain)
 	authMiddleware := authCtrl.AuthMiddleware()
-
-	// rutas
 
 	auth.RoutesConfig(api, authCtrl, authMiddleware)
 	cajas.RoutesConfig(api, db, authMiddleware)
