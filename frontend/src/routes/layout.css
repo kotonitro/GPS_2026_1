@@ -3,15 +3,15 @@
 @plugin '@tailwindcss/typography';
 
 :root {
-	--bg-primary: #fcfaf2; 
+	--bg-primary: #fcfaf2;
 	--bg-secondary: #f3efe0;
 	--bg-card: #ffffff;
-	--text-primary: #1e1e24; 
+	--text-primary: #1e1e24;
 	--text-secondary: #5c554e;
 	--text-muted: #8c8276;
 	--border-color: rgba(42, 36, 31, 0.08);
 	--border-color-hover: rgba(42, 36, 31, 0.15);
-	
+
 	--primario: #b45309;
 	--primario-hover: #92400e;
 	--secundario: #fef08a;
@@ -19,29 +19,29 @@
 	--error: #dc2626;
 	--danger-bg: rgba(220, 38, 38, 0.05);
 	--danger-color: #dc2626;
-    --accent: #d97706;
-    --accent-light: #f59e0b;
+	--accent: #d97706;
+	--accent-light: #f59e0b;
 }
 
 :root.dark {
-	--bg-primary: #0f0d0c; 
+	--bg-primary: #0f0d0c;
 	--bg-secondary: #1a1614;
 	--bg-card: #211c19;
-	--text-primary: #f5ece3; 
+	--text-primary: #f5ece3;
 	--text-secondary: #c5b8ad;
 	--text-muted: #95877c;
 	--border-color: rgba(245, 236, 227, 0.08);
 	--border-color-hover: rgba(245, 236, 227, 0.15);
-	
-	--primario: #f59e0b; 
+
+	--primario: #f59e0b;
 	--primario-hover: #d97706;
 	--secundario: #fef08a;
 	--exito: #22c55e;
 	--error: #ef4444;
 	--danger-bg: rgba(239, 68, 68, 0.1);
 	--danger-color: #ef4444;
-    --accent: #f59e0b;
-    --accent-light: #fbbf24;
+	--accent: #f59e0b;
+	--accent-light: #fbbf24;
 }
 
 @theme {
@@ -53,7 +53,7 @@
 	--color-text-muted: var(--text-muted);
 	--color-border-color: var(--border-color);
 	--color-border-color-hover: var(--border-color-hover);
-	
+
 	--color-primario: var(--primario);
 	--color-primario-hover: var(--primario-hover);
 	--color-secundario: var(--secundario);
@@ -61,8 +61,8 @@
 	--color-error: var(--error);
 	--color-danger-bg: var(--danger-bg);
 	--color-danger-color: var(--danger-color);
-    --color-accent: var(--accent);
-    --color-accent-light: var(--accent-light);
+	--color-accent: var(--accent);
+	--color-accent-light: var(--accent-light);
 }
 
 @layer base {
@@ -72,7 +72,9 @@
 		font-family: var(--font-sans);
 		margin: 0;
 		padding: 0;
-		transition: background-color 0.3s ease, color 0.3s ease;
+		transition:
+			background-color 0.3s ease,
+			color 0.3s ease;
 	}
 
 	::-webkit-scrollbar {

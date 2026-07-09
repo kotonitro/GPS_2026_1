@@ -2,10 +2,7 @@
 	import { page } from '$app/stores';
 
 	const status = $page.status || 404;
-	const mensaje =
-		status === 404
-			? 'Página no encontrada'
-			: 'Error interno';
+	const mensaje = status === 404 ? 'Página no encontrada' : 'Error interno';
 </script>
 
 <div class="text-center mt-[20vh]">

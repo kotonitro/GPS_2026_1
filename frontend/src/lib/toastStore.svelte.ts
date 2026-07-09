@@ -11,12 +11,12 @@ class ToastStore {
 		const id = Math.random().toString(36).substring(2, 9);
 		this.toasts.push({ id, message, type });
 		setTimeout(() => {
-			this.toasts = this.toasts.filter(t => t.id !== id);
+			this.toasts = this.toasts.filter((t) => t.id !== id);
 		}, duration);
 	}
 
 	dismiss(id: string) {
-		this.toasts = this.toasts.filter(t => t.id !== id);
+		this.toasts = this.toasts.filter((t) => t.id !== id);
 	}
 }
 

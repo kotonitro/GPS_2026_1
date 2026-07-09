@@ -342,7 +342,7 @@
 			errNombre = 'El nombre es obligatorio.';
 			isValid = false;
 		}
-		if (formPrecio < 0) {
+		if (Number(formPrecio) < 0) {
 			errPrecio = 'El precio no puede ser negativo.';
 			isValid = false;
 		}

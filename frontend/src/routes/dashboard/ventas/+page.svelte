@@ -77,6 +77,16 @@
 		producto?: Producto;
 	}
 
+	interface Fiado {
+		id_fiado: string;
+		id_cliente: string;
+		id_venta: string;
+		fecha_inicio: string;
+		fecha_limite: string;
+		monto_total: number;
+		pagado: boolean;
+	}
+
 	interface Venta {
 		id_venta: string;
 		id_caja: string;
@@ -94,10 +104,7 @@
 			id_metodo: string;
 			nombre_metodo: string;
 		};
-		fiado?: {
-			fecha_limite: string;
-			pagado: boolean;
-		};
+		fiado?: Fiado;
 	}
 
 	type Promocion = PromocionAPI;
@@ -148,14 +155,6 @@
 
 	function refreshPendingSales() {
 		pendingSales = getPendingSales();
-			id_fiado: string;
-			id_cliente: string;
-			id_venta: string;
-			fecha_inicio: string;
-			fecha_limite: string;
-			monto_total: number;
-			pagado: boolean;
-		};
 	}
 
 	async function syncPendingSales() {
@@ -348,8 +347,9 @@
 			let sets = 999999;
 			let costoNormalCombo = 0;
 
+			const productosCombo = promo.productos_combo || [];
 			const reqMap: Record<string, number> = {};
-			for (const pid of promo.productos_combo) {
+			for (const pid of productosCombo) {
 				reqMap[pid] = (reqMap[pid] || 0) + 1;
 			}
 
@@ -384,19 +384,21 @@
 					for (const promo of activePromos) {
 						let currentDisc = 0;
 						if (promo.tipo === 'NXM') {
-							if (promo.lleva > 0 && promo.paga > 0 && promo.lleva > promo.paga) {
-								const sets = Math.floor(remanente / promo.lleva);
-								currentDisc = sets * (promo.lleva - promo.paga) * item.producto.precio;
+							const lleva = promo.lleva ?? 0;
+							const paga = promo.paga ?? 0;
+							if (lleva > 0 && paga > 0 && lleva > paga) {
+								const sets = Math.floor(remanente / lleva);
+								currentDisc = sets * (lleva - paga) * item.producto.precio;
 							}
 						} else if (promo.tipo === 'porcentaje') {
-							if (promo.descuento > 0) {
-								currentDisc = Math.round(
-									remanente * item.producto.precio * (promo.descuento / 100)
-								);
+							const descuento = promo.descuento ?? 0;
+							if (descuento > 0) {
+								currentDisc = Math.round(remanente * item.producto.precio * (descuento / 100));
 							}
 						} else if (promo.tipo === 'precio_fijo') {
-							if (promo.descuento > 0 && item.producto.precio > promo.descuento) {
-								currentDisc = remanente * (item.producto.precio - promo.descuento);
+							const descuento = promo.descuento ?? 0;
+							if (descuento > 0 && item.producto.precio > descuento) {
+								currentDisc = remanente * (item.producto.precio - descuento);
 							}
 						}
 						if (currentDisc > bestDisc) bestDisc = currentDisc;
@@ -948,8 +950,10 @@
 			>
 				<Unlock size={14} class="text-exito" />
 				<span
-					>Turno abierto: <strong class="text-text-primary">{activeCajaName}</strong> · Saldo esperado:
-					<strong class="text-text-primary">{formatCurrency(turnoActivo.saldo_esperado)}</strong></span
+					>Turno abierto: <strong class="text-text-primary">{activeCajaName}</strong> · Saldo
+					esperado:
+					<strong class="text-text-primary">{formatCurrency(turnoActivo.saldo_esperado)}</strong
+					></span
 				>
 			</div>
 			<button
@@ -1365,7 +1369,6 @@
 								!selectedCajaId ||
 								hasExpiredFiados}
 							class="w-full inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-accent-light to-accent py-3 font-bold text-white shadow-md transition-all hover:bg-primario-hover hover:shadow-glow disabled:cursor-not-allowed disabled:opacity-50"
-							class="w-full inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-accent-light to-accent py-3 font-bold text-white shadow-md hover:bg-primario-hover hover:shadow-glow disabled:cursor-not-allowed disabled:opacity-50"
 						>
 							{#if submitting}
 								Procesando Venta...
@@ -1682,7 +1685,7 @@
 				<button
 					type="button"
 					class="absolute top-4 right-4 text-text-muted hover:text-text-primary text-xl"
-					onclick={() => (showCajaConfigModal = false)}
+					onclick={() => (showTurnoAperturaModal = false)}
 				>
 					&times;
 				</button>
@@ -1780,13 +1783,17 @@
 			<form onsubmit={handleCerrarTurno} class="p-6">
 				<div class="grid grid-cols-2 gap-4 mb-4">
 					<div class="rounded-lg border border-border-color bg-text-primary/[0.015] p-4">
-						<p class="text-[10px] font-bold uppercase tracking-wider text-text-muted">Saldo Inicial</p>
+						<p class="text-[10px] font-bold uppercase tracking-wider text-text-muted">
+							Saldo Inicial
+						</p>
 						<p class="text-lg font-black text-text-primary mt-1">
 							{formatCurrency(turnoActivo.saldo_inicial)}
 						</p>
 					</div>
 					<div class="rounded-lg border border-border-color bg-text-primary/[0.015] p-4">
-						<p class="text-[10px] font-bold uppercase tracking-wider text-text-muted">Saldo Esperado</p>
+						<p class="text-[10px] font-bold uppercase tracking-wider text-text-muted">
+							Saldo Esperado
+						</p>
 						<p class="text-lg font-black text-primario mt-1">
 							{formatCurrency(turnoActivo.saldo_esperado)}
 						</p>
@@ -1813,7 +1820,9 @@
 					</div>
 				</div>
 
-				<div class="mb-4 flex items-start gap-3 rounded-lg border border-border-color bg-text-primary/[0.015] p-3">
+				<div
+					class="mb-4 flex items-start gap-3 rounded-lg border border-border-color bg-text-primary/[0.015] p-3"
+				>
 					<input
 						id="cerrarSesion"
 						type="checkbox"
@@ -1821,7 +1830,10 @@
 						class="mt-0.5 h-4 w-4 accent-primario cursor-pointer shrink-0"
 					/>
 					<div class="flex flex-col">
-						<label for="cerrarSesion" class="text-xs font-semibold text-text-primary cursor-pointer">
+						<label
+							for="cerrarSesion"
+							class="text-xs font-semibold text-text-primary cursor-pointer"
+						>
 							Cerrar sesión al finalizar
 						</label>
 						<p class="text-[10px] text-text-muted mt-0.5">
@@ -2045,7 +2057,9 @@
 
 						<!-- Información del cliente si está registrado -->
 						{#if recentlyCompletedSale.id_cliente}
-							{@const cli = clientes.find((c) => c.id_cliente === recentlyCompletedSale.id_cliente)}
+							{@const cli = clientes.find(
+								(c) => c.id_cliente === recentlyCompletedSale!.id_cliente
+							)}
 							{#if cli}
 								<div class="mt-1.5 pt-1.5 border-t border-dotted border-neutral-300">
 									<p class="m-0 font-bold">CLIENTE ASOCIADO:</p>

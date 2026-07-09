@@ -21,14 +21,14 @@
 				Html5QrcodeSupportedFormats.CODE_128,
 				Html5QrcodeSupportedFormats.QR_CODE
 			]
-		});
+		} as any);
 
 		scanner
 			.start(
 				{ facingMode: 'environment' }, // Restricción de cámara trasera
 				{
 					fps: 30, // Mayor cantidad de cuadros para acelerar detección
-					qrbox: (width, height) => {
+					qrbox: (width: number, height: number) => {
 						// Área más ajustada para asegurar enfoque central
 						const w = Math.round(width * 0.8);
 						const h = Math.round(height * 0.4);
@@ -43,8 +43,8 @@
 						width: { ideal: 1920 },
 						height: { ideal: 1080 },
 						advanced: [{ focusMode: 'continuous' }] as any
-					}
-				},
+					} as any
+				} as any,
 				(decodedText) => {
 					// Éxito: Se detectó un código
 					if (scanner && scanner.isScanning) {

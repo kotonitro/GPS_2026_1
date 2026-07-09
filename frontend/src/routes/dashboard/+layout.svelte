@@ -116,7 +116,9 @@
 				notificaciones = clientes.filter(
 					(c: any) => (c.fiado_actual || 0) >= (c.fiado_maximo || 20000)
 				);
-			} catch (e) {}
+			} catch (e) {
+				// Silenciamos errores de carga de notificaciones para no bloquear el layout
+			}
 
 			verificando = false;
 		} catch (error) {

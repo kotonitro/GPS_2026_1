@@ -63,9 +63,6 @@ type SyncResultado struct {
 	Error  string `json:"error,omitempty"`
 }
 
-// procesarVentaIndividual centraliza la lógica de creación de una venta.
-// Si respectOriginalDate es true y la venta trae una FechaEmision válida, se respeta;
-// de lo contrario se asigna la fecha actual. Esto permite sincronizar ventas offline.
 func (ctrl *VentasController) procesarVentaIndividual(tx *gorm.DB, venta *Venta, empleadoID string, respectOriginalDate bool) error {
 	venta.EmpleadoID = empleadoID
 
@@ -73,7 +70,6 @@ func (ctrl *VentasController) procesarVentaIndividual(tx *gorm.DB, venta *Venta,
 		venta.FechaEmision = time.Now()
 	}
 
-	// Cargar todas las promociones activas
 	var activePromos []promociones.Promocion
 	now := time.Now()
 	if err := tx.Where("(fecha_inicio IS NULL OR fecha_inicio <= ?) AND (fecha_fin IS NULL OR fecha_fin >= ?)", now, now).Find(&activePromos).Error; err != nil {
@@ -83,7 +79,6 @@ func (ctrl *VentasController) procesarVentaIndividual(tx *gorm.DB, venta *Venta,
 	var totalDescuento float64 = 0
 	var totalVenta float64 = 0
 
-	// 1. Validar, descontar stock y calcular promociones por ítem
 	for i, detalle := range venta.Detalles {
 		var producto inventario.Producto
 		if err := tx.First(&producto, "id = ?", detalle.ProductoID).Error; err != nil {
@@ -98,23 +93,9 @@ func (ctrl *VentasController) procesarVentaIndividual(tx *gorm.DB, venta *Venta,
 		if err := tx.Save(&producto).Error; err != nil {
 			return err
 		}
-		var totalDescuento float64 = 0
-		var subtotalTotal float64 = 0
 
-		cantidades := make(map[string]int)
-		precios := make(map[string]float64)
-
-		// 1. Validar, descontar stock y preparar datos
-		for i, detalle := range nuevaVenta.Detalles {
-			var producto inventario.Producto
-			if err := tx.First(&producto, "id = ?", detalle.ProductoID).Error; err != nil {
-				return errors.New("El producto " + detalle.ProductoID + " no existe")
-			}
-
-		// Buscar la promoción activa que otorgue el mayor descuento para este ítem
 		var bestDiscount float64 = 0
 		for _, promo := range activePromos {
-			// Validar que ProductoID no sea nil antes de desreferenciarlo
 			if promo.ProductoID != nil && *promo.ProductoID == detalle.ProductoID {
 				disc := calcularDescuentoItem(detalle.Cantidad, producto.Precio, promo)
 				if disc > bestDiscount {
@@ -131,16 +112,13 @@ func (ctrl *VentasController) procesarVentaIndividual(tx *gorm.DB, venta *Venta,
 		totalVenta += montoFinalItem
 	}
 
-	// Sobrescribir los montos totales calculados por seguridad en el backend
 	venta.MontoDescuento = totalDescuento
 	venta.MontoTotal = totalVenta
 
-	// 2. Guardar la venta
 	if err := tx.Create(&venta).Error; err != nil {
 		return err
 	}
 
-	// 3. Si es venta en efectivo, actualizar el saldo esperado del turno activo del usuario
 	if venta.MetodoID == cajas.MetodoPagoEfectivoID {
 		var turnoActivo cajas.TurnoCaja
 		if err := tx.Where("usuario_id = ? AND estado = ?", empleadoID, cajas.EstadoTurnoAbierto).First(&turnoActivo).Error; err != nil {
@@ -155,7 +133,6 @@ func (ctrl *VentasController) procesarVentaIndividual(tx *gorm.DB, venta *Venta,
 		}
 	}
 
-	// 4. Si es venta fiada, guardar registro en la tabla fiados
 	if venta.MetodoID == "33333333-3333-3333-3333-333333333333" && venta.ClienteID != nil && *venta.ClienteID != "" {
 		fiadoFechaInicio := venta.FechaEmision
 		if fiadoFechaInicio.IsZero() {
@@ -166,83 +143,19 @@ func (ctrl *VentasController) procesarVentaIndividual(tx *gorm.DB, venta *Venta,
 			ClienteID:   *venta.ClienteID,
 			VentaID:     venta.ID,
 			FechaInicio: fiadoFechaInicio,
-			FechaLimite: fiadoFechaInicio.AddDate(0, 1, 0), // Plazo de 30 días
+			FechaLimite: fiadoFechaInicio.AddDate(0, 1, 0),
 			MontoTotal:  venta.MontoTotal,
 			Pagado:      false,
 		}
 		if err := tx.Create(&fiado).Error; err != nil {
 			return err
 		}
-			cantidades[detalle.ProductoID] += detalle.Cantidad
-			precios[detalle.ProductoID] = producto.Precio
 
-			subtotalItem := producto.Precio * float64(detalle.Cantidad)
-			subtotalTotal += subtotalItem
-			nuevaVenta.Detalles[i].MontoFinal = subtotalItem // Monto base, el descuento se calcula globalmente
-		}
-
-		// 2. Calcular Descuentos de Combos
-		for _, promo := range activePromos {
-			if promo.Tipo == "COMBO" && len(promo.ProductosCombo) > 0 && promo.Descuento != nil {
-				sets := 999999
-				var costoNormalCombo float64 = 0
-
-				reqMap := make(map[string]int)
-				for _, pid := range promo.ProductosCombo {
-					reqMap[pid]++
-				}
-
-				for pid, reqQty := range reqMap {
-					if reqQty > 0 {
-						avail := cantidades[pid]
-						possible := avail / reqQty
-						if possible < sets {
-							sets = possible
-						}
-						costoNormalCombo += precios[pid] * float64(reqQty)
-					}
-				}
-
-				if sets > 0 && sets != 999999 {
-					// El descuento es la diferencia entre el precio normal y el precio final del combo
-					ahorroPorCombo := costoNormalCombo - *promo.Descuento
-					if ahorroPorCombo > 0 {
-						totalDescuento += ahorroPorCombo * float64(sets)
-						for pid, reqQty := range reqMap {
-							cantidades[pid] -= reqQty * sets
-						}
-					}
-				}
-			}
-		}
-
-		// 3. Calcular Descuentos Individuales para el remanente
-		for pid, remanente := range cantidades {
-			if remanente > 0 {
-				var bestDiscount float64 = 0
-				for _, promo := range activePromos {
-					if promo.Tipo != "COMBO" && promo.ProductoID != nil && *promo.ProductoID == pid {
-						disc := calcularDescuentoItem(remanente, precios[pid], promo)
-						if disc > bestDiscount {
-							bestDiscount = disc
-						}
-					}
-				}
-				totalDescuento += bestDiscount
-			}
-		}
-
-		totalVenta := subtotalTotal - totalDescuento
-
-		// Sobrescribir los montos totales calculados por seguridad en el backend
-		nuevaVenta.MontoDescuento = totalDescuento
-		nuevaVenta.MontoTotal = totalVenta
-
-		// Actualizar la última compra del cliente en la base de datos
 		if err := tx.Model(&clientes.Cliente{}).Where("id = ?", *venta.ClienteID).Update("ultima_compra", &fiadoFechaInicio).Error; err != nil {
 			return err
 		}
 	}
+
 	return nil
 }
 
@@ -263,28 +176,6 @@ func (ctrl *VentasController) CrearVenta(c *gin.Context) {
 
 	err := ctrl.db.Transaction(func(tx *gorm.DB) error {
 		return ctrl.procesarVentaIndividual(tx, &nuevaVenta, idEmpleado.(string), false)
-			// Actualizar la última compra del cliente en la base de datos
-			now := time.Now()
-			if err := tx.Model(&clientes.Cliente{}).Where("id = ?", *nuevaVenta.ClienteID).Update("ultima_compra", &now).Error; err != nil {
-				return err
-			}
-		}
-
-		// 4. Actualizar el saldo final de la caja
-		// Aumentamos el saldo de la caja (asumiendo que las ventas al contado o tarjeta suman al cuadre)
-		// Si es Fiado, el dinero no entra a la caja en este momento.
-		if nuevaVenta.MetodoID != "33333333-3333-3333-3333-333333333333" {
-			var caja cajas.Caja
-			if err := tx.First(&caja, "id = ?", nuevaVenta.CajaID).Error; err != nil {
-				return errors.New("Error al buscar la caja para actualizar el saldo: " + err.Error())
-			}
-			caja.SaldoFinal += uint(nuevaVenta.MontoTotal)
-			if err := tx.Save(&caja).Error; err != nil {
-				return errors.New("Error al actualizar el saldo de la caja: " + err.Error())
-			}
-		}
-
-		return nil
 	})
 
 	if err != nil {

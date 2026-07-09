@@ -178,7 +178,7 @@
 				const idA = a.id_empleado || a.ID;
 				const idB = b.id_empleado || b.ID;
 
-				const miId = auth.user?.id_empleado || auth.user?.id || '';
+				const miId = auth.user?.id_empleado || '';
 
 				if (idA === miId) return -1;
 				if (idB === miId) return 1;
@@ -332,9 +332,9 @@
 
 			if (isEditing) {
 				const dataToUpdate = { ...payload };
-				if (!dataToUpdate.contrasena) delete dataToUpdate.contrasena;
+				if (!dataToUpdate.contrasena) delete (dataToUpdate as any).contrasena;
 
-				await apiEmpleados.update(payload.id_empleado || payload.ID, dataToUpdate);
+				await apiEmpleados.update(payload.id_empleado, dataToUpdate);
 				toast.show('Empleado actualizado correctamente.', 'success');
 			} else {
 				await apiEmpleados.create(payload);
@@ -475,7 +475,7 @@
 										<div class="flex items-center gap-2">
 											<span class="font-semibold">{emp.nombre}</span>
 
-											{#if (emp.id_empleado || emp.ID) === (auth.user?.id_empleado || auth.user?.id)}
+											{#if (emp.id_empleado || emp.ID) === auth.user?.id_empleado}
 												<span
 													class="rounded-md bg-primario/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primario"
 												>
@@ -483,7 +483,7 @@
 												</span>
 											{/if}
 
-											{#if emp.rut === ultimoModificadoRut && (emp.id_empleado || emp.ID) !== (auth.user?.id_empleado || auth.user?.id)}
+											{#if emp.rut === ultimoModificadoRut && (emp.id_empleado || emp.ID) !== auth.user?.id_empleado}
 												<span
 													class="rounded-md bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-600"
 												>
