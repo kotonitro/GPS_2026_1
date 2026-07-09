@@ -58,7 +58,12 @@ func ActualizarProducto(db *gorm.DB, productoExistente *Producto, datosNuevos *P
 // Desactivamos un producto en la base de datos, marcándolo como descontinuado
 func EliminarProducto(db *gorm.DB, id string) error {
 	var count int64
-	db.Table("detalle_ventas").Where("producto_id = ?", id).Count(&count)
+	if err := db.Table("detalle_ventas").Where("producto_id = ?", id).Count(&count).Error; err != nil {
+		// En caso de que la tabla se llame detalle_venta (singular) probamos ambas
+		if err2 := db.Table("detalle_venta").Where("producto_id = ?", id).Count(&count).Error; err2 != nil {
+			return err2
+		}
+	}
 	if count > 0 {
 		return errors.New("no se puede eliminar el producto porque ya tiene ventas asociadas")
 	}

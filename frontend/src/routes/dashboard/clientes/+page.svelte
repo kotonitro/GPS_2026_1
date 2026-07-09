@@ -326,9 +326,16 @@
 			isValid = false;
 		}
 
-		if (formFiadoActual === '' || formFiadoActual <= 0 || formFiadoActual > 20000) {
-			formGeneralError = 'El monto del fiado debe ser mayor a $0 y menor o igual a $20.000.';
-			isValid = false;
+		if (editingCliente) {
+			if (formFiadoActual === '' || formFiadoActual < 0 || formFiadoActual > 20000) {
+				formGeneralError = 'El monto del fiado debe ser mayor o igual a $0 y menor o igual a $20.000.';
+				isValid = false;
+			}
+		} else {
+			if (formFiadoActual !== 0) {
+				formGeneralError = 'El monto inicial del fiado debe ser $0.';
+				isValid = false;
+			}
 		}
 
 		if (!isValid) return;
