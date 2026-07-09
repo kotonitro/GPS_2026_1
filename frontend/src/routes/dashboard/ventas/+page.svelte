@@ -148,6 +148,14 @@
 
 	function refreshPendingSales() {
 		pendingSales = getPendingSales();
+			id_fiado: string;
+			id_cliente: string;
+			id_venta: string;
+			fecha_inicio: string;
+			fecha_limite: string;
+			monto_total: number;
+			pagado: boolean;
+		};
 	}
 
 	async function syncPendingSales() {
@@ -240,7 +248,11 @@
 	let selectedSale = $state<Venta | null>(null);
 	let showDetailModal = $state(false);
 
-	// Lista filtrada del historial
+	// Recently completed sale for the success receipt modal
+	let recentlyCompletedSale = $state<Venta | null>(null);
+	let showSuccessReceiptModal = $state(false);
+
+	// Filtered list for history
 	let filteredSales = $derived.by(() => {
 		const query = searchHistoryQuery.toLowerCase().trim();
 		return ventas.filter((v) => {
@@ -313,9 +325,89 @@
 	let subtotal = $derived(
 		cart.reduce((acc, item) => acc + item.producto.precio * item.cantidad, 0)
 	);
-	let discountAmount = $derived(
-		cart.reduce((acc, item) => acc + getBestDiscountForItem(item).discount, 0)
-	);
+	let discountAmount = $derived.by(() => {
+		let totalDesc = 0;
+		const cantidades: Record<string, number> = {};
+		const precios: Record<string, number> = {};
+
+		for (const item of cart) {
+			const pid = item.producto.id_producto;
+			cantidades[pid] = (cantidades[pid] || 0) + item.cantidad;
+			precios[pid] = item.producto.precio;
+		}
+
+		// 1. Calcular descuentos de COMBOS
+		const comboPromos = promociones.filter(
+			(p) =>
+				p.tipo === 'COMBO' &&
+				isPromotionActive(p) &&
+				p.productos_combo &&
+				p.productos_combo.length > 0
+		);
+		for (const promo of comboPromos) {
+			let sets = 999999;
+			let costoNormalCombo = 0;
+
+			const reqMap: Record<string, number> = {};
+			for (const pid of promo.productos_combo) {
+				reqMap[pid] = (reqMap[pid] || 0) + 1;
+			}
+
+			for (const [pid, reqQty] of Object.entries(reqMap)) {
+				const avail = cantidades[pid] || 0;
+				const possible = Math.floor(avail / reqQty);
+				if (possible < sets) sets = possible;
+				costoNormalCombo += (precios[pid] || 0) * reqQty;
+			}
+
+			if (sets > 0 && sets !== 999999) {
+				const promoDesc = Number(promo.descuento || 0);
+				const ahorroPorCombo = costoNormalCombo - promoDesc;
+				if (ahorroPorCombo > 0) {
+					totalDesc += ahorroPorCombo * sets;
+					for (const [pid, reqQty] of Object.entries(reqMap)) {
+						cantidades[pid] -= reqQty * sets;
+					}
+				}
+			}
+		}
+
+		// 2. Calcular descuentos individuales para las cantidades restantes
+		for (const [pid, remanente] of Object.entries(cantidades)) {
+			if (remanente > 0) {
+				const item = cart.find((i) => i.producto.id_producto === pid);
+				if (item) {
+					const activePromos = promociones.filter(
+						(p) => p.producto_id === pid && p.tipo !== 'COMBO' && isPromotionActive(p)
+					);
+					let bestDisc = 0;
+					for (const promo of activePromos) {
+						let currentDisc = 0;
+						if (promo.tipo === 'NXM') {
+							if (promo.lleva > 0 && promo.paga > 0 && promo.lleva > promo.paga) {
+								const sets = Math.floor(remanente / promo.lleva);
+								currentDisc = sets * (promo.lleva - promo.paga) * item.producto.precio;
+							}
+						} else if (promo.tipo === 'porcentaje') {
+							if (promo.descuento > 0) {
+								currentDisc = Math.round(
+									remanente * item.producto.precio * (promo.descuento / 100)
+								);
+							}
+						} else if (promo.tipo === 'precio_fijo') {
+							if (promo.descuento > 0 && item.producto.precio > promo.descuento) {
+								currentDisc = remanente * (item.producto.precio - promo.descuento);
+							}
+						}
+						if (currentDisc > bestDisc) bestDisc = currentDisc;
+					}
+					totalDesc += bestDisc;
+				}
+			}
+		}
+
+		return totalDesc;
+	});
 	let total = $derived(Math.max(subtotal - discountAmount, 0));
 	let change = $derived(
 		selectedMetodoId === '11111111-1111-1111-1111-111111111111' && typeof cashReceived === 'number'
@@ -732,7 +824,8 @@
 		}
 
 		try {
-			await apiVentas.create(payload);
+			const res = await apiVentas.create(payload);
+			const createdSale = res?.venta;
 
 			if (selectedMetodoId === 'fiado' && selectedClientData) {
 				const nuevoFiado = selectedClientData.fiado_actual + total;
@@ -746,6 +839,12 @@
 			}
 
 			toast.show('Venta registrada con éxito.', 'success');
+
+			if (createdSale) {
+				recentlyCompletedSale = createdSale;
+				showSuccessReceiptModal = true;
+			}
+
 			clearCart();
 			await loadData();
 		} catch (err: any) {
@@ -758,6 +857,20 @@
 	function openSaleDetail(sale: Venta) {
 		selectedSale = sale;
 		showDetailModal = true;
+	}
+
+	function printReceipt() {
+		window.print();
+	}
+
+	function getNumericFolio(uuid: string): string {
+		if (!uuid) return '000000';
+		let hash = 0;
+		for (let i = 0; i < uuid.length; i++) {
+			hash = uuid.charCodeAt(i) + ((hash << 5) - hash);
+		}
+		const num = Math.abs(hash) % 1000000;
+		return num.toString().padStart(6, '0');
 	}
 
 	function getProductDetailName(productId: string) {
@@ -791,7 +904,7 @@
 	<div class="flex">
 		<button
 			onclick={() => (activeTab = 'pos')}
-			class="inline-flex items-center gap-2 border-b-2 px-6 py-3 text-sm font-semibold transition-all duration-200 {activeTab ===
+			class="inline-flex items-center gap-2 border-b-2 px-6 py-3 text-sm font-semibold {activeTab ===
 			'pos'
 				? 'border-primario text-primario'
 				: 'border-transparent text-text-secondary hover:text-text-primary'}"
@@ -801,7 +914,7 @@
 		</button>
 		<button
 			onclick={() => (activeTab = 'history')}
-			class="inline-flex items-center gap-2 border-b-2 px-6 py-3 text-sm font-semibold transition-all duration-200 {activeTab ===
+			class="inline-flex items-center gap-2 border-b-2 px-6 py-3 text-sm font-semibold {activeTab ===
 			'history'
 				? 'border-primario text-primario'
 				: 'border-transparent text-text-secondary hover:text-text-primary'}"
@@ -947,7 +1060,7 @@
 					<button
 						type="button"
 						onclick={() => (showManualCodeModal = true)}
-						class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-border-color bg-bg-card px-4 py-2.5 text-xs font-semibold text-text-secondary transition-all hover:bg-text-primary/5"
+						class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-border-color bg-bg-card px-4 py-2.5 text-xs font-semibold text-text-secondary hover:bg-text-primary/5"
 					>
 						<Keyboard size={14} />
 						<span>Ingresar Código a Mano</span>
@@ -955,7 +1068,7 @@
 					<button
 						type="button"
 						onclick={() => (modoEscaneo = true)}
-						class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-border-color bg-bg-card px-4 py-2.5 text-xs font-semibold text-text-secondary transition-all hover:bg-text-primary/5"
+						class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-border-color bg-bg-card px-4 py-2.5 text-xs font-semibold text-text-secondary hover:bg-text-primary/5"
 					>
 						<Camera size={14} />
 						<span>Escanear con Cámara</span>
@@ -1087,7 +1200,7 @@
 										selectedMetodoId = '11111111-1111-1111-1111-111111111111';
 										cashReceived = '';
 									}}
-									class="flex flex-col items-center justify-center p-2 rounded-lg border text-xs font-semibold gap-1 transition-all {selectedMetodoId ===
+									class="flex flex-col items-center justify-center p-2 rounded-lg border text-xs font-semibold gap-1 {selectedMetodoId ===
 									'11111111-1111-1111-1111-111111111111'
 										? 'border-primario bg-primario/10 text-primario'
 										: 'border-border-color text-text-secondary hover:bg-text-primary/5'} disabled:opacity-50 disabled:cursor-not-allowed"
@@ -1103,7 +1216,7 @@
 										cashReceived = '';
 										selectedClienteId = '';
 									}}
-									class="flex flex-col items-center justify-center p-2 rounded-lg border text-xs font-semibold gap-1 transition-all {selectedMetodoId ===
+									class="flex flex-col items-center justify-center p-2 rounded-lg border text-xs font-semibold gap-1 {selectedMetodoId ===
 									'22222222-2222-2222-2222-222222222222'
 										? 'border-primario bg-primario/10 text-primario'
 										: 'border-border-color text-text-secondary hover:bg-text-primary/5'} disabled:opacity-50 disabled:cursor-not-allowed"
@@ -1118,7 +1231,7 @@
 										selectedMetodoId = 'fiado';
 										cashReceived = '';
 									}}
-									class="flex flex-col items-center justify-center p-2 rounded-lg border text-xs font-semibold gap-1 transition-all {selectedMetodoId ===
+									class="flex flex-col items-center justify-center p-2 rounded-lg border text-xs font-semibold gap-1 {selectedMetodoId ===
 									'fiado'
 										? 'border-primario bg-primario/10 text-primario'
 										: 'border-border-color text-text-secondary hover:bg-text-primary/5'} disabled:opacity-50 disabled:cursor-not-allowed"
@@ -1252,6 +1365,7 @@
 								!selectedCajaId ||
 								hasExpiredFiados}
 							class="w-full inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-accent-light to-accent py-3 font-bold text-white shadow-md transition-all hover:bg-primario-hover hover:shadow-glow disabled:cursor-not-allowed disabled:opacity-50"
+							class="w-full inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-accent-light to-accent py-3 font-bold text-white shadow-md hover:bg-primario-hover hover:shadow-glow disabled:cursor-not-allowed disabled:opacity-50"
 						>
 							{#if submitting}
 								Procesando Venta...
@@ -1298,7 +1412,7 @@
 					type="text"
 					bind:value={searchHistoryQuery}
 					placeholder="Buscar venta por ID..."
-					class="w-full rounded-xl border border-border-color bg-bg-card py-2.5 pl-10 pr-4 text-sm text-text-primary transition-colors focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario"
+					class="w-full rounded-xl border border-border-color bg-bg-card py-2.5 pl-10 pr-4 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario"
 				/>
 			</div>
 		</div>
@@ -1347,7 +1461,7 @@
 					</thead>
 					<tbody>
 						{#each filteredSales as sale (sale.id_venta)}
-							<tr class="transition-colors hover:bg-text-primary/[0.01]">
+							<tr class="hover:bg-text-primary/[0.01]">
 								<td class="border-b border-border-color p-4 font-mono text-xs text-text-primary">
 									{sale.id_venta.substring(0, 8)}...
 								</td>
@@ -1375,7 +1489,7 @@
 								<td class="border-b border-border-color p-4 text-right">
 									<button
 										onclick={() => openSaleDetail(sale)}
-										class="inline-flex cursor-pointer items-center justify-center rounded-lg border border-border-color bg-text-primary/3 p-2 text-text-secondary transition-all duration-200 hover:border-border-color-hover hover:bg-text-primary/7 hover:text-text-primary"
+										class="inline-flex cursor-pointer items-center justify-center rounded-lg border border-border-color bg-text-primary/3 p-2 text-text-secondary hover:border-border-color-hover hover:bg-text-primary/7 hover:text-text-primary"
 										title="Ver detalles de venta"
 									>
 										<ChevronRight size={16} />
@@ -1408,7 +1522,7 @@
 					<p class="text-xs text-text-muted mt-0.5">ID: {selectedSale.id_venta}</p>
 				</div>
 				<button
-					class="inline-flex cursor-pointer items-center justify-center rounded-lg border border-border-color bg-text-primary/3 p-2 text-text-secondary transition-all duration-200 hover:border-border-color-hover hover:bg-text-primary/7 hover:text-text-primary"
+					class="inline-flex cursor-pointer items-center justify-center rounded-lg border border-border-color bg-text-primary/3 p-2 text-text-secondary hover:border-border-color-hover hover:bg-text-primary/7 hover:text-text-primary"
 					onclick={() => (showDetailModal = false)}>&times;</button
 				>
 			</header>
@@ -1516,10 +1630,37 @@
 					</div>
 				</div>
 			</div>
-			<footer class="flex justify-end border-t border-border-color bg-text-primary/2 p-4 px-6">
+			<footer
+				class="flex justify-end gap-3 border-t border-border-color bg-text-primary/2 p-4 px-6"
+			>
 				<button
 					type="button"
-					class="inline-flex cursor-pointer items-center justify-center rounded-lg border border-border-color bg-bg-secondary px-5 py-2.5 text-sm font-semibold text-text-primary transition-all duration-200 hover:bg-text-primary/5"
+					class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-accent-light to-accent px-5 py-2.5 text-sm font-bold text-white shadow-md hover:bg-primario-hover"
+					onclick={() => {
+						recentlyCompletedSale = selectedSale;
+						showDetailModal = false;
+						showSuccessReceiptModal = true;
+					}}
+				>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						class="h-4 w-4"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke="currentColor"
+						stroke-width="2"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"
+						/>
+					</svg>
+					<span>Imprimir Boleta</span>
+				</button>
+				<button
+					type="button"
+					class="inline-flex cursor-pointer items-center justify-center rounded-lg border border-border-color bg-bg-secondary px-5 py-2.5 text-sm font-semibold text-text-primary hover:bg-text-primary/5"
 					onclick={() => (showDetailModal = false)}
 				>
 					Cerrar
@@ -1537,6 +1678,16 @@
 		<div
 			class="w-full max-w-[450px] overflow-hidden rounded-xl border border-border-color bg-bg-card p-6 shadow-2xl animate-modal-enter text-center"
 		>
+			{#if selectedCajaId}
+				<button
+					type="button"
+					class="absolute top-4 right-4 text-text-muted hover:text-text-primary text-xl"
+					onclick={() => (showCajaConfigModal = false)}
+				>
+					&times;
+				</button>
+			{/if}
+
 			<div
 				class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primario/10 text-primario"
 			>
@@ -1790,3 +1941,351 @@
 		</div>
 	</div>
 {/if}
+
+<!-- Success Receipt Preview Modal -->
+{#if showSuccessReceiptModal && recentlyCompletedSale}
+	<div
+		class="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 p-5 backdrop-blur-sm"
+		onclick={() => {
+			showSuccessReceiptModal = false;
+			recentlyCompletedSale = null;
+		}}
+		role="presentation"
+	>
+		<div
+			class="w-full max-w-[420px] overflow-hidden rounded-xl border border-border-color bg-bg-card shadow-2xl animate-modal-enter flex flex-col max-h-[90vh]"
+			onclick={(e) => e.stopPropagation()}
+			role="dialog"
+		>
+			<header class="flex items-center justify-between border-b border-border-color p-4 bg-exito/5">
+				<div class="flex items-center gap-2">
+					<div class="flex h-8 w-8 items-center justify-center rounded-full bg-exito/10 text-exito">
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							class="h-5 w-5"
+							viewBox="0 0 20 20"
+							fill="currentColor"
+						>
+							<path
+								fill-rule="evenodd"
+								d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+								clip-rule="evenodd"
+							/>
+						</svg>
+					</div>
+					<div class="text-left">
+						<h3 class="font-bold text-text-primary text-sm leading-tight">¡Venta Exitosa!</h3>
+						<p class="text-[10px] text-text-secondary leading-none">
+							Comprobante de compra generado
+						</p>
+					</div>
+				</div>
+				<button
+					class="text-text-muted hover:text-text-primary text-xl font-bold p-1"
+					onclick={() => {
+						showSuccessReceiptModal = false;
+						recentlyCompletedSale = null;
+					}}>&times;</button
+				>
+			</header>
+
+			<!-- Área de vista previa (contenedor de boleta) -->
+			<div
+				class="p-6 overflow-y-auto flex-1 bg-text-primary/[0.01] border-b border-border-color flex justify-center"
+			>
+				<!-- Este es el elemento para impresión. Forzamos fondo blanco y letra negra en pantalla para un look de ticket térmico tradicional -->
+				<div
+					id="print-receipt-area"
+					class="printable-receipt bg-white text-neutral-900 p-6 rounded shadow-sm border border-neutral-200 font-mono text-xs w-full max-w-[340px] text-left"
+				>
+					<!-- Encabezado de la boleta -->
+					<div class="text-center mb-4">
+						<!-- Recuadro oficial SII con borde rojo -->
+						<div
+							class="border-2 border-red-600 p-2.5 text-center text-red-600 font-bold my-2 leading-normal max-w-[260px] mx-auto rounded"
+						>
+							<div class="text-[10px] tracking-wider">R.U.T.: 76.123.456-7</div>
+							<div class="text-xs font-black my-0.5">BOLETA ELECTRÓNICA</div>
+							<div class="text-[10px]">
+								FOLIO N° {getNumericFolio(recentlyCompletedSale.id_venta)}
+							</div>
+						</div>
+
+						<h2 class="text-sm font-black uppercase text-neutral-800 m-0 mt-2">MINIMARKET GPS</h2>
+						<p class="text-[9px] text-neutral-500 m-0 font-bold">
+							Razón Social: Minimarket GPS Limitada
+						</p>
+						<p class="text-[9px] text-neutral-500 m-0">Giro: Almacén y Minimarket</p>
+						<p class="text-[9px] text-neutral-500 m-0">Dirección: Av. Principal 1234, Santiago</p>
+						<p class="text-[9px] text-neutral-500 m-0">Teléfono: +56 2 2345 6789</p>
+					</div>
+
+					<!-- Divisor -->
+					<div class="border-t border-dashed border-neutral-400 my-2"></div>
+
+					<!-- Datos generales de emisión -->
+					<div class="mb-3 text-[10px] leading-relaxed">
+						<p class="m-0 text-[8px] text-neutral-500">
+							ID Venta: {recentlyCompletedSale.id_venta}
+						</p>
+						<p class="m-0">
+							Fecha: {new Date(recentlyCompletedSale.fecha_emision).toLocaleString('es-CL')}
+						</p>
+						<p class="m-0">Caja: {getCajaName(recentlyCompletedSale.id_caja)}</p>
+						<p class="m-0">Cajero: {getEmpleadoName(recentlyCompletedSale.id_empleado)}</p>
+
+						<!-- Leyenda para pagos con tarjeta -->
+						{#if recentlyCompletedSale.metodo_pago?.nombre_metodo === 'Tarjeta'}
+							<div class="mt-1 bg-neutral-100 p-1 border border-neutral-300 text-center rounded">
+								<p class="m-0 font-black text-black text-[9px] tracking-wider">
+									*** VÁLIDO COMO BOLETA ***
+								</p>
+							</div>
+						{/if}
+
+						<!-- Información del cliente si está registrado -->
+						{#if recentlyCompletedSale.id_cliente}
+							{@const cli = clientes.find((c) => c.id_cliente === recentlyCompletedSale.id_cliente)}
+							{#if cli}
+								<div class="mt-1.5 pt-1.5 border-t border-dotted border-neutral-300">
+									<p class="m-0 font-bold">CLIENTE ASOCIADO:</p>
+									<p class="m-0">Nombre: {cli.nombre}</p>
+									<p class="m-0">RUT: {cli.rut}</p>
+								</div>
+							{/if}
+						{/if}
+					</div>
+
+					<!-- Divisor -->
+					<div class="border-t border-dashed border-neutral-400 my-2"></div>
+
+					<!-- Encabezado de la tabla de detalles (4 columnas) -->
+					<div
+						class="flex justify-between font-bold text-[9px] mb-1.5 pb-1 border-b border-neutral-300"
+					>
+						<span class="w-24 text-left">PRODUCTO</span>
+						<span class="w-10 text-center">CANT</span>
+						<span class="w-16 text-right font-bold">P.UNIT</span>
+						<span class="w-16 text-right font-bold">TOTAL</span>
+					</div>
+
+					<!-- Lista de ítems comprados -->
+					<div class="flex flex-col gap-1.5 mb-3">
+						{#if recentlyCompletedSale.detalles}
+							{#each recentlyCompletedSale.detalles as det}
+								{@const unitPrice = Math.round(det.monto_final / det.cantidad)}
+								<div class="flex justify-between items-start text-[9px] leading-tight">
+									<span class="w-24 text-left break-words pr-1"
+										>{getProductDetailName(det.id_producto)}</span
+									>
+									<span class="w-10 text-center">{det.cantidad}</span>
+									<span class="w-16 text-right">{formatCurrency(unitPrice)}</span>
+									<span class="w-16 text-right">{formatCurrency(det.monto_final)}</span>
+								</div>
+							{/each}
+						{/if}
+					</div>
+
+					<!-- Divisor -->
+					<div class="border-t border-dashed border-neutral-400 my-2"></div>
+
+					<!-- Desglose de totales de venta -->
+					<div class="flex flex-col gap-1 text-[10px] font-bold">
+						<!-- Subtotal bruto de venta -->
+						<div class="flex justify-between">
+							<span>SUBTOTAL:</span>
+							<span
+								>{formatCurrency(
+									recentlyCompletedSale.monto_total + recentlyCompletedSale.monto_descuento
+								)}</span
+							>
+						</div>
+
+						{#if recentlyCompletedSale.monto_descuento > 0}
+							<div class="flex justify-between text-neutral-600">
+								<span>TOTAL DESCUENTOS:</span>
+								<span>-{formatCurrency(recentlyCompletedSale.monto_descuento)}</span>
+							</div>
+						{/if}
+
+						<!-- Desglose de neto e IVA (19% IVA incluido en los precios) -->
+						<div class="flex justify-between text-neutral-600 font-normal">
+							<span>MONTO NETO:</span>
+							<span>{formatCurrency(Math.round(recentlyCompletedSale.monto_total / 1.19))}</span>
+						</div>
+						<div class="flex justify-between text-neutral-600 font-normal">
+							<span>IVA (19%):</span>
+							<span
+								>{formatCurrency(
+									recentlyCompletedSale.monto_total -
+										Math.round(recentlyCompletedSale.monto_total / 1.19)
+								)}</span
+							>
+						</div>
+
+						<div
+							class="flex justify-between text-xs font-black pt-1 border-t border-dotted border-neutral-300"
+						>
+							<span>TOTAL A PAGAR:</span>
+							<span>{formatCurrency(recentlyCompletedSale.monto_total)}</span>
+						</div>
+					</div>
+
+					<!-- Divisor -->
+					<div class="border-t border-dashed border-neutral-400 my-2"></div>
+
+					<!-- Detalle del pago y vuelto -->
+					<div class="text-[10px] leading-relaxed mb-3">
+						<p class="m-0 font-bold">
+							MÉTODO DE PAGO: {recentlyCompletedSale.metodo_pago?.nombre_metodo || 'Efectivo'}
+						</p>
+
+						{#if recentlyCompletedSale.id_metodo === '11111111-1111-1111-1111-111111111111'}
+							<!-- Datos de pago en efectivo y vuelto -->
+							<p class="m-0">Monto Pagado: {formatCurrency(recentlyCompletedSale.pago)}</p>
+							<p class="m-0 font-bold">Vuelto: {formatCurrency(recentlyCompletedSale.vuelto)}</p>
+						{:else if recentlyCompletedSale.id_metodo === '33333333-3333-3333-3333-333333333333'}
+							<!-- Datos de deuda fiada -->
+							{#if recentlyCompletedSale.fiado}
+								<p class="m-0 font-bold text-neutral-700">REGISTRADO COMO DEUDA FIADO</p>
+								<p class="m-0">
+									Fecha Límite Pago: {new Date(
+										recentlyCompletedSale.fiado.fecha_limite
+									).toLocaleDateString('es-CL')}
+								</p>
+							{/if}
+						{/if}
+					</div>
+
+					<!-- Divisor -->
+					<div class="border-t border-dashed border-neutral-400 my-2"></div>
+
+					<!-- Pie de página y timbre fiscal -->
+					<div class="text-center mt-3 font-mono">
+						<p class="m-0 font-bold text-[10px]">¡GRACIAS POR SU COMPRA!</p>
+						<p class="m-0 text-[9px] text-neutral-500">Visítenos en www.minimarketgps.cl</p>
+
+						<!-- Timbre Electrónico SII (Requerido: Timbre PDF417 simulado y leyenda legal) -->
+						<div
+							class="border-2 border-red-600 p-2 text-center text-red-600 font-bold text-[8px] my-3 max-w-[250px] mx-auto leading-tight rounded bg-red-50/10"
+						>
+							<div class="flex flex-col gap-[1px] justify-center items-center mb-1.5 opacity-80">
+								{#each Array.from({ length: 8 }) as _, row}
+									<div class="flex gap-[1px]">
+										{#each Array.from({ length: 26 }) as _, col}
+											{@const isBlack = (row * 7 + col * 13) % 3 === 0 || (row * col + 5) % 4 === 0}
+											<div
+												class="w-[3px] h-[3.5px] {isBlack ? 'bg-red-600' : 'bg-transparent'}"
+											></div>
+										{/each}
+									</div>
+								{/each}
+							</div>
+							<p class="m-0 uppercase tracking-widest text-[9px] font-black">
+								TIMBRE ELECTRÓNICO SII
+							</p>
+							<p class="m-0 text-[7px] font-normal">Res. N° 80 de 2014</p>
+							<p class="m-0 text-[7px] font-bold">Verifique documento en www.sii.cl</p>
+						</div>
+
+						<!-- Código de barra lineal simulado con CSS -->
+						<div
+							class="flex justify-center items-center gap-[1.5px] mt-3 mb-1 h-8 px-4 overflow-hidden"
+							title="Código de Barra Venta"
+						>
+							{#each Array.from({ length: 28 }) as _, i}
+								{@const isThick = (i * 7 + 13) % 5 === 0 || (i * 3) % 7 === 0}
+								{@const isSpace = (i * 2 + 5) % 3 === 0}
+								{#if isSpace}
+									<div class="w-[2px] h-8 bg-transparent"></div>
+								{:else if isThick}
+									<div class="w-[3px] h-8 bg-black"></div>
+								{:else}
+									<div class="w-[1px] h-8 bg-black"></div>
+								{/if}
+							{/each}
+						</div>
+						<span class="text-[8px] text-neutral-500 block font-mono"
+							>{recentlyCompletedSale.id_venta}</span
+						>
+					</div>
+				</div>
+			</div>
+
+			<!-- Botones de acción del modal -->
+			<footer class="p-4 bg-text-primary/[0.02] border-t border-border-color flex gap-3">
+				<button
+					type="button"
+					onclick={() => {
+						showSuccessReceiptModal = false;
+						recentlyCompletedSale = null;
+					}}
+					class="flex-1 inline-flex cursor-pointer items-center justify-center rounded-lg border border-border-color bg-bg-secondary py-2.5 text-sm font-semibold text-text-primary hover:bg-text-primary/5"
+				>
+					Nueva Venta
+				</button>
+				<button
+					type="button"
+					onclick={printReceipt}
+					class="flex-1 inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-accent-light to-accent py-2.5 font-bold text-white shadow-md hover:bg-primario-hover hover:shadow-glow"
+				>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						class="h-4 w-4"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke="currentColor"
+						stroke-width="2"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"
+						/>
+					</svg>
+					<span>Imprimir Boleta</span>
+				</button>
+			</footer>
+		</div>
+	</div>
+{/if}
+
+<style>
+	@media print {
+		@page {
+			size: auto;
+			margin: 0;
+		}
+
+		:global(body) {
+			background-color: white !important;
+			color: black !important;
+		}
+
+		/* Ocultar la pantalla completa de fondo */
+		:global(body *) {
+			visibility: hidden;
+		}
+
+		/* Mostrar únicamente el área de impresión del ticket */
+		:global(#print-receipt-area),
+		:global(#print-receipt-area *) {
+			visibility: visible;
+		}
+
+		:global(#print-receipt-area) {
+			position: absolute;
+			left: 0;
+			top: 0;
+			width: 100%;
+			max-width: 80mm;
+			margin: 0;
+			padding: 8mm;
+			box-shadow: none !important;
+			border: none !important;
+			background: white !important;
+			color: black !important;
+			font-family: 'Courier New', Courier, monospace !important;
+		}
+	}
+</style>
