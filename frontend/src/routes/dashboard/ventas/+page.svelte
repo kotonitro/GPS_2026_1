@@ -35,7 +35,8 @@
 		Sparkles,
 		Camera,
 		Lock,
-		Unlock
+		Unlock,
+		X
 	} from '@lucide/svelte';
 	import Scanner from '$lib/components/Scanner.svelte';
 
@@ -507,6 +508,163 @@
 		}
 	}
 
+	let showCreateClienteModal = $state(false);
+	let formNombre = $state('');
+	let formRut = $state('');
+	let formTelefono = $state('');
+	let formFiadoMaximo = $state<number>(20000);
+
+	let errNombre = $state('');
+	let errRut = $state('');
+	let errTelefono = $state('');
+	let formGeneralError = $state('');
+	let submitClienteLoading = $state(false);
+
+	function clearClienteErrors() {
+		errNombre = '';
+		errRut = '';
+		errTelefono = '';
+		formGeneralError = '';
+	}
+
+	function validarRut(rutOriginal: string): boolean {
+		const rutLimpio = rutOriginal.replace(/\./g, '').replace(/-/g, '').trim().toUpperCase();
+		if (rutLimpio.length < 8) return false;
+		const cuerpo = rutLimpio.slice(0, -1);
+		const dvIngresado = rutLimpio.slice(-1);
+		let suma = 0;
+		let multiplicador = 2;
+		for (let i = cuerpo.length - 1; i >= 0; i--) {
+			const digito = parseInt(cuerpo[i], 10);
+			if (isNaN(digito)) return false;
+			suma += digito * multiplicador;
+			multiplicador++;
+			if (multiplicador > 7) multiplicador = 2;
+		}
+		const resto = suma % 11;
+		const resultado = 11 - resto;
+		let dvCalculado = '';
+		if (resultado === 11) dvCalculado = '0';
+		else if (resultado === 10) dvCalculado = 'K';
+		else dvCalculado = resultado.toString();
+		return dvCalculado === dvIngresado;
+	}
+
+	function validarTelefono(tel: string): boolean {
+		return /^(\+56)?[\s.-]?9[\s.-]?\d{4}[\s.-]?\d{4}$/.test(tel);
+	}
+
+	function formatRutInput(val: string) {
+		let clean = val.replace(/[^0-9kK]/g, '');
+		if (clean.length === 0) return '';
+		const dv = clean.slice(-1);
+		let cuerpo = clean.slice(0, -1);
+		if (cuerpo.length > 0) {
+			let formattedCuerpo = '';
+			let j = 0;
+			for (let i = cuerpo.length - 1; i >= 0; i--) {
+				formattedCuerpo = cuerpo[i] + formattedCuerpo;
+				j++;
+				if (j === 3 && i > 0) {
+					formattedCuerpo = '.' + formattedCuerpo;
+					j = 0;
+				}
+			}
+			return `${formattedCuerpo}-${dv}`;
+		}
+		return dv;
+	}
+
+	function handleRutInput(e: Event) {
+		const target = e.target as HTMLInputElement;
+		const formatted = formatRutInput(target.value);
+		formRut = formatted;
+		target.value = formatted;
+	}
+
+	function formatNombreInput(val: string) {
+		return val
+			.toLowerCase()
+			.replace(/\s+/g, ' ')
+			.split(' ')
+			.map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+			.join(' ');
+	}
+
+	function handleNombreBlur() {
+		formNombre = formatNombreInput(formNombre).trim();
+	}
+
+	async function handleCreateCliente(e: Event) {
+		e.preventDefault();
+		clearClienteErrors();
+		let isValid = true;
+
+		if (!formNombre.trim()) {
+			errNombre = 'El nombre es obligatorio.';
+			isValid = false;
+		} else {
+			const soloLetras = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(formNombre);
+			const partes = formNombre.trim().split(/\s+/);
+			if (!soloLetras) {
+				errNombre = 'Solo debe contener letras y espacios.';
+				isValid = false;
+			} else if (partes.length < 2) {
+				errNombre = 'Ingrese al menos un nombre y apellido.';
+				isValid = false;
+			} else {
+				formNombre = formatNombreInput(formNombre).trim();
+			}
+		}
+
+		const rawRut = formRut.replace(/\./g, '');
+		if (!formRut) {
+			errRut = 'El RUT es obligatorio.';
+			isValid = false;
+		} else if (!validarRut(rawRut)) {
+			errRut = 'El RUT no es válido.';
+			isValid = false;
+		}
+
+		if (!formTelefono.trim()) {
+			errTelefono = 'El teléfono es obligatorio.';
+			isValid = false;
+		} else if (!validarTelefono(formTelefono.trim())) {
+			errTelefono = 'Formato no válido.';
+			isValid = false;
+		}
+
+		if (!isValid) return;
+
+		submitClienteLoading = true;
+		const payload = {
+			nombre: formNombre.trim(),
+			rut: rawRut.trim(),
+			telefono: formTelefono.replace(/\s+/g, ''),
+			fiado_actual: 0,
+			fiado_maximo: formFiadoMaximo
+		};
+
+		try {
+			await apiClientes.create(payload);
+			toast.show('Cliente añadido exitosamente.', 'success');
+			showCreateClienteModal = false;
+
+			// Recargar clientes y autoseleccionarlo
+			const resClients = await apiClientes.getAll();
+			clientes = Array.isArray(resClients) ? resClients : [];
+			const nuevoCliente = clientes.find((c) => c.rut === payload.rut);
+			if (nuevoCliente) {
+				selectedClienteId = nuevoCliente.id_cliente;
+			}
+		} catch (err: any) {
+			formGeneralError = err.message || 'Error al guardar el cliente.';
+			toast.show('No se pudo guardar el cliente.', 'error');
+		} finally {
+			submitClienteLoading = false;
+		}
+	}
+
 	onMount(async () => {
 		window.addEventListener('keydown', handleGlobalKeydown);
 		window.addEventListener('online', syncPendingSales);
@@ -964,12 +1122,15 @@
 				<span>Cerrar Turno/Caja</span>
 			</button>
 		{:else}
-			<div
-				class="flex items-center gap-2 rounded-lg border border-danger-color/30 bg-danger-bg px-3 py-1.5 text-xs text-danger-color"
+			<button
+				type="button"
+				onclick={() => (showTurnoAperturaModal = true)}
+				class="flex cursor-pointer items-center gap-2 rounded-lg border border-danger-color/30 bg-danger-bg px-3 py-1.5 text-xs font-bold text-danger-color transition-colors hover:bg-danger-color/10"
+				title="Haz clic para abrir un turno de caja"
 			>
 				<Lock size={14} />
-				<span>Sin turno abierto</span>
-			</div>
+				<span>Sin turno (Abrir Caja)</span>
+			</button>
 		{/if}
 	</div>
 </div>
@@ -1272,20 +1433,39 @@
 									class="text-xs font-bold uppercase tracking-wider text-text-secondary"
 									>Cliente Asoc.</label
 								>
-								<select
-									id="clientSelect"
-									bind:value={selectedClienteId}
-									disabled={cart.length === 0}
-									class="w-full rounded-lg border border-border-color bg-bg-card p-2.5 text-sm text-text-primary outline-none focus:border-accent disabled:opacity-50 disabled:cursor-not-allowed"
-									required
-								>
-									<option value="" disabled>-- Selecciona un cliente --</option>
-									{#each clientes as cli}
-										<option value={cli.id_cliente}
-											>{cli.nombre} (Deuda: {formatCurrency(cli.fiado_actual)})</option
-										>
-									{/each}
-								</select>
+								<div class="flex gap-2 items-center">
+									<select
+										id="clientSelect"
+										bind:value={selectedClienteId}
+										disabled={cart.length === 0}
+										class="w-full rounded-lg border border-border-color bg-bg-card p-2.5 text-sm text-text-primary outline-none focus:border-accent disabled:opacity-50 disabled:cursor-not-allowed"
+										required
+									>
+										<option value="" disabled>-- Selecciona un cliente --</option>
+										{#each clientes as cli}
+											<option value={cli.id_cliente}
+												>{cli.nombre} (Deuda: {formatCurrency(cli.fiado_actual)})</option
+											>
+										{/each}
+									</select>
+									<button
+										type="button"
+										onclick={(e) => {
+											e.preventDefault(); // Evita que se dispare el submit del form de venta
+											formNombre = '';
+											formRut = '';
+											formTelefono = '';
+											formFiadoMaximo = 20000;
+											clearClienteErrors();
+											showCreateClienteModal = true;
+										}}
+										class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-primario bg-primario/10 text-primario hover:bg-primario hover:text-white transition-colors"
+										title="Añadir Nuevo Cliente"
+									>
+										<Plus size={20} />
+									</button>
+								</div>
+
 								{#if selectedClientData}
 									<div
 										class="mt-2 p-3 rounded-lg border text-xs flex flex-col gap-1 {isFiadoLimitExceeded ||
@@ -1664,17 +1844,15 @@
 		class="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-5 backdrop-blur-sm"
 	>
 		<div
-			class="w-full max-w-[450px] overflow-hidden rounded-xl border border-border-color bg-bg-card p-6 shadow-2xl animate-modal-enter text-center"
+			class="relative w-full max-w-[450px] overflow-hidden rounded-xl border border-border-color bg-bg-card p-6 shadow-2xl animate-modal-enter text-center"
 		>
-			{#if selectedCajaId}
-				<button
-					type="button"
-					class="absolute top-4 right-4 text-text-muted hover:text-text-primary text-xl"
-					onclick={() => (showTurnoAperturaModal = false)}
-				>
-					&times;
-				</button>
-			{/if}
+			<button
+				type="button"
+				class="absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-border-color hover:text-text-primary"
+				onclick={() => (showTurnoAperturaModal = false)}
+			>
+				<X size={20} />
+			</button>
 
 			<div
 				class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primario/10 text-primario"
@@ -1682,7 +1860,7 @@
 				<Unlock size={28} />
 			</div>
 			<h3 class="text-lg font-bold text-text-primary">Abrir Turno de Caja</h3>
-			<p class="text-xs text-text-secondary mt-1.5 max-w-xs mx-auto">
+			<p class="mx-auto mt-1.5 max-w-xs text-xs text-text-secondary">
 				Para registrar ventas debes abrir un turno indicando la caja y el efectivo inicial con el
 				que cuentas para vueltos.
 			</p>
@@ -1691,13 +1869,13 @@
 				<div class="mb-4">
 					<label
 						for="turnoCajaSelect"
-						class="block text-xs font-bold uppercase tracking-wider text-text-secondary mb-2"
+						class="mb-2 block text-xs font-bold uppercase tracking-wider text-text-secondary"
 						>Caja asignada</label
 					>
 					<select
 						id="turnoCajaSelect"
 						bind:value={aperturaCajaId}
-						class="w-full rounded-lg border border-border-color bg-bg-card p-3 text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-primario focus:border-primario"
+						class="w-full rounded-lg border border-border-color bg-bg-card p-3 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario"
 						required
 					>
 						<option value="" disabled selected>-- Selecciona una caja --</option>
@@ -1710,22 +1888,22 @@
 				<div class="mb-6">
 					<label
 						for="saldoInicial"
-						class="block text-xs font-bold uppercase tracking-wider text-text-secondary mb-2"
+						class="mb-2 block text-xs font-bold uppercase tracking-wider text-text-secondary"
 						>Saldo Inicial de Apertura</label
 					>
 					<div class="relative flex items-center">
-						<span class="absolute left-3 text-sm text-text-muted font-bold">$</span>
+						<span class="absolute left-3 font-bold text-text-muted text-sm">$</span>
 						<input
 							id="saldoInicial"
 							type="number"
 							min="0"
 							placeholder="0"
 							bind:value={aperturaSaldoInicial}
-							class="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none w-full rounded-lg border border-border-color bg-bg-card py-2.5 pl-7 pr-3 text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-primario focus:border-primario"
+							class="w-full rounded-lg border border-border-color bg-bg-card py-2.5 pl-7 pr-3 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
 							required
 						/>
 					</div>
-					<p class="text-[10px] text-text-muted mt-1.5">
+					<p class="mt-1.5 text-[10px] text-text-muted">
 						Efectivo base que tienes disponible para entregar vueltos.
 					</p>
 				</div>
@@ -2244,6 +2422,116 @@
 					<span>Imprimir Boleta</span>
 				</button>
 			</footer>
+		</div>
+	</div>
+{/if}
+
+<!-- Modal de Crear Cliente (POS) -->
+{#if showCreateClienteModal}
+	<div
+		class="fixed inset-0 z-[150] flex items-center justify-center bg-black/60 p-4 backdrop-blur-[4px] animate-modal-enter"
+		onclick={() => (showCreateClienteModal = false)}
+		role="presentation"
+	>
+		<div
+			class="w-full max-w-lg overflow-hidden rounded-2xl border border-border-color bg-bg-card shadow-2xl"
+			onclick={(e) => e.stopPropagation()}
+			role="dialog"
+		>
+			<header class="flex items-center justify-between border-b border-border-color px-6 py-4">
+				<h3 class="text-lg font-bold text-text-primary">Añadir Nuevo Cliente Rápido</h3>
+				<button
+					class="rounded-lg p-1 text-text-muted hover:bg-border-color hover:text-text-primary"
+					onclick={() => (showCreateClienteModal = false)}
+				>
+					<X size={20} />
+				</button>
+			</header>
+			<form onsubmit={handleCreateCliente} autocomplete="off" class="p-6">
+				{#if formGeneralError}
+					<div
+						class="mb-5 flex gap-3 rounded-lg border border-red-500/15 bg-danger-bg p-4 text-sm text-danger-color"
+						role="alert"
+					>
+						<span>{formGeneralError}</span>
+					</div>
+				{/if}
+
+				<div class="grid grid-cols-1 gap-4">
+					<div class="flex flex-col gap-1.5">
+						<label class="text-sm font-semibold text-text-primary" for="formNombrePos"
+							>Nombre Completo</label
+						>
+						<input
+							type="text"
+							id="formNombrePos"
+							autocomplete="off"
+							class="rounded-xl border border-border-color bg-bg-primary px-4 py-2 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50"
+							placeholder="Ej: Juan Pérez Gómez"
+							bind:value={formNombre}
+							onblur={handleNombreBlur}
+							disabled={submitClienteLoading}
+							required
+						/>
+						{#if errNombre}<span class="mt-0.5 text-xs font-medium text-danger-color"
+								>{errNombre}</span
+							>{/if}
+					</div>
+
+					<div class="flex flex-col gap-1.5">
+						<label class="text-sm font-semibold text-text-primary" for="formRutPos">RUT</label>
+						<input
+							type="text"
+							id="formRutPos"
+							class="rounded-xl border border-border-color bg-bg-primary px-4 py-2 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50"
+							placeholder="Ej: 12.345.678-K"
+							value={formRut}
+							oninput={handleRutInput}
+							disabled={submitClienteLoading}
+							required
+						/>
+						{#if errRut}<span class="mt-0.5 text-xs font-medium text-danger-color">{errRut}</span
+							>{/if}
+					</div>
+
+					<div class="flex flex-col gap-1.5">
+						<label class="text-sm font-semibold text-text-primary" for="formTelefonoPos"
+							>Número Telefónico</label
+						>
+						<input
+							type="text"
+							id="formTelefonoPos"
+							class="rounded-xl border border-border-color bg-bg-primary px-4 py-2 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50"
+							placeholder="Ej: +56912345678"
+							bind:value={formTelefono}
+							disabled={submitClienteLoading}
+							required
+						/>
+						{#if errTelefono}<span class="mt-0.5 text-xs font-medium text-danger-color"
+								>{errTelefono}</span
+							>{/if}
+					</div>
+				</div>
+				<div class="mt-6 flex justify-end gap-3">
+					<button
+						type="button"
+						class="px-4 py-2 rounded-lg border border-border-color text-xs font-semibold text-text-secondary bg-bg-secondary hover:bg-text-primary/5"
+						onclick={() => (showCreateClienteModal = false)}
+						disabled={submitClienteLoading}>Cancelar</button
+					>
+					<button
+						type="submit"
+						class="rounded-lg bg-primario px-5 py-2 text-sm font-semibold text-white hover:bg-primario-hover shadow-md disabled:cursor-not-allowed disabled:opacity-70"
+						disabled={submitClienteLoading}
+					>
+						{#if submitClienteLoading}
+							Procesando...
+						{:else}
+							Crear y Seleccionar
+						{/if}
+					</button>
+				</div>
+			</form>
 		</div>
 	</div>
 {/if}

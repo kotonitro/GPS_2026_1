@@ -101,7 +101,7 @@ func (ctrl *CajaController) DeleteCajaByIDController(c *gin.Context) {
 		if strings.Contains(err.Error(), "23503") || strings.Contains(err.Error(), "foreign key constraint") {
 			c.JSON(http.StatusConflict, gin.H{
 				"error":   "No se pudo eliminar la caja.",
-				"detalle": "Esta caja tiene registros históricos asociados y no puede ser eliminada.",
+				"detalle": "Esta caja tiene un turno activo o registros históricos asociados y no puede ser eliminada.",
 			})
 			return
 		}
