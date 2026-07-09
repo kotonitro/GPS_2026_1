@@ -249,11 +249,10 @@
 	let selectedSale = $state<Venta | null>(null);
 	let showDetailModal = $state(false);
 
-	// Recently completed sale for the success receipt modal
 	let recentlyCompletedSale = $state<Venta | null>(null);
 	let showSuccessReceiptModal = $state(false);
 
-	// Filtered list for history
+	// Filtrado de historial
 	let filteredSales = $derived.by(() => {
 		const query = searchHistoryQuery.toLowerCase().trim();
 		return ventas.filter((v) => {
@@ -475,7 +474,7 @@
 		});
 	});
 
-	// Scanner global
+	// Scaneo
 	function handleGlobalKeydown(e: KeyboardEvent) {
 		if (activeTab !== 'pos') return;
 
@@ -491,7 +490,6 @@
 
 		const currentTime = Date.now();
 
-		// delay > 100ms, asumomos que se esta utilizando por alguien
 		if (currentTime - lastKeyTime > 100) {
 			barcodeBuffer = '';
 		}
@@ -981,14 +979,11 @@
 		Cargando datos de ventas...
 	</div>
 {:else}
-	<!-- POS TAB -->
 	{#if activeTab === 'pos'}
 		<div class="grid grid-cols-1 gap-6 lg:grid-cols-12">
-			<!-- POS Scanner Information Panel (Left side) -->
 			<div
 				class="flex flex-col gap-6 lg:col-span-7 justify-center items-center rounded-xl border border-dashed border-border-color bg-bg-card/50 p-8 text-center min-h-[400px]"
 			>
-				<!-- Bouncing Scan Circle -->
 				<div
 					class="relative flex h-28 w-28 items-center justify-center rounded-full bg-primario/10 text-primario animate-pulse"
 				>
@@ -1011,7 +1006,6 @@
 							d="M7 7v10M10 7v10M13 7v10M17 7v10"
 						/>
 					</svg>
-					<!-- Glowing Green Status Indicator -->
 					<span class="absolute right-1 bottom-1 flex h-4 w-4">
 						<span
 							class="animate-ping absolute inline-flex h-full w-full rounded-full bg-exito opacity-75"
@@ -1034,7 +1028,6 @@
 					</p>
 				</div>
 
-				<!-- feedback visual -->
 				{#if lastScannedProduct}
 					<div
 						class="w-full max-w-md rounded-xl border border-primario/30 bg-primario/5 p-4 text-left flex justify-between items-center animate-modal-enter"
@@ -1061,7 +1054,6 @@
 					</div>
 				{/if}
 
-				<!-- botones scaner -->
 				<div class="mt-4 flex flex-wrap gap-3">
 					<button
 						type="button"
@@ -1082,7 +1074,6 @@
 				</div>
 			</div>
 
-			<!-- cartas y Checkout -->
 			<div class="lg:col-span-5">
 				<form
 					onsubmit={handleCheckout}
@@ -1106,7 +1097,6 @@
 						{/if}
 					</header>
 
-					<!-- items -->
 					<div
 						class="p-4 flex flex-col gap-3 min-h-[220px] max-h-[300px] overflow-y-auto border-b border-border-color"
 					>
@@ -1132,7 +1122,6 @@
 										</p>
 									</div>
 
-									<!--control cantidad -->
 									<div class="flex items-center gap-2">
 										<button
 											type="button"
@@ -1191,9 +1180,7 @@
 						{/if}
 					</div>
 
-					<!-- Checkout opciones -->
 					<div class="p-4 flex flex-col gap-4 bg-text-primary/[0.005]">
-						<!-- Payment Method Selection -->
 						<div class="flex flex-col gap-1">
 							<span class="text-xs font-bold uppercase tracking-wider text-text-secondary mb-1"
 								>Método de Pago</span
@@ -1250,7 +1237,6 @@
 
 						<!--verificacion de condiciones -->
 						{#if selectedMetodoId === '11111111-1111-1111-1111-111111111111'}
-							<!-- Cash Received -->
 							<div class="flex gap-4">
 								<div class="flex-1 flex flex-col gap-1">
 									<label
@@ -1280,7 +1266,6 @@
 								</div>
 							</div>
 						{:else if selectedMetodoId === 'fiado'}
-							<!-- Client Selection -->
 							<div class="flex flex-col gap-1">
 								<label
 									for="clientSelect"
@@ -1386,7 +1371,6 @@
 
 	<!-- Tabla historial -->
 	{#if activeTab === 'history'}
-		<!-- Stats -->
 		<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
 			<div
 				class="flex flex-col justify-center rounded-xl border border-border-color bg-bg-card p-5 shadow-sm"
@@ -1532,7 +1516,6 @@
 				>
 			</header>
 			<div class="p-6">
-				<!-- info -->
 				<div class="grid grid-cols-2 gap-4 mb-6 text-sm border-b border-border-color pb-4">
 					<div>
 						<p class="text-text-muted font-medium text-xs uppercase">Fecha y Hora</p>
@@ -1956,7 +1939,6 @@
 	</div>
 {/if}
 
-<!-- Success Receipt Preview Modal -->
 {#if showSuccessReceiptModal && recentlyCompletedSale}
 	<div
 		class="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 p-5 backdrop-blur-sm"
