@@ -1,27 +1,98 @@
 name: Continuous Deployment (Producción)
 
-# 1. Este bot SOLO despierta cuando el código llega a la rama main
 on:
   push:
     branches: [ "main" ]
 
 jobs:
-  deploy:
-    name: Desplegar en Servidor
+  deploy-backend:
+    name: Desplegar Backend en Servidor UBB
     runs-on: ubuntu-latest
-    
+
     steps:
-    - name: Conectando y Actualizando Producción
+    - name: Checkout código
+      uses: actions/checkout@v4
+
+    - name: Desplegar Backend
       uses: appleboy/ssh-action@master
       with:
         host: ${{ secrets.SERVER_HOST }}
         username: ${{ secrets.SERVER_USER }}
         key: ${{ secrets.SERVER_SSH_KEY }}
-        port: ${{ secrets.SERVER_PORT }} # <-- ¡Línea nueva crucial!
+        port: ${{ secrets.SERVER_PORT }}
         script: |
-          cd ~/GPS_2026_1/backend
-          git checkout main
-          git pull origin main
-          go build -o gps-backend .
+          cd ~/GPS_2026_1
+
+          git fetch origin main
+          git reset --hard origin/main
+
+          cd backend
+
+          if ! go build -o gps-backend-new .; then
+            echo "Build failed, aborting deploy"
+            exit 1
+          fi
+
+          if [ -f gps-backend ]; then
+            cp gps-backend gps-backend-backup
+          fi
+
+          mv gps-backend-new gps-backend
+
           pkill -f gps-backend || true
+          sleep 1
           nohup ./gps-backend > backend.log 2>&1 &
+
+          sleep 3
+          if curl -sf http://localhost:8080/health > /dev/null; then
+            echo "Deploy exitoso"
+          else
+            echo "Health check fallo, haciendo rollback..."
+            pkill -f gps-backend || true
+            if [ -f gps-backend-backup ]; then
+              mv gps-backend-backup gps-backend
+              nohup ./gps-backend > backend.log 2>&1 &
+            fi
+            exit 1
+          fi
+
+  deploy-frontend:
+    name: Desplegar Frontend en Servidor UBB
+    runs-on: ubuntu-latest
+    needs: deploy-backend
+
+    steps:
+    - name: Checkout código
+      uses: actions/checkout@v4
+
+    - name: Build Frontend
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+
+    - name: Instalar dependencias y build
+      working-directory: ./frontend
+      run: |
+        npm ci
+        npm run build
+
+    - name: Copiar build al servidor
+      uses: appleboy/scp-action@master
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        key: ${{ secrets.SERVER_SSH_KEY }}
+        port: ${{ secrets.SERVER_PORT }}
+        source: "frontend/build/"
+        target: "~/GPS_2026_1/frontend/build"
+        strip_components: 2
+
+    - name: Reiniciar Nginx
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        key: ${{ secrets.SERVER_SSH_KEY }}
+        port: ${{ secrets.SERVER_PORT }}
+        script: |
+          sudo nginx -t && sudo nginx -s reload
