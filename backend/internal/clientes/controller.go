@@ -76,16 +76,8 @@ func (ctrl *ClienteController) CreateClienteController(c *gin.Context) {
 		nuevoCliente.FiadoMaximo = 20000.0
 	}
 
-	if input.FiadoActual != nil {
-		if *input.FiadoActual > nuevoCliente.FiadoMaximo {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error":   "No se pudo registrar el cliente.",
-				"detalle": "El saldo de fiado no puede superar el límite máximo de $20.000.",
-			})
-			return
-		}
-		nuevoCliente.FiadoActual = *input.FiadoActual
-	}
+	// Forzar FiadoActual a 0 sin importar lo que envíe el frontend
+	nuevoCliente.FiadoActual = 0.0
 
 	err := CreateCliente(ctrl.db, &nuevoCliente)
 	if err != nil {

@@ -211,7 +211,7 @@
 		formNombre = '';
 		formRut = '';
 		formTelefono = '';
-		formFiadoActual = '';
+		formFiadoActual = 0;
 		formFiadoMaximo = 20000;
 		clearErrors();
 		showModal = true;
@@ -697,9 +697,9 @@
 								min="0"
 								step="1"
 								id="formFiadoActual"
-								class="w-full rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 pl-8 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+								class="w-full rounded-xl border border-border-color bg-bg-primary px-4 py-2.5 pl-8 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50 disabled:cursor-not-allowed [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
 								bind:value={formFiadoActual}
-								disabled={submitLoading}
+								disabled={submitLoading || !editingCliente}
 								required
 							/>
 						</div>

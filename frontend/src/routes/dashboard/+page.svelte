@@ -166,7 +166,7 @@
 					fecha: new Date(v.fecha_emision),
 					estado:
 						v.metodo_pago && v.metodo_pago.nombre_metodo ? v.metodo_pago.nombre_metodo : 'Efectivo',
-					desc: `Venta #${v.id_venta.slice(0, 8)}...`
+					desc: `Venta Completada`
 				};
 			});
 		} catch (error) {

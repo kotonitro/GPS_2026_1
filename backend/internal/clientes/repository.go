@@ -1,6 +1,10 @@
 package clientes
 
-import "gorm.io/gorm"
+import (
+	"errors"
+
+	"gorm.io/gorm"
+)
 
 // obetener todos los clientes de la DB
 func GetClientes(db *gorm.DB) ([]Cliente, error) {
@@ -34,6 +38,10 @@ func DeleteClienteByID(db *gorm.DB, id string) error {
 
 	if err := db.First(&cliente, "id = ?", id).Error; err != nil {
 		return err
+	}
+
+	if cliente.FiadoActual > 0 {
+		return errors.New("no se puede eliminar el cliente porque posee una deuda pendiente")
 	}
 
 	if err := db.Delete(&cliente).Error; err != nil {
