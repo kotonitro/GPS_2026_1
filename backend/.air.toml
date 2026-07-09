@@ -1,0 +1,10 @@
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  cmd = "go build -o ./tmp/main ."
+  bin = "tmp/main"
+  include_ext = ["go", "tpl", "tmpl", "html", "env"]
+  exclude_dir = ["assets", "tmp", "vendor", "testdata", "frontend"]
+  poll = true
+  poll_interval = 500

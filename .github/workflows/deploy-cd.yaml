@@ -1,0 +1,27 @@
+name: Continuous Deployment (Producción)
+
+# 1. Este bot SOLO despierta cuando el código llega a la rama main
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  deploy:
+    name: Desplegar en Servidor
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Conectando y Actualizando Producción
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        key: ${{ secrets.SERVER_SSH_KEY }}
+        port: ${{ secrets.SERVER_PORT }} # <-- ¡Línea nueva crucial!
+        script: |
+          cd ~/GPS_2026_1/backend
+          git checkout main
+          git pull origin main
+          go build -o gps-backend .
+          pkill -f gps-backend || true
+          nohup ./gps-backend > backend.log 2>&1 &

@@ -1,51 +1,58 @@
 package database
 
 import (
-	"fmt"
-	"log"
-	"os"
-
+	"backend/internal/cajas"
 	"backend/internal/clientes"
+	"backend/internal/config"
+	"backend/internal/empleados"
 	"backend/internal/inventario"
 	"backend/internal/promociones"
 	"backend/internal/ventas"
+	"fmt"
+	"log"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
-// Init inicializa la conexión a PostgreSQL y ejecuta las migraciones automáticas
-func Init() *gorm.DB {
-
-	host := os.Getenv("DB_HOST")
-	user := os.Getenv("DB_USER")
-	password := os.Getenv("DB_PASSWORD")
-	name := os.Getenv("DB_NAME")
-	port := os.Getenv("DB_PORT")
+// Inicializa la conexión a PostgreSQL
+func Connect(cfg *config.AppConfig) *gorm.DB {
 
 	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable",
-		host, user, password, name, port,
+		cfg.DBHost, cfg.DBUser, cfg.DBPassword, cfg.DBName, cfg.DBPort,
 	)
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
-		log.Fatalf("Error crítico al conectar con la base de datos: %v", err)
+		log.Fatal("Error: No se pudo conectar a la base de datos \n", err)
 	}
 
-	err = db.AutoMigrate(
+	fmt.Println("Conexión con la base de datos establecida")
+
+	return db
+}
+
+// Migra automaticamente las tablas
+func Migrations(db *gorm.DB) {
+	err := db.AutoMigrate(
+		&empleados.Empleado{},
+		&empleados.Rol{},
 		&clientes.Cliente{},
+		&cajas.Caja{},
+		&cajas.TurnoCaja{},
 		&inventario.Categoria{},
 		&inventario.Producto{},
 		&promociones.Promocion{},
-		&promociones.DetalleVenta{},
+		&promociones.DetallePromocion{},
 		&ventas.MetodoPago{},
 		&ventas.Venta{},
 		&ventas.DetalleVenta{},
 		&ventas.Fiado{},
 	)
+
 	if err != nil {
-		log.Fatalf("Error crítico al ejecutar las migraciones de tablas: %v", err)
+		log.Fatal("Error fatal al ejecutar las migraciones: ", err)
 	}
 
-	return db
+	log.Println("Migraciones ejecutadas exitosamente")
 }
