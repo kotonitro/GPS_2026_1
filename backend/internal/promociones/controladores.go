@@ -179,6 +179,9 @@ func (ctrl *PromocionController) UpdatePromocionByIDController(c *gin.Context) {
 	if input.Descuento != nil {
 		datosActualizados["descuento"] = *input.Descuento
 	}
+	
+	datosActualizados["fecha_inicio"] = input.FechaInicio
+	datosActualizados["fecha_fin"] = input.FechaFin
 
 	promocionActualizada, err := ActualizarPromocion(ctrl.db, id, datosActualizados)
 	if err != nil {
