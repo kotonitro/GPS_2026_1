@@ -5,11 +5,16 @@
 		apiClientes,
 		apiVentas,
 		apiCajas,
+		apiTurnos,
 		obtenerPromociones,
-		apiEmpleados
+		apiEmpleados,
+		logout,
+		type TurnoCaja,
+		type Promocion as PromocionAPI
 	} from '$lib/api';
 	import { auth } from '$lib/authStore.svelte';
 	import { toast } from '$lib/toastStore.svelte';
+	import { goto } from '$app/navigation';
 	import {
 		Search,
 		Plus,
@@ -28,7 +33,9 @@
 		Keyboard,
 		Laptop,
 		Sparkles,
-		Camera
+		Camera,
+		Lock,
+		Unlock
 	} from '@lucide/svelte';
 	import Scanner from '$lib/components/Scanner.svelte';
 
@@ -75,6 +82,7 @@
 		id_caja: string;
 		id_metodo: string;
 		id_empleado: string;
+		id_cliente?: string;
 		fecha_emision: string;
 		pago: number;
 		vuelto: number;
@@ -87,6 +95,59 @@
 			nombre_metodo: string;
 		};
 		fiado?: {
+			fecha_limite: string;
+			pagado: boolean;
+		};
+	}
+
+	type Promocion = PromocionAPI;
+
+	interface PendingSale {
+		id: string;
+		payload: any;
+		createdAt: string;
+	}
+
+	const PENDING_SALES_KEY = 'pending_sales';
+
+	function generateUUID(): string {
+		if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+			return crypto.randomUUID();
+		}
+		return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+			const r = (Math.random() * 16) | 0;
+			const v = c === 'x' ? r : (r & 0x3) | 0x8;
+			return v.toString(16);
+		});
+	}
+
+	function getPendingSales(): PendingSale[] {
+		if (typeof window === 'undefined') return [];
+		const raw = localStorage.getItem(PENDING_SALES_KEY);
+		return raw ? JSON.parse(raw) : [];
+	}
+
+	function savePendingSales(sales: PendingSale[]) {
+		if (typeof window !== 'undefined') {
+			localStorage.setItem(PENDING_SALES_KEY, JSON.stringify(sales));
+		}
+	}
+
+	function addPendingSale(payload: any): string {
+		const sales = getPendingSales();
+		const id = generateUUID();
+		sales.push({ id, payload, createdAt: new Date().toISOString() });
+		savePendingSales(sales);
+		return id;
+	}
+
+	function removePendingSalesByIds(ids: string[]) {
+		const sales = getPendingSales().filter((s) => !ids.includes(s.id));
+		savePendingSales(sales);
+	}
+
+	function refreshPendingSales() {
+		pendingSales = getPendingSales();
 			id_fiado: string;
 			id_cliente: string;
 			id_venta: string;
@@ -97,15 +158,37 @@
 		};
 	}
 
-	interface Promocion {
-		id_promocion: string;
-		tipo: string;
-		lleva: number;
-		paga: number;
-		descuento: number;
-		producto_id: string;
-		fecha_inicio: string | null;
-		fecha_fin: string | null;
+	async function syncPendingSales() {
+		const sales = getPendingSales();
+		if (sales.length === 0) return;
+
+		try {
+			const res = await apiFetch('/ventas/sync', {
+				method: 'POST',
+				body: JSON.stringify({ ventas: sales.map((s) => s.payload) })
+			});
+
+			const resultados = res.resultados || [];
+			const syncedIds = resultados.filter((r: any) => r.status === 'ok').map((r: any) => r.id);
+
+			removePendingSalesByIds(syncedIds);
+			refreshPendingSales();
+
+			const errors = resultados.filter((r: any) => r.status === 'error');
+			const duplicates = resultados.filter((r: any) => r.status === 'duplicado');
+
+			if (syncedIds.length > 0) {
+				toast.show(`${syncedIds.length} venta(s) sincronizada(s)`, 'success');
+			}
+			if (duplicates.length > 0) {
+				toast.show(`${duplicates.length} venta(s) ya estaban sincronizadas`, 'success');
+			}
+			if (errors.length > 0) {
+				toast.show(`${errors.length} venta(s) no pudieron sincronizarse`, 'error');
+			}
+		} catch (err: any) {
+			toast.show(err.message || 'Error al sincronizar ventas pendientes', 'error');
+		}
 	}
 
 	// variables de estado
@@ -128,8 +211,17 @@
 	let discountPercent = $state<number>(0);
 	let cashReceived = $state<number | ''>('');
 
+	// Turno de caja
+	let turnoActivo = $state<TurnoCaja | null>(null);
+	let turnoLoading = $state(true);
+	let showTurnoAperturaModal = $state(false);
+	let showTurnoCierreModal = $state(false);
+	let aperturaCajaId = $state<string>('');
+	let aperturaSaldoInicial = $state<number | ''>('');
+	let cierreSaldoReal = $state<number | ''>('');
+	let cerrarSesionAlCerrarTurno = $state(false);
+
 	// Modals
-	let showCajaConfigModal = $state(false);
 	let showManualCodeModal = $state(false);
 	let manualBarcodeValue = $state('');
 	let modoEscaneo = $state(false);
@@ -140,6 +232,7 @@
 		cantidad: number;
 	}
 	let cart = $state<CartItem[]>([]);
+	let pendingSales = $state<PendingSale[]>([]);
 
 	// visualizacion del ultimo scanner
 	let lastScannedProduct = $state<Producto | null>(null);
@@ -188,18 +281,22 @@
 		const qty = item.cantidad;
 
 		if (promo.tipo === 'NXM') {
-			if (promo.lleva > 0 && promo.paga > 0 && promo.lleva > promo.paga) {
-				const sets = Math.floor(qty / promo.lleva);
-				const discountQty = sets * (promo.lleva - promo.paga);
+			const lleva = promo.lleva ?? 0;
+			const paga = promo.paga ?? 0;
+			if (lleva > 0 && paga > 0 && lleva > paga) {
+				const sets = Math.floor(qty / lleva);
+				const discountQty = sets * (lleva - paga);
 				return discountQty * price;
 			}
 		} else if (promo.tipo === 'porcentaje') {
-			if (promo.descuento > 0) {
-				return Math.round(qty * price * (promo.descuento / 100));
+			const descuento = promo.descuento ?? 0;
+			if (descuento > 0) {
+				return Math.round(qty * price * (descuento / 100));
 			}
 		} else if (promo.tipo === 'precio_fijo') {
-			if (promo.descuento > 0 && price > promo.descuento) {
-				const unitDiscount = price - promo.descuento;
+			const descuento = promo.descuento ?? 0;
+			if (descuento > 0 && price > descuento) {
+				const unitDiscount = price - descuento;
 				return qty * unitDiscount;
 			}
 		}
@@ -347,6 +444,13 @@
 		cantidadVentasHoy > 0 ? Math.round(totalVendidoHoy / cantidadVentasHoy) : 0
 	);
 
+	// arqueo de cierre
+	let cierreDiferencia = $derived(
+		turnoActivo && typeof cierreSaldoReal === 'number'
+			? Math.round((cierreSaldoReal - turnoActivo.saldo_esperado) * 100) / 100
+			: 0
+	);
+
 	// cliente detalle
 	let selectedClientData = $derived(clientes.find((c) => c.id_cliente === selectedClienteId));
 	let isFiadoLimitExceeded = $derived.by(() => {
@@ -371,7 +475,6 @@
 	function handleGlobalKeydown(e: KeyboardEvent) {
 		if (activeTab !== 'pos') return;
 
-		
 		const target = e.target as HTMLElement;
 		if (
 			target.tagName === 'INPUT' ||
@@ -404,12 +507,15 @@
 
 	onMount(async () => {
 		window.addEventListener('keydown', handleGlobalKeydown);
+		window.addEventListener('online', syncPendingSales);
+		refreshPendingSales();
 		await loadData();
 	});
 
 	onDestroy(() => {
 		if (typeof window !== 'undefined') {
 			window.removeEventListener('keydown', handleGlobalKeydown);
+			window.removeEventListener('online', syncPendingSales);
 		}
 	});
 
@@ -433,8 +539,8 @@
 			promociones = Array.isArray(resPromociones) ? resPromociones : [];
 			empleados = Array.isArray(resEmployees) ? resEmployees : [];
 
-			// detectar caja 
-			detectCaja();
+			// detectar turno de caja activo
+			await loadTurnoActivo();
 		} catch (err: any) {
 			toast.show(err.message || 'Error al cargar los datos del módulo de ventas.', 'error');
 		} finally {
@@ -442,29 +548,119 @@
 		}
 	}
 
-	function detectCaja() {
-		const savedCajaId = localStorage.getItem('id_caja');
-		const activeCajaExists = cajas.some((c) => c.id_caja === savedCajaId);
+	async function loadTurnoActivo() {
+		turnoLoading = true;
+		try {
+			if (!navigator.onLine) {
+				// En modo offline confiamos en la última caja asignada localmente
+				const savedCajaId = localStorage.getItem('id_caja');
+				selectedCajaId = cajas.some((c) => c.id_caja === savedCajaId) ? savedCajaId! : '';
+				return;
+			}
 
-		if (savedCajaId && activeCajaExists) {
-			selectedCajaId = savedCajaId;
-		} else {
-			// Si no está configurado, o si la caja seleccionada ya no está activa o no existe
-			selectedCajaId = '';
-			showCajaConfigModal = true;
+			const res = await apiTurnos.getActivo();
+			if (res.activo && res.turno) {
+				turnoActivo = res.turno;
+				selectedCajaId = res.turno.id_caja;
+				localStorage.setItem('id_caja', res.turno.id_caja);
+				showTurnoAperturaModal = false;
+			} else {
+				turnoActivo = null;
+				selectedCajaId = '';
+				aperturaCajaId = '';
+				aperturaSaldoInicial = '';
+				showTurnoAperturaModal = true;
+			}
+		} catch (err: any) {
+			toast.show(err.message || 'Error al verificar el turno de caja', 'error');
+		} finally {
+			turnoLoading = false;
 		}
 	}
 
-	function handleCajaSelection(cajaId: string) {
-		selectedCajaId = cajaId;
-		localStorage.setItem('id_caja', cajaId);
-		showCajaConfigModal = false;
-		const cajaName = cajas.find((c) => c.id_caja === cajaId)?.nombre || 'Caja';
-		toast.show(`Equipo asociado correctamente a: ${cajaName}`, 'success');
+	async function handleAbrirTurno(e: Event) {
+		e.preventDefault();
+		if (!aperturaCajaId) {
+			toast.show('Debes seleccionar una caja', 'error');
+			return;
+		}
+		if (aperturaSaldoInicial === '' || Number(aperturaSaldoInicial) < 0) {
+			toast.show('Debes ingresar un saldo inicial válido', 'error');
+			return;
+		}
+
+		submitting = true;
+		try {
+			const res = await apiTurnos.abrir({
+				id_caja: aperturaCajaId,
+				saldo_inicial: Number(aperturaSaldoInicial)
+			});
+			localStorage.setItem('id_caja', res.id_caja);
+			toast.show('Turno de caja abierto correctamente', 'success');
+			await loadTurnoActivo();
+		} catch (err: any) {
+			toast.show(err.message || 'No se pudo abrir el turno de caja', 'error');
+		} finally {
+			submitting = false;
+		}
 	}
 
-	function changeCaja() {
-		showCajaConfigModal = true;
+	function openCierreTurno() {
+		if (!turnoActivo) return;
+		cierreSaldoReal = '';
+		cerrarSesionAlCerrarTurno = false;
+		showTurnoCierreModal = true;
+	}
+
+	async function handleCerrarTurno(e: Event) {
+		e.preventDefault();
+		if (!turnoActivo) return;
+		if (cierreSaldoReal === '' || Number(cierreSaldoReal) < 0) {
+			toast.show('Debes ingresar el saldo real del arqueo', 'error');
+			return;
+		}
+
+		const pending = getPendingSales();
+		if (cerrarSesionAlCerrarTurno && pending.length > 0) {
+			if (!navigator.onLine) {
+				toast.show(
+					'Tienes ventas offline pendientes. Conéctate a internet para sincronizarlas antes de cerrar sesión.',
+					'error'
+				);
+				return;
+			}
+			toast.show('Sincronizando ventas pendientes antes de cerrar sesión...', 'success');
+			await syncPendingSales();
+			const stillPending = getPendingSales();
+			if (stillPending.length > 0) {
+				toast.show(
+					'Algunas ventas pendientes no pudieron sincronizarse. Revisa los errores antes de cerrar sesión.',
+					'error'
+				);
+				return;
+			}
+		}
+
+		submitting = true;
+		try {
+			await apiTurnos.cerrar({ saldo_real: Number(cierreSaldoReal) });
+			toast.show('Turno de caja cerrado correctamente', 'success');
+			showTurnoCierreModal = false;
+			turnoActivo = null;
+			selectedCajaId = '';
+			localStorage.removeItem('id_caja');
+
+			if (cerrarSesionAlCerrarTurno) {
+				await logout();
+				goto('/login');
+			} else {
+				showTurnoAperturaModal = true;
+			}
+		} catch (err: any) {
+			toast.show(err.message || 'No se pudo cerrar el turno de caja', 'error');
+		} finally {
+			submitting = false;
+		}
 	}
 
 	function formatCurrency(amount: number) {
@@ -561,9 +757,9 @@
 			return;
 		}
 
-		if (!selectedCajaId) {
-			toast.show('Por favor, asocia el equipo a una Caja activa.', 'error');
-			showCajaConfigModal = true;
+		if (!selectedCajaId || !turnoActivo) {
+			toast.show('Debes abrir un turno de caja para realizar ventas.', 'error');
+			showTurnoAperturaModal = true;
 			return;
 		}
 
@@ -612,6 +808,20 @@
 			monto_descuento: discountAmount,
 			detalles: detallesPayload
 		};
+
+		if (!navigator.onLine) {
+			const offlinePayload = {
+				...payload,
+				id_venta: generateUUID(),
+				fecha_emision: new Date().toISOString()
+			};
+			addPendingSale(offlinePayload);
+			refreshPendingSales();
+			toast.show('Venta guardada localmente. Se sincronizará al recuperar conexión.', 'success');
+			clearCart();
+			submitting = false;
+			return;
+		}
 
 		try {
 			const res = await apiVentas.create(payload);
@@ -716,15 +926,47 @@
 
 	<!-- indicador de la caja -->
 	<div class="flex items-center gap-3 pr-4">
-		<div
-			class="flex items-center gap-2 rounded-lg border border-border-color bg-bg-card px-3 py-1.5 text-xs text-text-secondary"
-		>
-			<Laptop size={14} class="text-primario" />
-			<span>Terminal asociado a: <strong class="text-text-primary">{activeCajaName}</strong></span>
-		</div>
-		<button onclick={changeCaja} class="text-xs text-primario hover:underline font-semibold">
-			Cambiar Caja
-		</button>
+		{#if pendingSales.length > 0}
+			<div
+				class="flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-xs text-amber-700 dark:text-amber-400"
+			>
+				<span class="font-bold">{pendingSales.length}</span>
+				<span>venta(s) pendiente(s)</span>
+			</div>
+			{#if navigator.onLine}
+				<button
+					onclick={syncPendingSales}
+					class="text-xs text-primario hover:underline font-semibold"
+				>
+					Sincronizar ahora
+				</button>
+			{/if}
+		{/if}
+		{#if turnoActivo}
+			<div
+				class="flex items-center gap-2 rounded-lg border border-border-color bg-bg-card px-3 py-1.5 text-xs text-text-secondary"
+			>
+				<Unlock size={14} class="text-exito" />
+				<span
+					>Turno abierto: <strong class="text-text-primary">{activeCajaName}</strong> · Saldo esperado:
+					<strong class="text-text-primary">{formatCurrency(turnoActivo.saldo_esperado)}</strong></span
+				>
+			</div>
+			<button
+				onclick={openCierreTurno}
+				class="inline-flex items-center gap-1 text-xs text-primario hover:underline font-semibold"
+			>
+				<Lock size={12} />
+				<span>Cerrar Turno/Caja</span>
+			</button>
+		{:else}
+			<div
+				class="flex items-center gap-2 rounded-lg border border-danger-color/30 bg-danger-bg px-3 py-1.5 text-xs text-danger-color"
+			>
+				<Lock size={14} />
+				<span>Sin turno abierto</span>
+			</div>
+		{/if}
 	</div>
 </div>
 
@@ -1122,6 +1364,7 @@
 								isFiadoLimitExceeded ||
 								!selectedCajaId ||
 								hasExpiredFiados}
+							class="w-full inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-accent-light to-accent py-3 font-bold text-white shadow-md transition-all hover:bg-primario-hover hover:shadow-glow disabled:cursor-not-allowed disabled:opacity-50"
 							class="w-full inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-accent-light to-accent py-3 font-bold text-white shadow-md hover:bg-primario-hover hover:shadow-glow disabled:cursor-not-allowed disabled:opacity-50"
 						>
 							{#if submitting}
@@ -1427,13 +1670,13 @@
 	</div>
 {/if}
 
-<!-- configuracion de caja Modal -->
-{#if showCajaConfigModal}
+<!-- Modal de Apertura de Turno -->
+{#if showTurnoAperturaModal}
 	<div
-		class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-5 backdrop-blur-sm"
+		class="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-5 backdrop-blur-sm"
 	>
 		<div
-			class="w-full max-w-[450px] overflow-hidden rounded-xl border border-border-color bg-bg-card p-6 shadow-2xl animate-modal-enter text-center relative"
+			class="w-full max-w-[450px] overflow-hidden rounded-xl border border-border-color bg-bg-card p-6 shadow-2xl animate-modal-enter text-center"
 		>
 			{#if selectedCajaId}
 				<button
@@ -1448,49 +1691,172 @@
 			<div
 				class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primario/10 text-primario"
 			>
-				<Laptop size={28} />
+				<Unlock size={28} />
 			</div>
-			<h3 class="text-lg font-bold text-text-primary">Asociar Caja a este Terminal</h3>
+			<h3 class="text-lg font-bold text-text-primary">Abrir Turno de Caja</h3>
 			<p class="text-xs text-text-secondary mt-1.5 max-w-xs mx-auto">
-				Por seguridad y control de arqueo, debes indicar a qué caja corresponde este equipo antes de
-				realizar ventas. Esta selección quedará guardada en este dispositivo.
+				Para registrar ventas debes abrir un turno indicando la caja y el efectivo inicial con el
+				que cuentas para vueltos.
 			</p>
 
-			<div class="my-6">
-				<label
-					for="cajaConfigSelect"
-					class="block text-left text-xs font-bold uppercase tracking-wider text-text-secondary mb-2"
-					>Selecciona la caja activa</label
-				>
-				<select
-					id="cajaConfigSelect"
-					class="w-full rounded-lg border border-border-color bg-bg-card p-3 text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-primario focus:border-primario"
-					onchange={(e) => handleCajaSelection((e.target as HTMLSelectElement).value)}
-				>
-					<option value="" disabled selected={!selectedCajaId}>-- Selecciona una caja --</option>
-					{#each cajas as c}
-						<option value={c.id_caja} selected={c.id_caja === selectedCajaId}
-							>{c.nombre} ({c.ubicacion})</option
-						>
-					{/each}
-				</select>
-			</div>
+			<form onsubmit={handleAbrirTurno} class="my-6 text-left">
+				<div class="mb-4">
+					<label
+						for="turnoCajaSelect"
+						class="block text-xs font-bold uppercase tracking-wider text-text-secondary mb-2"
+						>Caja asignada</label
+					>
+					<select
+						id="turnoCajaSelect"
+						bind:value={aperturaCajaId}
+						class="w-full rounded-lg border border-border-color bg-bg-card p-3 text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-primario focus:border-primario"
+						required
+					>
+						<option value="" disabled selected>-- Selecciona una caja --</option>
+						{#each cajas as c}
+							<option value={c.id_caja}>{c.nombre} ({c.ubicacion})</option>
+						{/each}
+					</select>
+				</div>
 
-			<div class="flex flex-col gap-3">
-				{#if selectedCajaId}
+				<div class="mb-6">
+					<label
+						for="saldoInicial"
+						class="block text-xs font-bold uppercase tracking-wider text-text-secondary mb-2"
+						>Saldo Inicial de Apertura</label
+					>
+					<div class="relative flex items-center">
+						<span class="absolute left-3 text-sm text-text-muted font-bold">$</span>
+						<input
+							id="saldoInicial"
+							type="number"
+							min="0"
+							placeholder="0"
+							bind:value={aperturaSaldoInicial}
+							class="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none w-full rounded-lg border border-border-color bg-bg-card py-2.5 pl-7 pr-3 text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-primario focus:border-primario"
+							required
+						/>
+					</div>
+					<p class="text-[10px] text-text-muted mt-1.5">
+						Efectivo base que tienes disponible para entregar vueltos.
+					</p>
+				</div>
+
+				<button
+					type="submit"
+					disabled={submitting || !aperturaCajaId || aperturaSaldoInicial === ''}
+					class="w-full rounded-lg bg-primario py-2.5 text-sm font-bold text-white shadow-md transition-all hover:bg-primario-hover disabled:cursor-not-allowed disabled:opacity-50"
+				>
+					{#if submitting}Abriendo turno...{:else}Abrir Turno de Caja{/if}
+				</button>
+			</form>
+		</div>
+	</div>
+{/if}
+
+<!-- Modal de Cierre de Turno -->
+{#if showTurnoCierreModal && turnoActivo}
+	<div
+		class="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-5 backdrop-blur-sm"
+		onclick={() => (showTurnoCierreModal = false)}
+		role="presentation"
+	>
+		<div
+			class="w-full max-w-[450px] overflow-hidden rounded-xl border border-border-color bg-bg-card shadow-2xl animate-modal-enter"
+			onclick={(e) => e.stopPropagation()}
+			role="dialog"
+		>
+			<header class="flex items-center justify-between border-b border-border-color p-5">
+				<div>
+					<h2 class="text-lg font-bold text-text-primary">Cerrar Turno de Caja</h2>
+					<p class="text-xs text-text-muted mt-0.5">{turnoActivo.caja?.nombre || activeCajaName}</p>
+				</div>
+				<button
+					class="inline-flex cursor-pointer items-center justify-center rounded-lg border border-border-color bg-text-primary/3 p-2 text-text-secondary transition-all duration-200 hover:border-border-color-hover hover:bg-text-primary/7 hover:text-text-primary"
+					onclick={() => (showTurnoCierreModal = false)}>&times;</button
+				>
+			</header>
+
+			<form onsubmit={handleCerrarTurno} class="p-6">
+				<div class="grid grid-cols-2 gap-4 mb-4">
+					<div class="rounded-lg border border-border-color bg-text-primary/[0.015] p-4">
+						<p class="text-[10px] font-bold uppercase tracking-wider text-text-muted">Saldo Inicial</p>
+						<p class="text-lg font-black text-text-primary mt-1">
+							{formatCurrency(turnoActivo.saldo_inicial)}
+						</p>
+					</div>
+					<div class="rounded-lg border border-border-color bg-text-primary/[0.015] p-4">
+						<p class="text-[10px] font-bold uppercase tracking-wider text-text-muted">Saldo Esperado</p>
+						<p class="text-lg font-black text-primario mt-1">
+							{formatCurrency(turnoActivo.saldo_esperado)}
+						</p>
+					</div>
+				</div>
+
+				<div class="mb-4">
+					<label
+						for="saldoReal"
+						class="block text-xs font-bold uppercase tracking-wider text-text-secondary mb-2"
+						>Saldo Real del Arqueo</label
+					>
+					<div class="relative flex items-center">
+						<span class="absolute left-3 text-sm text-text-muted font-bold">$</span>
+						<input
+							id="saldoReal"
+							type="number"
+							min="0"
+							placeholder="0"
+							bind:value={cierreSaldoReal}
+							class="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none w-full rounded-lg border border-border-color bg-bg-card py-2.5 pl-7 pr-3 text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-primario focus:border-primario"
+							required
+						/>
+					</div>
+				</div>
+
+				<div class="mb-4 flex items-start gap-3 rounded-lg border border-border-color bg-text-primary/[0.015] p-3">
+					<input
+						id="cerrarSesion"
+						type="checkbox"
+						bind:checked={cerrarSesionAlCerrarTurno}
+						class="mt-0.5 h-4 w-4 accent-primario cursor-pointer shrink-0"
+					/>
+					<div class="flex flex-col">
+						<label for="cerrarSesion" class="text-xs font-semibold text-text-primary cursor-pointer">
+							Cerrar sesión al finalizar
+						</label>
+						<p class="text-[10px] text-text-muted mt-0.5">
+							Marca esta opción si terminas tu jornada. Se sincronizarán las ventas offline
+							pendientes antes de salir.
+						</p>
+					</div>
+				</div>
+
+				<div
+					class="mb-6 rounded-lg border p-4 {cierreDiferencia === 0
+						? 'border-exito/20 bg-exito/5 text-exito'
+						: cierreDiferencia > 0
+							? 'border-amber-500/20 bg-amber-500/5 text-amber-700 dark:text-amber-400'
+							: 'border-danger-color/20 bg-danger-bg text-danger-color'}"
+				>
+					<p class="text-[10px] font-bold uppercase tracking-wider">Diferencia</p>
+					<p class="text-xl font-black mt-1">{formatCurrency(cierreDiferencia)}</p>
+				</div>
+
+				<footer class="flex justify-end gap-3">
 					<button
 						type="button"
-						class="w-full rounded-lg border border-border-color bg-bg-secondary py-2.5 text-sm font-semibold text-text-primary hover:bg-text-primary/5"
-						onclick={() => (showCajaConfigModal = false)}
+						class="px-4 py-2 rounded-lg border border-border-color text-xs font-semibold text-text-secondary bg-bg-secondary hover:bg-text-primary/5"
+						onclick={() => (showTurnoCierreModal = false)}>Cancelar</button
 					>
-						Cancelar
+					<button
+						type="submit"
+						disabled={submitting || cierreSaldoReal === ''}
+						class="px-4 py-2 rounded-lg bg-primario text-white text-xs font-bold hover:bg-primario-hover shadow-sm disabled:cursor-not-allowed disabled:opacity-50"
+					>
+						{#if submitting}Cerrando...{:else}Cerrar Turno{/if}
 					</button>
-				{/if}
-			</div>
-
-			<p class="text-[10px] text-text-muted mt-4">
-				Podrás cambiar esta asignación más tarde desde la esquina superior derecha si es necesario.
-			</p>
+				</footer>
+			</form>
 		</div>
 	</div>
 {/if}

@@ -18,45 +18,45 @@ func NewPromocionController(db *gorm.DB) *PromocionController {
 }
 
 type CreatePromocionInput struct {
-	ProductoID     *string   `json:"producto_id"`
-	ProductosCombo []string  `json:"productos_combo"`
-	Tipo           string    `json:"tipo" binding:"required"`
-	Lleva          *int      `json:"lleva"`
-	Paga           *int      `json:"paga"`
-	Descuento      *float64  `json:"descuento"`
+	ProductoID     *string    `json:"producto_id"`
+	ProductosCombo []string   `json:"productos_combo"`
+	Tipo           string     `json:"tipo" binding:"required"`
+	Lleva          *int       `json:"lleva"`
+	Paga           *int       `json:"paga"`
+	Descuento      *float64   `json:"descuento"`
 	FechaInicio    *time.Time `json:"fecha_inicio"`
 	FechaFin       *time.Time `json:"fecha_fin"`
 }
 
 type UpdatePromocionInput struct {
 	ProductoID     *string    `json:"producto_id"`
-	Tipo      *string  `json:"tipo"`
+	Tipo           *string    `json:"tipo"`
 	ProductosCombo []string   `json:"productos_combo"`
-	Lleva     *int     `json:"lleva"`
-	Paga      *int     `json:"paga"`
-	Descuento *float64 `json:"descuento"`
-	FechaInicio *time.Time `json:"fecha_inicio"`
-	FechaFin    *time.Time `json:"fecha_fin"`
+	Lleva          *int       `json:"lleva"`
+	Paga           *int       `json:"paga"`
+	Descuento      *float64   `json:"descuento"`
+	FechaInicio    *time.Time `json:"fecha_inicio"`
+	FechaFin       *time.Time `json:"fecha_fin"`
 }
 
 func (ctrl *PromocionController) CreatePromocionController(c *gin.Context) {
 	var input CreatePromocionInput
 	if err := c.ShouldBindJSON(&input); err != nil {
-    c.JSON(http.StatusBadRequest, gin.H{"error": "Error de estructura: " + err.Error()})
-    return
-}
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Error de estructura: " + err.Error()})
+		return
+	}
 
 	switch input.Tipo {
-		case "NXM":
-    		if input.Lleva == nil || *input.Lleva <= 0 || input.Paga == nil || *input.Paga <= 0 {
-        	c.JSON(http.StatusBadRequest, gin.H{"error": "Para NXM, lleva y paga son requeridos y > 0"})
-         	return
-      		}
-    	case "porcentaje", "precio_fijo", "COMBO":
-     		if input.Descuento == nil || *input.Descuento <= 0 {
-       		c.JSON(http.StatusBadRequest, gin.H{"error": "El descuento debe ser mayor a 0"})
-         	return
-       		}
+	case "NXM":
+		if input.Lleva == nil || *input.Lleva <= 0 || input.Paga == nil || *input.Paga <= 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Para NXM, lleva y paga son requeridos y > 0"})
+			return
+		}
+	case "porcentaje", "precio_fijo", "COMBO":
+		if input.Descuento == nil || *input.Descuento <= 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "El descuento debe ser mayor a 0"})
+			return
+		}
 	default:
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Tipo de promocion no valida"})
 		return
@@ -67,7 +67,7 @@ func (ctrl *PromocionController) CreatePromocionController(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Debe seleccionar un producto para esta promoción"})
 			return
 		}
-		input.ProductosCombo = []string{} 
+		input.ProductosCombo = []string{}
 	}
 
 	// Guardar
@@ -78,7 +78,7 @@ func (ctrl *PromocionController) CreatePromocionController(c *gin.Context) {
 		Lleva:          input.Lleva,
 		Paga:           input.Paga,
 		Descuento:      input.Descuento,
-		FechaInicio:    input.FechaInicio, 
+		FechaInicio:    input.FechaInicio,
 		FechaFin:       input.FechaFin,
 	}
 
@@ -119,7 +119,7 @@ func (ctrl *PromocionController) GetPromocionByIDController(c *gin.Context) {
 
 func (ctrl *PromocionController) UpdatePromocionByIDController(c *gin.Context) {
 	id := c.Param("id")
-	var input UpdatePromocionInput 
+	var input UpdatePromocionInput
 
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Datos inválidos: " + err.Error()})
@@ -167,7 +167,7 @@ func (ctrl *PromocionController) UpdatePromocionByIDController(c *gin.Context) {
 	if input.Tipo != nil {
 		datosActualizados["tipo"] = *input.Tipo
 		// Agregamos los campos de producto siempre que se actualice el tipo
-		datosActualizados["producto_id"] = input.ProductoID 
+		datosActualizados["producto_id"] = input.ProductoID
 		datosActualizados["productos_combo"] = input.ProductosCombo
 	}
 	if input.Lleva != nil {

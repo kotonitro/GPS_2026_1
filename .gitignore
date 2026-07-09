@@ -9,6 +9,7 @@
 
 # BACKEND
 tmp/
+backend/backend
 
 # FRONTEND
 node_modules/

@@ -53,31 +53,51 @@ func NewVentasController(db *gorm.DB) *VentasController {
 	return &VentasController{db: db}
 }
 
-func (ctrl *VentasController) CrearVenta(c *gin.Context) {
-	var nuevaVenta Venta
+type SyncVentasRequest struct {
+	Ventas []Venta `json:"ventas" binding:"required"`
+}
 
-	if err := c.ShouldBindJSON(&nuevaVenta); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": "Datos inválidos: " + err.Error()})
-		return
+type SyncResultado struct {
+	ID     string `json:"id"`
+	Status string `json:"status"`
+	Error  string `json:"error,omitempty"`
+}
+
+// procesarVentaIndividual centraliza la lógica de creación de una venta.
+// Si respectOriginalDate es true y la venta trae una FechaEmision válida, se respeta;
+// de lo contrario se asigna la fecha actual. Esto permite sincronizar ventas offline.
+func (ctrl *VentasController) procesarVentaIndividual(tx *gorm.DB, venta *Venta, empleadoID string, respectOriginalDate bool) error {
+	venta.EmpleadoID = empleadoID
+
+	if !respectOriginalDate || venta.FechaEmision.IsZero() {
+		venta.FechaEmision = time.Now()
 	}
 
-	// Extraer empleado del contexto
-	idEmpleado, existe := c.Get("id_empleado")
-	if !existe {
-		c.JSON(http.StatusUnauthorized, gin.H{"Error": "No se encontró sesión de empleado"})
-		return
+	// Cargar todas las promociones activas
+	var activePromos []promociones.Promocion
+	now := time.Now()
+	if err := tx.Where("(fecha_inicio IS NULL OR fecha_inicio <= ?) AND (fecha_fin IS NULL OR fecha_fin >= ?)", now, now).Find(&activePromos).Error; err != nil {
+		return err
 	}
-	nuevaVenta.EmpleadoID = idEmpleado.(string)
-	nuevaVenta.FechaEmision = time.Now()
 
-	err := ctrl.db.Transaction(func(tx *gorm.DB) error {
-		// Cargar todas las promociones activas
-		var activePromos []promociones.Promocion
-		now := time.Now()
-		if err := tx.Where("(fecha_inicio IS NULL OR fecha_inicio <= ?) AND (fecha_fin IS NULL OR fecha_fin >= ?)", now, now).Find(&activePromos).Error; err != nil {
-			return err
+	var totalDescuento float64 = 0
+	var totalVenta float64 = 0
+
+	// 1. Validar, descontar stock y calcular promociones por ítem
+	for i, detalle := range venta.Detalles {
+		var producto inventario.Producto
+		if err := tx.First(&producto, "id = ?", detalle.ProductoID).Error; err != nil {
+			return errors.New("El producto " + detalle.ProductoID + " no existe")
 		}
 
+		if producto.Stock < detalle.Cantidad {
+			return errors.New("Stock insuficiente para: " + producto.Nombre)
+		}
+
+		producto.Stock -= detalle.Cantidad
+		if err := tx.Save(&producto).Error; err != nil {
+			return err
+		}
 		var totalDescuento float64 = 0
 		var subtotalTotal float64 = 0
 
@@ -91,15 +111,68 @@ func (ctrl *VentasController) CrearVenta(c *gin.Context) {
 				return errors.New("El producto " + detalle.ProductoID + " no existe")
 			}
 
-			if producto.Stock < detalle.Cantidad {
-				return errors.New("Stock insuficiente para: " + producto.Nombre)
+		// Buscar la promoción activa que otorgue el mayor descuento para este ítem
+		var bestDiscount float64 = 0
+		for _, promo := range activePromos {
+			// Validar que ProductoID no sea nil antes de desreferenciarlo
+			if promo.ProductoID != nil && *promo.ProductoID == detalle.ProductoID {
+				disc := calcularDescuentoItem(detalle.Cantidad, producto.Precio, promo)
+				if disc > bestDiscount {
+					bestDiscount = disc
+				}
 			}
+		}
 
-			producto.Stock -= detalle.Cantidad
-			if err := tx.Save(&producto).Error; err != nil {
-				return err
+		subtotalItem := producto.Precio * float64(detalle.Cantidad)
+		montoFinalItem := subtotalItem - bestDiscount
+		venta.Detalles[i].MontoFinal = montoFinalItem
+
+		totalDescuento += bestDiscount
+		totalVenta += montoFinalItem
+	}
+
+	// Sobrescribir los montos totales calculados por seguridad en el backend
+	venta.MontoDescuento = totalDescuento
+	venta.MontoTotal = totalVenta
+
+	// 2. Guardar la venta
+	if err := tx.Create(&venta).Error; err != nil {
+		return err
+	}
+
+	// 3. Si es venta en efectivo, actualizar el saldo esperado del turno activo del usuario
+	if venta.MetodoID == cajas.MetodoPagoEfectivoID {
+		var turnoActivo cajas.TurnoCaja
+		if err := tx.Where("usuario_id = ? AND estado = ?", empleadoID, cajas.EstadoTurnoAbierto).First(&turnoActivo).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return errors.New("No hay un turno de caja abierto para registrar ventas en efectivo")
 			}
+			return err
+		}
 
+		if err := cajas.ActualizarSaldoEsperado(tx, empleadoID, venta.MontoTotal); err != nil {
+			return err
+		}
+	}
+
+	// 4. Si es venta fiada, guardar registro en la tabla fiados
+	if venta.MetodoID == "33333333-3333-3333-3333-333333333333" && venta.ClienteID != nil && *venta.ClienteID != "" {
+		fiadoFechaInicio := venta.FechaEmision
+		if fiadoFechaInicio.IsZero() {
+			fiadoFechaInicio = time.Now()
+		}
+
+		fiado := Fiado{
+			ClienteID:   *venta.ClienteID,
+			VentaID:     venta.ID,
+			FechaInicio: fiadoFechaInicio,
+			FechaLimite: fiadoFechaInicio.AddDate(0, 1, 0), // Plazo de 30 días
+			MontoTotal:  venta.MontoTotal,
+			Pagado:      false,
+		}
+		if err := tx.Create(&fiado).Error; err != nil {
+			return err
+		}
 			cantidades[detalle.ProductoID] += detalle.Cantidad
 			precios[detalle.ProductoID] = producto.Precio
 
@@ -165,25 +238,31 @@ func (ctrl *VentasController) CrearVenta(c *gin.Context) {
 		nuevaVenta.MontoDescuento = totalDescuento
 		nuevaVenta.MontoTotal = totalVenta
 
-		// 2. Guardar la venta
-		if err := tx.Create(&nuevaVenta).Error; err != nil {
+		// Actualizar la última compra del cliente en la base de datos
+		if err := tx.Model(&clientes.Cliente{}).Where("id = ?", *venta.ClienteID).Update("ultima_compra", &fiadoFechaInicio).Error; err != nil {
 			return err
 		}
+	}
+	return nil
+}
 
-		// 3. Si es venta fiada, guardar registro en la tabla fiados
-		if nuevaVenta.MetodoID == "33333333-3333-3333-3333-333333333333" && nuevaVenta.ClienteID != nil && *nuevaVenta.ClienteID != "" {
-			fiado := Fiado{
-				ClienteID:   *nuevaVenta.ClienteID,
-				VentaID:     nuevaVenta.ID,
-				FechaInicio: time.Now(),
-				FechaLimite: time.Now().AddDate(0, 1, 0), // Plazo de 30 días
-				MontoTotal:  nuevaVenta.MontoTotal,
-				Pagado:      false,
-			}
-			if err := tx.Create(&fiado).Error; err != nil {
-				return err
-			}
+func (ctrl *VentasController) CrearVenta(c *gin.Context) {
+	var nuevaVenta Venta
 
+	if err := c.ShouldBindJSON(&nuevaVenta); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "Datos inválidos: " + err.Error()})
+		return
+	}
+
+	// Extraer empleado del contexto
+	idEmpleado, existe := c.Get("id_empleado")
+	if !existe {
+		c.JSON(http.StatusUnauthorized, gin.H{"Error": "No se encontró sesión de empleado"})
+		return
+	}
+
+	err := ctrl.db.Transaction(func(tx *gorm.DB) error {
+		return ctrl.procesarVentaIndividual(tx, &nuevaVenta, idEmpleado.(string), false)
 			// Actualizar la última compra del cliente en la base de datos
 			now := time.Now()
 			if err := tx.Model(&clientes.Cliente{}).Where("id = ?", *nuevaVenta.ClienteID).Update("ultima_compra", &now).Error; err != nil {
@@ -219,6 +298,54 @@ func (ctrl *VentasController) CrearVenta(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{
 		"mensaje": "Venta creada",
 		"venta":   nuevaVenta,
+	})
+}
+
+// SyncVentasOffline recibe un lote de ventas creadas offline, valida duplicados por UUID
+// y las procesa respetando las fechas originales enviadas por el cliente.
+func (ctrl *VentasController) SyncVentasOffline(c *gin.Context) {
+	var req SyncVentasRequest
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "Datos inválidos: " + err.Error()})
+		return
+	}
+
+	idEmpleado, existe := c.Get("id_empleado")
+	if !existe {
+		c.JSON(http.StatusUnauthorized, gin.H{"Error": "No se encontró sesión de empleado"})
+		return
+	}
+
+	var resultados []SyncResultado
+
+	for _, venta := range req.Ventas {
+		if venta.ID == "" {
+			resultados = append(resultados, SyncResultado{ID: "", Status: "error", Error: "El UUID de la venta es requerido"})
+			continue
+		}
+
+		// Validar duplicado por UUID
+		var existing Venta
+		if err := ctrl.db.First(&existing, "id = ?", venta.ID).Error; err == nil {
+			resultados = append(resultados, SyncResultado{ID: venta.ID, Status: "duplicado", Error: "La venta ya fue sincronizada"})
+			continue
+		}
+
+		err := ctrl.db.Transaction(func(tx *gorm.DB) error {
+			return ctrl.procesarVentaIndividual(tx, &venta, idEmpleado.(string), true)
+		})
+
+		if err != nil {
+			resultados = append(resultados, SyncResultado{ID: venta.ID, Status: "error", Error: err.Error()})
+		} else {
+			resultados = append(resultados, SyncResultado{ID: venta.ID, Status: "ok"})
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"mensaje":    "Sincronización completada",
+		"resultados": resultados,
 	})
 }
 

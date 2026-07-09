@@ -1,13 +1,13 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { checkSession, logout, apiClientes } from '$lib/api';
 	import { auth } from '$lib/authStore.svelte';
 	import { toast } from '$lib/toastStore.svelte';
 	import '../layout.css';
+	import logo from '$lib/assets/logo.svg';
 	import {
-		Store,
 		LayoutDashboard,
 		ShoppingCart,
 		Package,
@@ -19,7 +19,9 @@
 		Sun,
 		Moon,
 		Bell,
-		Shield
+		Shield,
+		Menu,
+		X
 	} from '@lucide/svelte';
 
 	let { children } = $props();
@@ -32,12 +34,41 @@
 		es_admin: boolean;
 	} | null>(null);
 	let isDark = $state(false);
+	let isOnline = $state(true);
+
+	function handleNetworkOnline() {
+		isOnline = true;
+	}
+
+	function handleNetworkOffline() {
+		isOnline = false;
+	}
+
+	function isModuleEnabled(href: string): boolean {
+		if (isOnline) return true;
+		return href.startsWith('/dashboard/ventas');
+	}
+
+	$effect(() => {
+		if (!isOnline && !$page.url.pathname.startsWith('/dashboard/ventas')) {
+			goto('/dashboard/ventas');
+		}
+	});
 
 	let isNotificationsOpen = $state(false);
 	let notificaciones = $state<any[]>([]);
 	let loadingNotificaciones = $state(false);
 
 	let currentDate = $state('');
+	let isSidebarOpen = $state(false);
+
+	function toggleSidebar() {
+		isSidebarOpen = !isSidebarOpen;
+	}
+
+	function closeSidebar() {
+		isSidebarOpen = false;
+	}
 
 	let pageTitle = $derived.by(() => {
 		const path = $page.url.pathname;
@@ -55,6 +86,10 @@
 	onMount(async () => {
 		try {
 			if (typeof window !== 'undefined') {
+				isOnline = navigator.onLine;
+				window.addEventListener('online', handleNetworkOnline);
+				window.addEventListener('offline', handleNetworkOffline);
+
 				const savedTheme = localStorage.getItem('theme');
 				if (
 					savedTheme === 'dark' ||
@@ -86,6 +121,13 @@
 			verificando = false;
 		} catch (error) {
 			goto('/login');
+		}
+	});
+
+	onDestroy(() => {
+		if (typeof window !== 'undefined') {
+			window.removeEventListener('online', handleNetworkOnline);
+			window.removeEventListener('offline', handleNetworkOffline);
 		}
 	});
 
@@ -142,18 +184,48 @@
 		Verificando credenciales...
 	</div>
 {:else}
-	<div class="flex h-screen w-screen overflow-hidden">
+	<div class="flex h-screen w-screen overflow-hidden {isOnline ? '' : 'pt-10'}">
+		{#if !isOnline}
+			<div
+				class="fixed left-0 right-0 top-0 z-[60] bg-danger-color px-4 py-2 text-center text-sm font-semibold text-white shadow-md"
+			>
+				Modo Offline Activo: Las funciones de administración están deshabilitadas temporalmente
+				hasta recuperar la conexión. Solo se permiten ventas
+			</div>
+		{/if}
+
+		{#if isSidebarOpen}
+			<div
+				class="fixed inset-0 z-40 bg-black/50 md:hidden"
+				onclick={closeSidebar}
+				role="presentation"
+			></div>
+		{/if}
+
 		<aside
-			class="sidebar-scroll flex h-full w-[240px] shrink-0 flex-col justify-between overflow-y-auto border-r border-[#2a241f] bg-[#1a1512] px-5 py-6 text-[#a39b93]"
+			class="sidebar-scroll fixed md:static left-0 top-0 z-50 flex h-full w-[240px] shrink-0 -translate-x-full transform flex-col justify-between overflow-y-auto border-r border-[#2a241f] bg-[#1a1512] px-5 py-6 text-[#a39b93] transition-transform duration-300 ease-in-out {isSidebarOpen
+				? 'translate-x-0'
+				: '-translate-x-full'} md:translate-x-0"
 		>
 			<div class="flex flex-col gap-8">
+				<div class="mb-[-1rem] flex justify-end md:hidden">
+					<button
+						onclick={closeSidebar}
+						class="rounded-lg p-2 text-[#a39b93] hover:bg-[#241e1a] hover:text-white"
+						aria-label="Cerrar menú"
+					>
+						<X size={24} />
+					</button>
+				</div>
+
 				<a
 					href="/dashboard"
-					class="flex items-center gap-3 px-2 transition-opacity hover:opacity-80"
+					class="flex items-center gap-3 px-2 transition-opacity hover:opacity-80 {isOnline
+						? ''
+						: 'pointer-events-none opacity-40 cursor-not-allowed'}"
+					onclick={closeSidebar}
 				>
-					<div class="flex items-center justify-center rounded-lg bg-[#382a1b] p-2 text-primario">
-						<Store size={30} strokeWidth={2.5} />
-					</div>
+					<img src={logo} alt="MinimarketGo" class="h-11 w-11 rounded-lg object-cover" />
 					<div class="flex flex-col">
 						<h2 class="text-lg font-semibold leading-tight text-white">MinimarketGo</h2>
 						<p class="text-xs font-medium text-primario">Gestión comercial</p>
@@ -169,7 +241,12 @@
 						href="/dashboard"
 						class="relative flex items-center gap-3 rounded-xl border p-3 {isActive('/dashboard')
 							? 'border-[#4a3a28] bg-[#382a1b] text-primario'
-							: 'border-transparent hover:bg-[#241e1a] hover:text-white'}"
+							: 'border-transparent hover:bg-[#241e1a] hover:text-white'} {isModuleEnabled(
+							'/dashboard'
+						)
+							? ''
+							: 'pointer-events-none opacity-40 cursor-not-allowed'}"
+						onclick={closeSidebar}
 					>
 						<LayoutDashboard size={20} />
 						<span class="font-medium">Dashboard</span>
@@ -184,7 +261,12 @@
 							'/dashboard/ventas'
 						)
 							? 'border-[#4a3a28] bg-[#382a1b] text-primario'
-							: 'border-transparent hover:bg-[#241e1a] hover:text-white'}"
+							: 'border-transparent hover:bg-[#241e1a] hover:text-white'} {isModuleEnabled(
+							'/dashboard/ventas'
+						)
+							? ''
+							: 'pointer-events-none opacity-40 cursor-not-allowed'}"
+						onclick={closeSidebar}
 					>
 						<ShoppingCart size={20} />
 						<span class="font-medium">Ventas</span>
@@ -199,7 +281,12 @@
 							'/dashboard/productos'
 						)
 							? 'border-[#4a3a28] bg-[#382a1b] text-primario'
-							: 'border-transparent hover:bg-[#241e1a] hover:text-white'}"
+							: 'border-transparent hover:bg-[#241e1a] hover:text-white'} {isModuleEnabled(
+							'/dashboard/productos'
+						)
+							? ''
+							: 'pointer-events-none opacity-40 cursor-not-allowed'}"
+						onclick={closeSidebar}
 					>
 						<Package size={20} />
 						<span class="font-medium">Productos</span>
@@ -214,7 +301,12 @@
 							'/dashboard/clientes'
 						)
 							? 'border-[#4a3a28] bg-[#382a1b] text-primario'
-							: 'border-transparent hover:bg-[#241e1a] hover:text-white'}"
+							: 'border-transparent hover:bg-[#241e1a] hover:text-white'} {isModuleEnabled(
+							'/dashboard/clientes'
+						)
+							? ''
+							: 'pointer-events-none opacity-40 cursor-not-allowed'}"
+						onclick={closeSidebar}
 					>
 						<Users size={20} />
 						<span class="font-medium">Clientes</span>
@@ -229,7 +321,12 @@
 							'/dashboard/promociones'
 						)
 							? 'border-[#4a3a28] bg-[#382a1b] text-primario'
-							: 'border-transparent hover:bg-[#241e1a] hover:text-white'}"
+							: 'border-transparent hover:bg-[#241e1a] hover:text-white'} {isModuleEnabled(
+							'/dashboard/promociones'
+						)
+							? ''
+							: 'pointer-events-none opacity-40 cursor-not-allowed'}"
+						onclick={closeSidebar}
 					>
 						<Tag size={20} />
 						<span class="font-medium">Promociones</span>
@@ -253,7 +350,12 @@
 								'/dashboard/empleados'
 							)
 								? 'border-[#4a3a28] bg-[#382a1b] text-primario'
-								: 'border-transparent hover:bg-[#241e1a] hover:text-white'}"
+								: 'border-transparent hover:bg-[#241e1a] hover:text-white'} {isModuleEnabled(
+								'/dashboard/empleados'
+							)
+								? ''
+								: 'pointer-events-none opacity-40 cursor-not-allowed'}"
+							onclick={closeSidebar}
 						>
 							<UserCog size={20} />
 							<span class="font-medium">Empleados</span>
@@ -268,7 +370,12 @@
 								'/dashboard/roles'
 							)
 								? 'border-[#4a3a28] bg-[#382a1b] text-primario'
-								: 'border-transparent hover:bg-[#241e1a] hover:text-white'}"
+								: 'border-transparent hover:bg-[#241e1a] hover:text-white'} {isModuleEnabled(
+								'/dashboard/roles'
+							)
+								? ''
+								: 'pointer-events-none opacity-40 cursor-not-allowed'}"
+							onclick={closeSidebar}
 						>
 							<Shield size={20} />
 							<span class="font-medium">Roles</span>
@@ -283,7 +390,12 @@
 								'/dashboard/cajas'
 							)
 								? 'border-[#4a3a28] bg-[#382a1b] text-primario'
-								: 'border-transparent hover:bg-[#241e1a] hover:text-white'}"
+								: 'border-transparent hover:bg-[#241e1a] hover:text-white'} {isModuleEnabled(
+								'/dashboard/cajas'
+							)
+								? ''
+								: 'pointer-events-none opacity-40 cursor-not-allowed'}"
+							onclick={closeSidebar}
 						>
 							<MonitorSmartphone size={20} />
 							<span class="font-medium">Cajas</span>
@@ -335,11 +447,20 @@
 
 		<main class="flex-1 overflow-y-auto bg-bg-primary">
 			<header
-				class="sticky top-0 z-30 flex items-center justify-between border-b border-border-color bg-bg-card px-8 py-4"
+				class="sticky top-0 z-30 flex items-center justify-between border-b border-border-color bg-bg-card px-4 py-3 md:px-8 md:py-4"
 			>
-				<div>
-					<h1 class="text-xl font-bold text-text-primary">{pageTitle}</h1>
-					<p class="text-sm text-text-secondary">{currentDate}</p>
+				<div class="flex items-center gap-3">
+					<button
+						onclick={toggleSidebar}
+						class="rounded-lg p-2 text-text-primary hover:bg-border-color md:hidden"
+						aria-label="Abrir menú"
+					>
+						<Menu size={24} />
+					</button>
+					<div>
+						<h1 class="text-lg font-bold text-text-primary md:text-xl">{pageTitle}</h1>
+						<p class="text-xs text-text-secondary md:text-sm">{currentDate}</p>
+					</div>
 				</div>
 				<div class="relative">
 					<button

@@ -8,7 +8,10 @@
 		MonitorSmartphone,
 		CheckCircle2,
 		XCircle,
-		X
+		X,
+		User,
+		Unlock,
+		Lock
 	} from '@lucide/svelte';
 	import { toast } from '$lib/toastStore.svelte';
 	import { apiCajas, checkSession } from '$lib/api';
@@ -28,8 +31,6 @@
 		id_caja: '',
 		nombre: '',
 		ubicacion: '',
-		saldo_inicial: 0,
-		saldo_final: 0,
 		activo: true
 	});
 
@@ -105,8 +106,6 @@
 			id_caja: '',
 			nombre: '',
 			ubicacion: '',
-			saldo_inicial: 0,
-			saldo_final: 0,
 			activo: true
 		};
 		showModal = true;
@@ -119,8 +118,6 @@
 			id_caja: caja.id_caja || caja.id || caja.ID,
 			nombre: caja.nombre || caja.Nombre,
 			ubicacion: caja.ubicacion || caja.Ubicacion,
-			saldo_inicial: caja.saldo_inicial !== undefined ? caja.saldo_inicial : caja.SaldoInicial,
-			saldo_final: caja.saldo_final !== undefined ? caja.saldo_final : caja.SaldoFinal,
 			activo: caja.activo !== undefined ? caja.activo : caja.Activo
 		};
 		showModal = true;
@@ -141,19 +138,15 @@
 			isValid = false;
 		}
 
-		if (formData.saldo_inicial < 0 || formData.saldo_final < 0) {
-			formGeneralError = 'Los saldos no pueden ser negativos.';
-			isValid = false;
-		}
-
 		if (!isValid) return;
 
 		submitLoading = true;
 		try {
 			const payload = {
-				...formData,
-				saldo_inicial: Number(formData.saldo_inicial),
-				saldo_final: Number(formData.saldo_final)
+				id_caja: formData.id_caja,
+				nombre: formData.nombre,
+				ubicacion: formData.ubicacion,
+				activo: formData.activo
 			};
 
 			if (isEditing) {
@@ -259,8 +252,9 @@
 				<tr>
 					<th class="px-6 py-4 font-semibold">Caja Registradora</th>
 					<th class="px-6 py-4 font-semibold">Ubicación</th>
-					<th class="px-6 py-4 font-semibold">Saldo Inicial</th>
-					<th class="px-6 py-4 font-semibold">Saldo Final</th>
+					<th class="px-6 py-4 font-semibold">Turno Activo</th>
+					<th class="px-6 py-4 font-semibold">Responsable</th>
+					<th class="px-6 py-4 font-semibold">Saldo Esperado</th>
 					<th class="px-6 py-4 font-semibold">Estado</th>
 					<th class="px-6 py-4 text-right font-semibold">Acciones</th>
 				</tr>
@@ -268,11 +262,11 @@
 			<tbody class="divide-y divide-border-color">
 				{#if isLoading}
 					<tr>
-						<td colspan="6" class="py-8 text-center text-text-muted">Cargando cajas...</td>
+						<td colspan="7" class="py-8 text-center text-text-muted">Cargando cajas...</td>
 					</tr>
 				{:else if cajasFiltradas.length === 0}
 					<tr>
-						<td colspan="6" class="py-8 text-center text-text-muted">
+						<td colspan="7" class="py-8 text-center text-text-muted">
 							No se encontraron cajas con los filtros aplicados.
 						</td>
 					</tr>
@@ -280,11 +274,9 @@
 					{#each cajasFiltradas as caja (caja.id_caja || caja.id || caja.ID)}
 						{@const nombre = caja.nombre || caja.Nombre}
 						{@const ubicacion = caja.ubicacion || caja.Ubicacion}
-						{@const saldoInicial =
-							caja.saldo_inicial !== undefined ? caja.saldo_inicial : caja.SaldoInicial}
-						{@const saldoFinal =
-							caja.saldo_final !== undefined ? caja.saldo_final : caja.SaldoFinal}
 						{@const esActiva = caja.activo !== undefined ? caja.activo : caja.Activo}
+						{@const turno = caja.turno_activo}
+						{@const responsable = turno?.usuario?.nombre || turno?.usuario?.Usuario || '-'}
 
 						<tr class="hover:bg-bg-primary/30">
 							<td class="px-6 py-4">
@@ -302,12 +294,43 @@
 								{ubicacion}
 							</td>
 
-							<td class="px-6 py-4 font-medium text-text-primary">
-								{formatCurrency(saldoInicial)}
+							<td class="px-6 py-4">
+								{#if turno}
+									<span
+										class="inline-flex items-center gap-1.5 rounded-full bg-green-500/10 px-2.5 py-1 text-xs font-medium text-green-500"
+									>
+										<Unlock size={14} /> Abierto
+									</span>
+								{:else}
+									<span
+										class="inline-flex items-center gap-1.5 rounded-full bg-text-primary/5 px-2.5 py-1 text-xs font-medium text-text-muted"
+									>
+										<Lock size={14} /> Sin turno
+									</span>
+								{/if}
+							</td>
+
+							<td class="px-6 py-4 text-text-primary">
+								{#if turno}
+									<div class="flex items-center gap-2">
+										<div
+											class="flex h-6 w-6 items-center justify-center rounded-full bg-primario/10 text-primario"
+										>
+											<User size={12} />
+										</div>
+										<span class="text-sm font-medium">{responsable}</span>
+									</div>
+								{:else}
+									<span class="text-sm text-text-muted">—</span>
+								{/if}
 							</td>
 
 							<td class="px-6 py-4 font-medium text-text-primary">
-								{formatCurrency(saldoFinal)}
+								{#if turno}
+									{formatCurrency(turno.saldo_esperado)}
+								{:else}
+									<span class="text-text-muted">—</span>
+								{/if}
 							</td>
 
 							<td class="px-6 py-4">
@@ -415,46 +438,6 @@
 						{#if errUbicacion}<span class="text-xs font-medium text-danger-color"
 								>{errUbicacion}</span
 							>{/if}
-					</div>
-
-					<div class="flex flex-col gap-1.5">
-						<label for="saldo_inicial" class="text-sm font-semibold text-text-primary"
-							>Saldo Inicial</label
-						>
-						<div class="relative flex items-center">
-							<span class="absolute left-4 text-text-muted font-medium">$</span>
-							<input
-								id="saldo_inicial"
-								type="number"
-								autocomplete="off"
-								min="0"
-								step="1"
-								bind:value={formData.saldo_inicial}
-								disabled={submitLoading}
-								required
-								class="w-full rounded-xl border border-border-color bg-bg-primary py-2.5 pl-8 pr-4 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-							/>
-						</div>
-					</div>
-
-					<div class="flex flex-col gap-1.5">
-						<label for="saldo_final" class="text-sm font-semibold text-text-primary"
-							>Saldo Final</label
-						>
-						<div class="relative flex items-center">
-							<span class="absolute left-4 text-text-muted font-medium">$</span>
-							<input
-								id="saldo_final"
-								type="number"
-								autocomplete="off"
-								min="0"
-								step="1"
-								bind:value={formData.saldo_final}
-								disabled={submitLoading}
-								required
-								class="w-full rounded-xl border border-border-color bg-bg-primary py-2.5 pl-8 pr-4 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-							/>
-						</div>
 					</div>
 
 					<div class="col-span-1 sm:col-span-2 flex items-center gap-3 pt-2">
