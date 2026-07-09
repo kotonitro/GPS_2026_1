@@ -149,7 +149,7 @@
 	}
 
 	function removePendingSalesByIds(ids: string[]) {
-		const sales = getPendingSales().filter((s) => !ids.includes(s.id));
+		const sales = getPendingSales().filter((s) => !ids.includes(s.payload?.id_venta));
 		savePendingSales(sales);
 	}
 
@@ -168,7 +168,9 @@
 			});
 
 			const resultados = res.resultados || [];
-			const syncedIds = resultados.filter((r: any) => r.status === 'ok').map((r: any) => r.id);
+			const syncedIds = resultados
+				.filter((r: any) => r.status === 'ok' || r.status === 'duplicado')
+				.map((r: any) => r.id);
 
 			removePendingSalesByIds(syncedIds);
 			refreshPendingSales();
