@@ -39,6 +39,7 @@ func Migrations(db *gorm.DB) {
 		&empleados.Rol{},
 		&clientes.Cliente{},
 		&cajas.Caja{},
+		&cajas.TurnoCaja{},
 		&inventario.Categoria{},
 		&inventario.Producto{},
 		&promociones.Promocion{},

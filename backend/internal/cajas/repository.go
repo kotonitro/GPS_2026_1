@@ -9,6 +9,30 @@ func GetCajas(db *gorm.DB) ([]Caja, error) {
 	return cajas, result.Error
 }
 
+// GetCajasConTurnoActivo devuelve la lista de cajas enriquecida con el turno abierto más reciente
+// de cada una, incluyendo el responsable y el saldo esperado actual.
+func GetCajasConTurnoActivo(db *gorm.DB) ([]Caja, error) {
+	var cajas []Caja
+	if err := db.Find(&cajas).Error; err != nil {
+		return nil, err
+	}
+
+	for i := range cajas {
+		var turno TurnoCaja
+		err := db.
+			Preload("Usuario").
+			Where("caja_id = ? AND estado = ?", cajas[i].ID, EstadoTurnoAbierto).
+			Order("fecha_apertura DESC").
+			First(&turno).Error
+
+		if err == nil {
+			cajas[i].TurnoActivo = &turno
+		}
+	}
+
+	return cajas, nil
+}
+
 func GetCajaByID(db *gorm.DB, id string) (*Caja, error) {
 	var caja Caja
 

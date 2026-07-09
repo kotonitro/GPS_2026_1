@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
+
 // RoutesConfig reemplaza a la antigua función ConfigurarRutas
 func RoutesConfig(api *gin.RouterGroup, db *gorm.DB, authMiddleware gin.HandlerFunc) {
 	ctrl := NewClienteController(db)

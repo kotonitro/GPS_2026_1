@@ -16,6 +16,7 @@ func ConfigurarRutas(api *gin.RouterGroup, db *gorm.DB, authMiddleware gin.Handl
 	rutasVentas.Use(authMiddleware)
 	{
 		rutasVentas.POST("", ctrl.CrearVenta)
+		rutasVentas.POST("/sync", ctrl.SyncVentasOffline)
 		rutasVentas.GET("", ctrl.GetVentas)
 		rutasVentas.GET("/:id", ctrl.GetVentaByID)
 		rutasVentas.POST("/clientes/:id/abonar", ctrl.RegistrarAbono)

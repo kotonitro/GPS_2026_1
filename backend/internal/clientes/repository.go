@@ -1,6 +1,7 @@
 package clientes
 
 import "gorm.io/gorm"
+
 // obetener todos los clientes de la DB
 func GetClientes(db *gorm.DB) ([]Cliente, error) {
 	var clientes []Cliente
@@ -8,6 +9,7 @@ func GetClientes(db *gorm.DB) ([]Cliente, error) {
 	result := db.Find(&clientes)
 	return clientes, result.Error
 }
+
 // Obtener un cliente por su ID
 func GetClienteByID(db *gorm.DB, id string) (*Cliente, error) {
 	var cliente Cliente
@@ -19,12 +21,14 @@ func GetClienteByID(db *gorm.DB, id string) (*Cliente, error) {
 
 	return &cliente, nil
 }
-//crear cliente
+
+// crear cliente
 func CreateCliente(db *gorm.DB, cliente *Cliente) error {
 	resultado := db.Create(cliente)
 	return resultado.Error
 }
-//borrar cliente usando ID
+
+// borrar cliente usando ID
 func DeleteClienteByID(db *gorm.DB, id string) error {
 	var cliente Cliente
 
@@ -38,7 +42,8 @@ func DeleteClienteByID(db *gorm.DB, id string) error {
 
 	return nil
 }
-//modicifar cliente
+
+// modicifar cliente
 func UpdateClienteByID(db *gorm.DB, id string, data UpdateClienteInput) error {
 	var cliente Cliente
 
@@ -52,7 +57,8 @@ func UpdateClienteByID(db *gorm.DB, id string, data UpdateClienteInput) error {
 
 	return nil
 }
-//obtener cliente por rut
+
+// obtener cliente por rut
 func GetClienteByRut(db *gorm.DB, rut string) (*Cliente, error) {
 	var cliente Cliente
 
@@ -63,7 +69,8 @@ func GetClienteByRut(db *gorm.DB, rut string) (*Cliente, error) {
 
 	return &cliente, nil
 }
-//obtener cliente por nombre
+
+// obtener cliente por nombre
 func GetClientesByNombre(db *gorm.DB, nombre string) ([]Cliente, error) {
 	var clientes []Cliente
 

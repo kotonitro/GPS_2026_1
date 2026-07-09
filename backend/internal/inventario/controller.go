@@ -34,7 +34,7 @@ func (ctrl *InventarioController) CrearProducto(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": "El precio debe ser mayor a cero"})
 		return
 	}
-	
+
 	validBarcode := regexp.MustCompile(`^\d{13}$`)
 	if !validBarcode.MatchString(nuevoProducto.CodigoBarras) {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": "El código de barras debe tener exactamente 13 dígitos"})

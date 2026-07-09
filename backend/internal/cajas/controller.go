@@ -19,7 +19,7 @@ func NewCajaController(db *gorm.DB) *CajaController {
 }
 
 func (ctrl *CajaController) GetCajasController(c *gin.Context) {
-	listaCajas, err := GetCajas(ctrl.db)
+	listaCajas, err := GetCajasConTurnoActivo(ctrl.db)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error interno al obtener la lista de cajas."})
 		return

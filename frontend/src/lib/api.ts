@@ -223,3 +223,25 @@ export const apiCajas = {
     update: (id: string, data: any) => apiFetch(`/cajas/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
     delete: (id: string) => apiFetch(`/cajas/${id}`, { method: 'DELETE' })
 };
+
+export interface TurnoCaja {
+	id_turno: string;
+	id_usuario: string;
+	id_caja: string;
+	saldo_inicial: number;
+	saldo_esperado: number;
+	saldo_real: number;
+	diferencia: number;
+	fecha_apertura: string;
+	fecha_cierre?: string | null;
+	estado: 'abierto' | 'cerrado';
+	caja?: Caja;
+}
+
+export const apiTurnos = {
+	getActivo: (): Promise<{ activo: boolean; turno?: TurnoCaja }> => apiFetch('/cajas/turnos/activo'),
+	abrir: (data: { id_caja: string; saldo_inicial: number }) =>
+		apiFetch('/cajas/turnos/apertura', { method: 'POST', body: JSON.stringify(data) }),
+	cerrar: (data: { saldo_real: number }) =>
+		apiFetch('/cajas/turnos/cierre', { method: 'POST', body: JSON.stringify(data) })
+};
