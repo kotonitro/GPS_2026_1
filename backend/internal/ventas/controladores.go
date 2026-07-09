@@ -183,8 +183,8 @@ func (ctrl *VentasController) CrearVenta(c *gin.Context) {
 		return
 	}
 
-	// Preload MetodoPago, Detalles, Fiado y Caja para consistencia en la respuesta
-	ctrl.db.Preload("MetodoPago").Preload("Detalles").Preload("Fiado").Preload("Caja").First(&nuevaVenta, "id = ?", nuevaVenta.ID)
+	// Cargar los datos relacionados
+	ctrl.db.Preload("MetodoPago").Preload("Detalles").Preload("Detalles.Producto").Preload("Fiado").Preload("Caja").Preload("Empleado").First(&nuevaVenta, "id = ?", nuevaVenta.ID)
 
 	c.JSON(http.StatusCreated, gin.H{
 		"mensaje": "Venta creada",

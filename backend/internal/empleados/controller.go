@@ -114,7 +114,7 @@ func (ctrl *EmpleadoController) CreateEmpleadoController(c *gin.Context) {
 		if errors.Is(err, gorm.ErrDuplicatedKey) || strings.Contains(err.Error(), "23505") || strings.Contains(err.Error(), "duplicate key") {
 			c.JSON(http.StatusConflict, gin.H{
 				"error":   "No se pudo registrar el empleado.",
-				"detalle": "El RUT o Usuario ingresado ya se encuentra registrado en el sistema.",
+				"detalle": "El RUT, usuario o teléfono ingresado ya se encuentra registrado en el sistema.",
 			})
 			return
 		}
@@ -277,7 +277,7 @@ func (ctrl *EmpleadoController) UpdateEmpleadoByIDController(c *gin.Context) {
 		if errors.Is(err, gorm.ErrDuplicatedKey) || strings.Contains(err.Error(), "23505") || strings.Contains(err.Error(), "duplicate key") {
 			c.JSON(http.StatusConflict, gin.H{
 				"error":   "No se pudo modificar el empleado.",
-				"detalle": "El nuevo RUT o usuario ingresado ya está en uso por otra cuenta de empleado.",
+				"detalle": "El nuevo RUT, usuario o teléfono ingresado ya está en uso por otra cuenta de empleado.",
 			})
 			return
 		}

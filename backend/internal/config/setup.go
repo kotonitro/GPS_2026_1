@@ -113,11 +113,9 @@ func InitialSetup(db *gorm.DB) {
 
 	if countCajas == 0 {
 		cajaInicial := InitialCaja{
-			Nombre:       "Caja Principal",
-			Ubicacion:    "Caja Central",
-			Activo:       true,
-			SaldoInicial: 0,
-			SaldoFinal:   0,
+			Nombre:    "Caja Principal",
+			Ubicacion: "Caja Central",
+			Activo:    true,
 		}
 		if err := db.Create(&cajaInicial).Error; err != nil {
 			log.Println("Advertencia: No se pudo inicializar la caja principal: ", err)

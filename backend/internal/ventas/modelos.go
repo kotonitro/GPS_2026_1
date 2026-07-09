@@ -3,6 +3,8 @@ package ventas
 import (
 	"backend/internal/cajas"
 	"backend/internal/clientes"
+	"backend/internal/empleados"
+	"backend/internal/inventario"
 	"time"
 )
 
@@ -19,18 +21,20 @@ type Venta struct {
 	MontoDescuento float64   `json:"monto_descuento"`
 	EstadoSync     string    `json:"estado_sync"`
 
-	Detalles   []DetalleVenta `gorm:"foreignKey:VentaID" json:"detalles,omitempty"`
-	MetodoPago MetodoPago     `gorm:"foreignKey:MetodoID" json:"metodo_pago,omitempty"`
-	Fiado      *Fiado         `gorm:"foreignKey:VentaID" json:"fiado,omitempty"`
-	Caja       *cajas.Caja    `gorm:"foreignKey:CajaID;references:ID;constraint:OnDelete:RESTRICT" json:"caja,omitempty"`
+	Detalles   []DetalleVenta      `gorm:"foreignKey:VentaID" json:"detalles,omitempty"`
+	MetodoPago MetodoPago          `gorm:"foreignKey:MetodoID" json:"metodo_pago,omitempty"`
+	Fiado      *Fiado              `gorm:"foreignKey:VentaID" json:"fiado,omitempty"`
+	Caja       *cajas.Caja         `gorm:"foreignKey:CajaID;references:ID;constraint:OnDelete:RESTRICT" json:"caja,omitempty"`
+	Empleado   *empleados.Empleado `gorm:"foreignKey:EmpleadoID;references:ID;constraint:OnDelete:RESTRICT" json:"empleado,omitempty"`
 }
 
 type DetalleVenta struct {
-	ID         string  `gorm:"primaryKey;type:uuid;default:gen_random_uuid()" json:"id_detalle"`
-	VentaID    string  `json:"id_venta"`
-	ProductoID string  `json:"id_producto"`
-	Cantidad   int     `json:"cantidad"`
-	MontoFinal float64 `json:"monto_final"`
+	ID         string               `gorm:"primaryKey;type:uuid;default:gen_random_uuid()" json:"id_detalle"`
+	VentaID    string               `json:"id_venta"`
+	ProductoID string               `json:"id_producto"`
+	Cantidad   int                  `json:"cantidad"`
+	MontoFinal float64              `json:"monto_final"`
+	Producto   *inventario.Producto `gorm:"foreignKey:ProductoID;references:ID;constraint:OnDelete:RESTRICT" json:"producto,omitempty"`
 }
 
 type MetodoPago struct {

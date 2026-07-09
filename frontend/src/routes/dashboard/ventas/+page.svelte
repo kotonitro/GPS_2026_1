@@ -35,7 +35,11 @@
 		Sparkles,
 		Camera,
 		Lock,
-		Unlock
+		Unlock,
+		X,
+		ArrowUp,
+		ArrowDown,
+		ArrowUpDown
 	} from '@lucide/svelte';
 	import Scanner from '$lib/components/Scanner.svelte';
 
@@ -244,25 +248,74 @@
 
 	// historial
 	let searchHistoryQuery = $state('');
+	let sortFecha = $state<'none' | 'asc' | 'desc'>('desc');
+	let sortTotal = $state<'none' | 'asc' | 'desc'>('none');
+	let historyPage = $state(1);
+	let historyItemsPerPage = $state(10);
+
+	function toggleSortFecha() {
+		sortTotal = 'none'; // reset other
+		if (sortFecha === 'none') sortFecha = 'asc';
+		else if (sortFecha === 'asc') sortFecha = 'desc';
+		else sortFecha = 'none';
+		historyPage = 1;
+	}
+
+	function toggleSortTotal() {
+		sortFecha = 'none'; // reset other
+		if (sortTotal === 'none') sortTotal = 'asc';
+		else if (sortTotal === 'asc') sortTotal = 'desc';
+		else sortTotal = 'none';
+		historyPage = 1;
+	}
 
 	// buscar po detalle
 	let selectedSale = $state<Venta | null>(null);
 	let showDetailModal = $state(false);
 
-	// Recently completed sale for the success receipt modal
 	let recentlyCompletedSale = $state<Venta | null>(null);
 	let showSuccessReceiptModal = $state(false);
 
-	// Filtered list for history
+	// Filtrado de historial
 	let filteredSales = $derived.by(() => {
 		const query = searchHistoryQuery.toLowerCase().trim();
-		return ventas.filter((v) => {
+		let result = ventas.filter((v) => {
 			if (!query) return true;
-			return (
-				v.id_venta.toLowerCase().includes(query) || v.id_empleado.toLowerCase().includes(query)
-			);
+
+			const folio = getNumericFolio(v.id_venta).toLowerCase();
+			const empName = getEmpleadoName(v.id_empleado, v).toLowerCase();
+			const payment = (v.metodo_pago?.nombre_metodo || 'efectivo').toLowerCase();
+
+			return folio.includes(query) || empName.includes(query) || payment.includes(query);
 		});
+
+		result.sort((a, b) => {
+			if (sortFecha !== 'none') {
+				const timeA = new Date(a.fecha_emision).getTime();
+				const timeB = new Date(b.fecha_emision).getTime();
+				if (timeA !== timeB) return sortFecha === 'desc' ? timeB - timeA : timeA - timeB;
+			}
+			if (sortTotal !== 'none') {
+				const diff =
+					sortTotal === 'desc'
+						? Number(b.monto_total) - Number(a.monto_total)
+						: Number(a.monto_total) - Number(b.monto_total);
+				if (diff !== 0) return diff;
+			}
+			// ordenar por fechas por defecto
+			const timeA = new Date(a.fecha_emision).getTime();
+			const timeB = new Date(b.fecha_emision).getTime();
+			if (timeA !== timeB) return timeB - timeA;
+			return b.id_venta.localeCompare(a.id_venta);
+		});
+
+		return result;
 	});
+
+	let totalHistoryPages = $derived(Math.ceil(filteredSales.length / historyItemsPerPage) || 1);
+	let paginatedSales = $derived(
+		filteredSales.slice((historyPage - 1) * historyItemsPerPage, historyPage * historyItemsPerPage)
+	);
 
 	function isPromotionActive(p: Promocion): boolean {
 		const now = new Date();
@@ -475,7 +528,7 @@
 		});
 	});
 
-	// Scanner global
+	// Scaneo
 	function handleGlobalKeydown(e: KeyboardEvent) {
 		if (activeTab !== 'pos') return;
 
@@ -491,7 +544,6 @@
 
 		const currentTime = Date.now();
 
-		// delay > 100ms, asumomos que se esta utilizando por alguien
 		if (currentTime - lastKeyTime > 100) {
 			barcodeBuffer = '';
 		}
@@ -506,6 +558,163 @@
 			e.preventDefault();
 		} else if (e.key.length === 1) {
 			barcodeBuffer += e.key;
+		}
+	}
+
+	let showCreateClienteModal = $state(false);
+	let formNombre = $state('');
+	let formRut = $state('');
+	let formTelefono = $state('');
+	let formFiadoMaximo = $state<number>(20000);
+
+	let errNombre = $state('');
+	let errRut = $state('');
+	let errTelefono = $state('');
+	let formGeneralError = $state('');
+	let submitClienteLoading = $state(false);
+
+	function clearClienteErrors() {
+		errNombre = '';
+		errRut = '';
+		errTelefono = '';
+		formGeneralError = '';
+	}
+
+	function validarRut(rutOriginal: string): boolean {
+		const rutLimpio = rutOriginal.replace(/\./g, '').replace(/-/g, '').trim().toUpperCase();
+		if (rutLimpio.length < 8) return false;
+		const cuerpo = rutLimpio.slice(0, -1);
+		const dvIngresado = rutLimpio.slice(-1);
+		let suma = 0;
+		let multiplicador = 2;
+		for (let i = cuerpo.length - 1; i >= 0; i--) {
+			const digito = parseInt(cuerpo[i], 10);
+			if (isNaN(digito)) return false;
+			suma += digito * multiplicador;
+			multiplicador++;
+			if (multiplicador > 7) multiplicador = 2;
+		}
+		const resto = suma % 11;
+		const resultado = 11 - resto;
+		let dvCalculado = '';
+		if (resultado === 11) dvCalculado = '0';
+		else if (resultado === 10) dvCalculado = 'K';
+		else dvCalculado = resultado.toString();
+		return dvCalculado === dvIngresado;
+	}
+
+	function validarTelefono(tel: string): boolean {
+		return /^(\+56)?[\s.-]?9[\s.-]?\d{4}[\s.-]?\d{4}$/.test(tel);
+	}
+
+	function formatRutInput(val: string) {
+		let clean = val.replace(/[^0-9kK]/g, '');
+		if (clean.length === 0) return '';
+		const dv = clean.slice(-1);
+		let cuerpo = clean.slice(0, -1);
+		if (cuerpo.length > 0) {
+			let formattedCuerpo = '';
+			let j = 0;
+			for (let i = cuerpo.length - 1; i >= 0; i--) {
+				formattedCuerpo = cuerpo[i] + formattedCuerpo;
+				j++;
+				if (j === 3 && i > 0) {
+					formattedCuerpo = '.' + formattedCuerpo;
+					j = 0;
+				}
+			}
+			return `${formattedCuerpo}-${dv}`;
+		}
+		return dv;
+	}
+
+	function handleRutInput(e: Event) {
+		const target = e.target as HTMLInputElement;
+		const formatted = formatRutInput(target.value);
+		formRut = formatted;
+		target.value = formatted;
+	}
+
+	function formatNombreInput(val: string) {
+		return val
+			.toLowerCase()
+			.replace(/\s+/g, ' ')
+			.split(' ')
+			.map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+			.join(' ');
+	}
+
+	function handleNombreBlur() {
+		formNombre = formatNombreInput(formNombre).trim();
+	}
+
+	async function handleCreateCliente(e: Event) {
+		e.preventDefault();
+		clearClienteErrors();
+		let isValid = true;
+
+		if (!formNombre.trim()) {
+			errNombre = 'El nombre es obligatorio.';
+			isValid = false;
+		} else {
+			const soloLetras = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(formNombre);
+			const partes = formNombre.trim().split(/\s+/);
+			if (!soloLetras) {
+				errNombre = 'Solo debe contener letras y espacios.';
+				isValid = false;
+			} else if (partes.length < 2) {
+				errNombre = 'Ingrese al menos un nombre y apellido.';
+				isValid = false;
+			} else {
+				formNombre = formatNombreInput(formNombre).trim();
+			}
+		}
+
+		const rawRut = formRut.replace(/\./g, '');
+		if (!formRut) {
+			errRut = 'El RUT es obligatorio.';
+			isValid = false;
+		} else if (!validarRut(rawRut)) {
+			errRut = 'El RUT no es válido.';
+			isValid = false;
+		}
+
+		if (!formTelefono.trim()) {
+			errTelefono = 'El teléfono es obligatorio.';
+			isValid = false;
+		} else if (!validarTelefono(formTelefono.trim())) {
+			errTelefono = 'Formato no válido.';
+			isValid = false;
+		}
+
+		if (!isValid) return;
+
+		submitClienteLoading = true;
+		const payload = {
+			nombre: formNombre.trim(),
+			rut: rawRut.trim(),
+			telefono: formTelefono.replace(/\s+/g, ''),
+			fiado_actual: 0,
+			fiado_maximo: formFiadoMaximo
+		};
+
+		try {
+			await apiClientes.create(payload);
+			toast.show('Cliente añadido exitosamente.', 'success');
+			showCreateClienteModal = false;
+
+			// Recargar clientes y autoseleccionarlo
+			const resClients = await apiClientes.getAll();
+			clientes = Array.isArray(resClients) ? resClients : [];
+			const nuevoCliente = clientes.find((c) => c.rut === payload.rut);
+			if (nuevoCliente) {
+				selectedClienteId = nuevoCliente.id_cliente;
+			}
+		} catch (err: any) {
+			formGeneralError = err.message || 'Error al guardar el cliente.';
+			toast.show('No se pudo guardar el cliente.', 'error');
+		} finally {
+			submitClienteLoading = false;
 		}
 	}
 
@@ -877,17 +1086,26 @@
 		return num.toString().padStart(6, '0');
 	}
 
-	function getProductDetailName(productId: string) {
+	function getProductDetailName(productId: string, det?: any) {
+		if (det && det.producto && det.producto.nombre) {
+			return det.producto.nombre;
+		}
 		const prod = productos.find((p) => p.id_producto === productId);
 		return prod ? prod.nombre : 'Producto desconocido';
 	}
 
-	function getEmpleadoName(empleadoId: string) {
+	function getEmpleadoName(empleadoId: string, sale?: any) {
+		if (sale && sale.empleado && sale.empleado.nombre) {
+			return `${sale.empleado.nombre} ${sale.empleado.apellido || ''}`.trim();
+		}
 		const emp = empleados.find((e) => e.id_empleado === empleadoId);
 		return emp ? `${emp.nombre} ${emp.apellido || ''}`.trim() : 'Desconocido';
 	}
 
-	function getCajaName(cajaId: string) {
+	function getCajaName(cajaId: string, sale?: any) {
+		if (sale && sale.caja && sale.caja.nombre) {
+			return sale.caja.nombre;
+		}
 		const c = cajas.find((cj) => cj.id_caja === cajaId);
 		return c ? c.nombre : 'Caja desconocida';
 	}
@@ -966,12 +1184,15 @@
 				<span>Cerrar Turno/Caja</span>
 			</button>
 		{:else}
-			<div
-				class="flex items-center gap-2 rounded-lg border border-danger-color/30 bg-danger-bg px-3 py-1.5 text-xs text-danger-color"
+			<button
+				type="button"
+				onclick={() => (showTurnoAperturaModal = true)}
+				class="flex cursor-pointer items-center gap-2 rounded-lg border border-danger-color/30 bg-danger-bg px-3 py-1.5 text-xs font-bold text-danger-color transition-colors hover:bg-danger-color/10"
+				title="Haz clic para abrir un turno de caja"
 			>
 				<Lock size={14} />
-				<span>Sin turno abierto</span>
-			</div>
+				<span>Sin turno (Abrir Caja)</span>
+			</button>
 		{/if}
 	</div>
 </div>
@@ -981,14 +1202,11 @@
 		Cargando datos de ventas...
 	</div>
 {:else}
-	<!-- POS TAB -->
 	{#if activeTab === 'pos'}
 		<div class="grid grid-cols-1 gap-6 lg:grid-cols-12">
-			<!-- POS Scanner Information Panel (Left side) -->
 			<div
 				class="flex flex-col gap-6 lg:col-span-7 justify-center items-center rounded-xl border border-dashed border-border-color bg-bg-card/50 p-8 text-center min-h-[400px]"
 			>
-				<!-- Bouncing Scan Circle -->
 				<div
 					class="relative flex h-28 w-28 items-center justify-center rounded-full bg-primario/10 text-primario animate-pulse"
 				>
@@ -1011,7 +1229,6 @@
 							d="M7 7v10M10 7v10M13 7v10M17 7v10"
 						/>
 					</svg>
-					<!-- Glowing Green Status Indicator -->
 					<span class="absolute right-1 bottom-1 flex h-4 w-4">
 						<span
 							class="animate-ping absolute inline-flex h-full w-full rounded-full bg-exito opacity-75"
@@ -1034,7 +1251,6 @@
 					</p>
 				</div>
 
-				<!-- feedback visual -->
 				{#if lastScannedProduct}
 					<div
 						class="w-full max-w-md rounded-xl border border-primario/30 bg-primario/5 p-4 text-left flex justify-between items-center animate-modal-enter"
@@ -1061,7 +1277,6 @@
 					</div>
 				{/if}
 
-				<!-- botones scaner -->
 				<div class="mt-4 flex flex-wrap gap-3">
 					<button
 						type="button"
@@ -1082,7 +1297,6 @@
 				</div>
 			</div>
 
-			<!-- cartas y Checkout -->
 			<div class="lg:col-span-5">
 				<form
 					onsubmit={handleCheckout}
@@ -1106,7 +1320,6 @@
 						{/if}
 					</header>
 
-					<!-- items -->
 					<div
 						class="p-4 flex flex-col gap-3 min-h-[220px] max-h-[300px] overflow-y-auto border-b border-border-color"
 					>
@@ -1132,7 +1345,6 @@
 										</p>
 									</div>
 
-									<!--control cantidad -->
 									<div class="flex items-center gap-2">
 										<button
 											type="button"
@@ -1191,9 +1403,7 @@
 						{/if}
 					</div>
 
-					<!-- Checkout opciones -->
 					<div class="p-4 flex flex-col gap-4 bg-text-primary/[0.005]">
-						<!-- Payment Method Selection -->
 						<div class="flex flex-col gap-1">
 							<span class="text-xs font-bold uppercase tracking-wider text-text-secondary mb-1"
 								>Método de Pago</span
@@ -1250,7 +1460,6 @@
 
 						<!--verificacion de condiciones -->
 						{#if selectedMetodoId === '11111111-1111-1111-1111-111111111111'}
-							<!-- Cash Received -->
 							<div class="flex gap-4">
 								<div class="flex-1 flex flex-col gap-1">
 									<label
@@ -1280,27 +1489,45 @@
 								</div>
 							</div>
 						{:else if selectedMetodoId === 'fiado'}
-							<!-- Client Selection -->
 							<div class="flex flex-col gap-1">
 								<label
 									for="clientSelect"
 									class="text-xs font-bold uppercase tracking-wider text-text-secondary"
 									>Cliente Asoc.</label
 								>
-								<select
-									id="clientSelect"
-									bind:value={selectedClienteId}
-									disabled={cart.length === 0}
-									class="w-full rounded-lg border border-border-color bg-bg-card p-2.5 text-sm text-text-primary outline-none focus:border-accent disabled:opacity-50 disabled:cursor-not-allowed"
-									required
-								>
-									<option value="" disabled>-- Selecciona un cliente --</option>
-									{#each clientes as cli}
-										<option value={cli.id_cliente}
-											>{cli.nombre} (Deuda: {formatCurrency(cli.fiado_actual)})</option
-										>
-									{/each}
-								</select>
+								<div class="flex gap-2 items-center">
+									<select
+										id="clientSelect"
+										bind:value={selectedClienteId}
+										disabled={cart.length === 0}
+										class="w-full rounded-lg border border-border-color bg-bg-card p-2.5 text-sm text-text-primary outline-none focus:border-accent disabled:opacity-50 disabled:cursor-not-allowed"
+										required
+									>
+										<option value="" disabled>-- Selecciona un cliente --</option>
+										{#each clientes as cli}
+											<option value={cli.id_cliente}
+												>{cli.nombre} (Deuda: {formatCurrency(cli.fiado_actual)})</option
+											>
+										{/each}
+									</select>
+									<button
+										type="button"
+										onclick={(e) => {
+											e.preventDefault(); // Evita que se dispare el submit del form de venta
+											formNombre = '';
+											formRut = '';
+											formTelefono = '';
+											formFiadoMaximo = 20000;
+											clearClienteErrors();
+											showCreateClienteModal = true;
+										}}
+										class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-primario bg-primario/10 text-primario hover:bg-primario hover:text-white transition-colors"
+										title="Añadir Nuevo Cliente"
+									>
+										<Plus size={20} />
+									</button>
+								</div>
+
 								{#if selectedClientData}
 									<div
 										class="mt-2 p-3 rounded-lg border text-xs flex flex-col gap-1 {isFiadoLimitExceeded ||
@@ -1386,7 +1613,6 @@
 
 	<!-- Tabla historial -->
 	{#if activeTab === 'history'}
-		<!-- Stats -->
 		<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
 			<div
 				class="flex flex-col justify-center rounded-xl border border-border-color bg-bg-card p-5 shadow-sm"
@@ -1406,8 +1632,8 @@
 			</div>
 		</div>
 
-		<!-- Buscar ventas -->
-		<div class="mb-6">
+		<!-- Buscar y Filtrar ventas -->
+		<div class="mb-6 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
 			<div class="relative w-full sm:max-w-xs">
 				<Search
 					class="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-text-muted"
@@ -1416,7 +1642,10 @@
 				<input
 					type="text"
 					bind:value={searchHistoryQuery}
-					placeholder="Buscar venta por ID..."
+					oninput={() => {
+						historyPage = 1;
+					}}
+					placeholder="Buscar por folio, vendedor o pago..."
 					class="w-full rounded-xl border border-border-color bg-bg-card py-2.5 pl-10 pr-4 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario"
 				/>
 			</div>
@@ -1440,11 +1669,24 @@
 						<tr>
 							<th
 								class="border-b border-border-color bg-text-primary/4 p-4 text-xs font-bold uppercase tracking-wider text-text-secondary"
-								>ID Venta</th
 							>
+								<button
+									class="flex items-center gap-1 hover:text-text-primary w-full text-left font-bold uppercase tracking-wider"
+									onclick={toggleSortFecha}
+								>
+									FECHA Y HORA
+									{#if sortFecha === 'asc'}
+										<ArrowUp size={12} />
+									{:else if sortFecha === 'desc'}
+										<ArrowDown size={12} />
+									{:else}
+										<ArrowUpDown size={12} class="opacity-50" />
+									{/if}
+								</button>
+							</th>
 							<th
 								class="border-b border-border-color bg-text-primary/4 p-4 text-xs font-bold uppercase tracking-wider text-text-secondary"
-								>Fecha y Hora</th
+								>Vendedor</th
 							>
 							<th
 								class="border-b border-border-color bg-text-primary/4 p-4 text-xs font-bold uppercase tracking-wider text-text-secondary"
@@ -1456,8 +1698,21 @@
 							>
 							<th
 								class="border-b border-border-color bg-text-primary/4 p-4 text-xs font-bold uppercase tracking-wider text-text-secondary"
-								>Total</th
 							>
+								<button
+									class="flex items-center gap-1 hover:text-text-primary w-full text-left font-bold uppercase tracking-wider"
+									onclick={toggleSortTotal}
+								>
+									TOTAL
+									{#if sortTotal === 'asc'}
+										<ArrowUp size={12} />
+									{:else if sortTotal === 'desc'}
+										<ArrowDown size={12} />
+									{:else}
+										<ArrowUpDown size={12} class="opacity-50" />
+									{/if}
+								</button>
+							</th>
 							<th
 								class="w-[100px] border-b border-border-color bg-text-primary/4 p-4 text-right text-xs font-bold uppercase tracking-wider text-text-secondary"
 								>Detalles</th
@@ -1465,13 +1720,15 @@
 						</tr>
 					</thead>
 					<tbody>
-						{#each filteredSales as sale (sale.id_venta)}
+						{#each paginatedSales as sale (sale.id_venta)}
 							<tr class="hover:bg-text-primary/[0.01]">
-								<td class="border-b border-border-color p-4 font-mono text-xs text-text-primary">
-									{sale.id_venta.substring(0, 8)}...
-								</td>
 								<td class="border-b border-border-color p-4 text-sm text-text-secondary">
 									{new Date(sale.fecha_emision).toLocaleString('es-CL')}
+								</td>
+								<td
+									class="border-b border-border-color p-4 text-sm font-semibold text-text-primary"
+								>
+									{getEmpleadoName(sale.id_empleado, sale)}
 								</td>
 								<td class="border-b border-border-color p-4">
 									<span
@@ -1504,6 +1761,34 @@
 						{/each}
 					</tbody>
 				</table>
+
+				<!-- Controles de paginación -->
+				{#if totalHistoryPages > 1}
+					<div
+						class="flex flex-col sm:flex-row items-center justify-between border-t border-border-color p-4 bg-text-primary/[0.01] gap-4"
+					>
+						<span class="text-xs font-semibold text-text-muted">
+							Mostrando página {historyPage} de {totalHistoryPages} ({filteredSales.length} ventas en
+							total)
+						</span>
+						<div class="flex gap-2">
+							<button
+								class="px-4 py-2 text-xs font-bold uppercase tracking-wide rounded-lg border border-border-color bg-bg-card text-text-secondary hover:bg-text-primary/5 hover:text-text-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+								disabled={historyPage === 1}
+								onclick={() => historyPage--}
+							>
+								Anterior
+							</button>
+							<button
+								class="px-4 py-2 text-xs font-bold uppercase tracking-wide rounded-lg border border-border-color bg-bg-card text-text-secondary hover:bg-text-primary/5 hover:text-text-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+								disabled={historyPage === totalHistoryPages}
+								onclick={() => historyPage++}
+							>
+								Siguiente
+							</button>
+						</div>
+					</div>
+				{/if}
 			</div>
 		{/if}
 	{/if}
@@ -1532,7 +1817,6 @@
 				>
 			</header>
 			<div class="p-6">
-				<!-- info -->
 				<div class="grid grid-cols-2 gap-4 mb-6 text-sm border-b border-border-color pb-4">
 					<div>
 						<p class="text-text-muted font-medium text-xs uppercase">Fecha y Hora</p>
@@ -1549,13 +1833,13 @@
 					<div>
 						<p class="text-text-muted font-medium text-xs uppercase">Empleado</p>
 						<p class="font-semibold text-text-primary mt-0.5">
-							{getEmpleadoName(selectedSale.id_empleado)}
+							{getEmpleadoName(selectedSale.id_empleado, selectedSale)}
 						</p>
 					</div>
 					<div>
 						<p class="text-text-muted font-medium text-xs uppercase">Caja</p>
 						<p class="font-semibold text-text-primary mt-0.5">
-							{getCajaName(selectedSale.id_caja)}
+							{getCajaName(selectedSale.id_caja, selectedSale)}
 						</p>
 					</div>
 					{#if selectedSale.fiado}
@@ -1588,7 +1872,7 @@
 								{#each selectedSale.detalles as det}
 									<tr>
 										<td class="p-3 border-b border-border-color font-medium text-text-primary">
-											{getProductDetailName(det.id_producto)}
+											{getProductDetailName(det.id_producto, det)}
 										</td>
 										<td class="p-3 border-b border-border-color text-center text-text-primary">
 											{det.cantidad}
@@ -1681,17 +1965,15 @@
 		class="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-5 backdrop-blur-sm"
 	>
 		<div
-			class="w-full max-w-[450px] overflow-hidden rounded-xl border border-border-color bg-bg-card p-6 shadow-2xl animate-modal-enter text-center"
+			class="relative w-full max-w-[450px] overflow-hidden rounded-xl border border-border-color bg-bg-card p-6 shadow-2xl animate-modal-enter text-center"
 		>
-			{#if selectedCajaId}
-				<button
-					type="button"
-					class="absolute top-4 right-4 text-text-muted hover:text-text-primary text-xl"
-					onclick={() => (showTurnoAperturaModal = false)}
-				>
-					&times;
-				</button>
-			{/if}
+			<button
+				type="button"
+				class="absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-border-color hover:text-text-primary"
+				onclick={() => (showTurnoAperturaModal = false)}
+			>
+				<X size={20} />
+			</button>
 
 			<div
 				class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primario/10 text-primario"
@@ -1699,7 +1981,7 @@
 				<Unlock size={28} />
 			</div>
 			<h3 class="text-lg font-bold text-text-primary">Abrir Turno de Caja</h3>
-			<p class="text-xs text-text-secondary mt-1.5 max-w-xs mx-auto">
+			<p class="mx-auto mt-1.5 max-w-xs text-xs text-text-secondary">
 				Para registrar ventas debes abrir un turno indicando la caja y el efectivo inicial con el
 				que cuentas para vueltos.
 			</p>
@@ -1708,13 +1990,13 @@
 				<div class="mb-4">
 					<label
 						for="turnoCajaSelect"
-						class="block text-xs font-bold uppercase tracking-wider text-text-secondary mb-2"
+						class="mb-2 block text-xs font-bold uppercase tracking-wider text-text-secondary"
 						>Caja asignada</label
 					>
 					<select
 						id="turnoCajaSelect"
 						bind:value={aperturaCajaId}
-						class="w-full rounded-lg border border-border-color bg-bg-card p-3 text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-primario focus:border-primario"
+						class="w-full rounded-lg border border-border-color bg-bg-card p-3 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario"
 						required
 					>
 						<option value="" disabled selected>-- Selecciona una caja --</option>
@@ -1727,22 +2009,22 @@
 				<div class="mb-6">
 					<label
 						for="saldoInicial"
-						class="block text-xs font-bold uppercase tracking-wider text-text-secondary mb-2"
+						class="mb-2 block text-xs font-bold uppercase tracking-wider text-text-secondary"
 						>Saldo Inicial de Apertura</label
 					>
 					<div class="relative flex items-center">
-						<span class="absolute left-3 text-sm text-text-muted font-bold">$</span>
+						<span class="absolute left-3 font-bold text-text-muted text-sm">$</span>
 						<input
 							id="saldoInicial"
 							type="number"
 							min="0"
 							placeholder="0"
 							bind:value={aperturaSaldoInicial}
-							class="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none w-full rounded-lg border border-border-color bg-bg-card py-2.5 pl-7 pr-3 text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-primario focus:border-primario"
+							class="w-full rounded-lg border border-border-color bg-bg-card py-2.5 pl-7 pr-3 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
 							required
 						/>
 					</div>
-					<p class="text-[10px] text-text-muted mt-1.5">
+					<p class="mt-1.5 text-[10px] text-text-muted">
 						Efectivo base que tienes disponible para entregar vueltos.
 					</p>
 				</div>
@@ -1956,7 +2238,6 @@
 	</div>
 {/if}
 
-<!-- Success Receipt Preview Modal -->
 {#if showSuccessReceiptModal && recentlyCompletedSale}
 	<div
 		class="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 p-5 backdrop-blur-sm"
@@ -2004,13 +2285,11 @@
 			</header>
 
 			<!-- Área de vista previa (contenedor de boleta) -->
-			<div
-				class="p-6 overflow-y-auto flex-1 bg-text-primary/[0.01] border-b border-border-color flex justify-center"
-			>
+			<div class="p-6 overflow-y-auto flex-1 bg-text-primary/[0.01] border-b border-border-color">
 				<!-- Este es el elemento para impresión. Forzamos fondo blanco y letra negra en pantalla para un look de ticket térmico tradicional -->
 				<div
 					id="print-receipt-area"
-					class="printable-receipt bg-white text-neutral-900 p-6 rounded shadow-sm border border-neutral-200 font-mono text-xs w-full max-w-[340px] text-left"
+					class="printable-receipt bg-white text-neutral-900 p-6 rounded shadow-sm border border-neutral-200 font-mono text-xs w-full max-w-[340px] mx-auto text-left"
 				>
 					<!-- Encabezado de la boleta -->
 					<div class="text-center mb-4">
@@ -2025,12 +2304,12 @@
 							</div>
 						</div>
 
-						<h2 class="text-sm font-black uppercase text-neutral-800 m-0 mt-2">MINIMARKET GPS</h2>
+						<h2 class="text-sm font-black uppercase text-neutral-800 m-0 mt-2">MINIMARKET GO</h2>
 						<p class="text-[9px] text-neutral-500 m-0 font-bold">
-							Razón Social: Minimarket GPS Limitada
+							Razón Social: Minimarket Go Limitada
 						</p>
 						<p class="text-[9px] text-neutral-500 m-0">Giro: Almacén y Minimarket</p>
-						<p class="text-[9px] text-neutral-500 m-0">Dirección: Av. Principal 1234, Santiago</p>
+						<p class="text-[9px] text-neutral-500 m-0">Dirección: Talcahuano</p>
 						<p class="text-[9px] text-neutral-500 m-0">Teléfono: +56 2 2345 6789</p>
 					</div>
 
@@ -2045,8 +2324,12 @@
 						<p class="m-0">
 							Fecha: {new Date(recentlyCompletedSale.fecha_emision).toLocaleString('es-CL')}
 						</p>
-						<p class="m-0">Caja: {getCajaName(recentlyCompletedSale.id_caja)}</p>
-						<p class="m-0">Cajero: {getEmpleadoName(recentlyCompletedSale.id_empleado)}</p>
+						<p class="m-0">
+							Caja: {getCajaName(recentlyCompletedSale.id_caja, recentlyCompletedSale)}
+						</p>
+						<p class="m-0">
+							Cajero: {getEmpleadoName(recentlyCompletedSale.id_empleado, recentlyCompletedSale)}
+						</p>
 
 						<!-- Leyenda para pagos con tarjeta -->
 						{#if recentlyCompletedSale.metodo_pago?.nombre_metodo === 'Tarjeta'}
@@ -2092,7 +2375,7 @@
 								{@const unitPrice = Math.round(det.monto_final / det.cantidad)}
 								<div class="flex justify-between items-start text-[9px] leading-tight">
 									<span class="w-24 text-left break-words pr-1"
-										>{getProductDetailName(det.id_producto)}</span
+										>{getProductDetailName(det.id_producto, det)}</span
 									>
 									<span class="w-10 text-center">{det.cantidad}</span>
 									<span class="w-16 text-right">{formatCurrency(unitPrice)}</span>
@@ -2179,7 +2462,6 @@
 					<!-- Pie de página y timbre fiscal -->
 					<div class="text-center mt-3 font-mono">
 						<p class="m-0 font-bold text-[10px]">¡GRACIAS POR SU COMPRA!</p>
-						<p class="m-0 text-[9px] text-neutral-500">Visítenos en www.minimarketgps.cl</p>
 
 						<!-- Timbre Electrónico SII (Requerido: Timbre PDF417 simulado y leyenda legal) -->
 						<div
@@ -2262,6 +2544,116 @@
 					<span>Imprimir Boleta</span>
 				</button>
 			</footer>
+		</div>
+	</div>
+{/if}
+
+<!-- Modal de Crear Cliente (POS) -->
+{#if showCreateClienteModal}
+	<div
+		class="fixed inset-0 z-[150] flex items-center justify-center bg-black/60 p-4 backdrop-blur-[4px] animate-modal-enter"
+		onclick={() => (showCreateClienteModal = false)}
+		role="presentation"
+	>
+		<div
+			class="w-full max-w-lg overflow-hidden rounded-2xl border border-border-color bg-bg-card shadow-2xl"
+			onclick={(e) => e.stopPropagation()}
+			role="dialog"
+		>
+			<header class="flex items-center justify-between border-b border-border-color px-6 py-4">
+				<h3 class="text-lg font-bold text-text-primary">Añadir Nuevo Cliente Rápido</h3>
+				<button
+					class="rounded-lg p-1 text-text-muted hover:bg-border-color hover:text-text-primary"
+					onclick={() => (showCreateClienteModal = false)}
+				>
+					<X size={20} />
+				</button>
+			</header>
+			<form onsubmit={handleCreateCliente} autocomplete="off" class="p-6">
+				{#if formGeneralError}
+					<div
+						class="mb-5 flex gap-3 rounded-lg border border-red-500/15 bg-danger-bg p-4 text-sm text-danger-color"
+						role="alert"
+					>
+						<span>{formGeneralError}</span>
+					</div>
+				{/if}
+
+				<div class="grid grid-cols-1 gap-4">
+					<div class="flex flex-col gap-1.5">
+						<label class="text-sm font-semibold text-text-primary" for="formNombrePos"
+							>Nombre Completo</label
+						>
+						<input
+							type="text"
+							id="formNombrePos"
+							autocomplete="off"
+							class="rounded-xl border border-border-color bg-bg-primary px-4 py-2 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50"
+							placeholder="Ej: Juan Pérez Gómez"
+							bind:value={formNombre}
+							onblur={handleNombreBlur}
+							disabled={submitClienteLoading}
+							required
+						/>
+						{#if errNombre}<span class="mt-0.5 text-xs font-medium text-danger-color"
+								>{errNombre}</span
+							>{/if}
+					</div>
+
+					<div class="flex flex-col gap-1.5">
+						<label class="text-sm font-semibold text-text-primary" for="formRutPos">RUT</label>
+						<input
+							type="text"
+							id="formRutPos"
+							class="rounded-xl border border-border-color bg-bg-primary px-4 py-2 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50"
+							placeholder="Ej: 12.345.678-K"
+							value={formRut}
+							oninput={handleRutInput}
+							disabled={submitClienteLoading}
+							required
+						/>
+						{#if errRut}<span class="mt-0.5 text-xs font-medium text-danger-color">{errRut}</span
+							>{/if}
+					</div>
+
+					<div class="flex flex-col gap-1.5">
+						<label class="text-sm font-semibold text-text-primary" for="formTelefonoPos"
+							>Número Telefónico</label
+						>
+						<input
+							type="text"
+							id="formTelefonoPos"
+							class="rounded-xl border border-border-color bg-bg-primary px-4 py-2 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario disabled:opacity-50"
+							placeholder="Ej: +56912345678"
+							bind:value={formTelefono}
+							disabled={submitClienteLoading}
+							required
+						/>
+						{#if errTelefono}<span class="mt-0.5 text-xs font-medium text-danger-color"
+								>{errTelefono}</span
+							>{/if}
+					</div>
+				</div>
+				<div class="mt-6 flex justify-end gap-3">
+					<button
+						type="button"
+						class="px-4 py-2 rounded-lg border border-border-color text-xs font-semibold text-text-secondary bg-bg-secondary hover:bg-text-primary/5"
+						onclick={() => (showCreateClienteModal = false)}
+						disabled={submitClienteLoading}>Cancelar</button
+					>
+					<button
+						type="submit"
+						class="rounded-lg bg-primario px-5 py-2 text-sm font-semibold text-white hover:bg-primario-hover shadow-md disabled:cursor-not-allowed disabled:opacity-70"
+						disabled={submitClienteLoading}
+					>
+						{#if submitClienteLoading}
+							Procesando...
+						{:else}
+							Crear y Seleccionar
+						{/if}
+					</button>
+				</div>
+			</form>
 		</div>
 	</div>
 {/if}
