@@ -45,7 +45,7 @@ func main() {
 	})
 
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{cfg.FrontURL, "http://localhost:5173", "http://127.0.0.1:5173", "http://146.83.198.35", "https://146.83.198.35"},
+		AllowOrigins:     []string{cfg.FrontURL, "http://localhost:5173", "http://127.0.0.1:5173"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
