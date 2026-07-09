@@ -283,7 +283,7 @@
 			if (!query) return true;
 
 			const folio = getNumericFolio(v.id_venta).toLowerCase();
-			const empName = getEmpleadoName(v.id_empleado).toLowerCase();
+			const empName = getEmpleadoName(v.id_empleado, v).toLowerCase();
 			const payment = (v.metodo_pago?.nombre_metodo || 'efectivo').toLowerCase();
 
 			return folio.includes(query) || empName.includes(query) || payment.includes(query);
@@ -302,11 +302,11 @@
 						: Number(a.monto_total) - Number(b.monto_total);
 				if (diff !== 0) return diff;
 			}
-			// fallback default
+			// ordenar por fechas por defecto
 			const timeA = new Date(a.fecha_emision).getTime();
 			const timeB = new Date(b.fecha_emision).getTime();
 			if (timeA !== timeB) return timeB - timeA;
-			return b.id_venta.localeCompare(a.id_venta); // Tie-breaker to prevent random shifting
+			return b.id_venta.localeCompare(a.id_venta);
 		});
 
 		return result;
@@ -1086,17 +1086,26 @@
 		return num.toString().padStart(6, '0');
 	}
 
-	function getProductDetailName(productId: string) {
+	function getProductDetailName(productId: string, det?: any) {
+		if (det && det.producto && det.producto.nombre) {
+			return det.producto.nombre;
+		}
 		const prod = productos.find((p) => p.id_producto === productId);
 		return prod ? prod.nombre : 'Producto desconocido';
 	}
 
-	function getEmpleadoName(empleadoId: string) {
+	function getEmpleadoName(empleadoId: string, sale?: any) {
+		if (sale && sale.empleado && sale.empleado.nombre) {
+			return `${sale.empleado.nombre} ${sale.empleado.apellido || ''}`.trim();
+		}
 		const emp = empleados.find((e) => e.id_empleado === empleadoId);
 		return emp ? `${emp.nombre} ${emp.apellido || ''}`.trim() : 'Desconocido';
 	}
 
-	function getCajaName(cajaId: string) {
+	function getCajaName(cajaId: string, sale?: any) {
+		if (sale && sale.caja && sale.caja.nombre) {
+			return sale.caja.nombre;
+		}
 		const c = cajas.find((cj) => cj.id_caja === cajaId);
 		return c ? c.nombre : 'Caja desconocida';
 	}
@@ -1719,7 +1728,7 @@
 								<td
 									class="border-b border-border-color p-4 text-sm font-semibold text-text-primary"
 								>
-									{getEmpleadoName(sale.id_empleado)}
+									{getEmpleadoName(sale.id_empleado, sale)}
 								</td>
 								<td class="border-b border-border-color p-4">
 									<span
@@ -1824,13 +1833,13 @@
 					<div>
 						<p class="text-text-muted font-medium text-xs uppercase">Empleado</p>
 						<p class="font-semibold text-text-primary mt-0.5">
-							{getEmpleadoName(selectedSale.id_empleado)}
+							{getEmpleadoName(selectedSale.id_empleado, selectedSale)}
 						</p>
 					</div>
 					<div>
 						<p class="text-text-muted font-medium text-xs uppercase">Caja</p>
 						<p class="font-semibold text-text-primary mt-0.5">
-							{getCajaName(selectedSale.id_caja)}
+							{getCajaName(selectedSale.id_caja, selectedSale)}
 						</p>
 					</div>
 					{#if selectedSale.fiado}
@@ -1863,7 +1872,7 @@
 								{#each selectedSale.detalles as det}
 									<tr>
 										<td class="p-3 border-b border-border-color font-medium text-text-primary">
-											{getProductDetailName(det.id_producto)}
+											{getProductDetailName(det.id_producto, det)}
 										</td>
 										<td class="p-3 border-b border-border-color text-center text-text-primary">
 											{det.cantidad}
@@ -2315,8 +2324,12 @@
 						<p class="m-0">
 							Fecha: {new Date(recentlyCompletedSale.fecha_emision).toLocaleString('es-CL')}
 						</p>
-						<p class="m-0">Caja: {getCajaName(recentlyCompletedSale.id_caja)}</p>
-						<p class="m-0">Cajero: {getEmpleadoName(recentlyCompletedSale.id_empleado)}</p>
+						<p class="m-0">
+							Caja: {getCajaName(recentlyCompletedSale.id_caja, recentlyCompletedSale)}
+						</p>
+						<p class="m-0">
+							Cajero: {getEmpleadoName(recentlyCompletedSale.id_empleado, recentlyCompletedSale)}
+						</p>
 
 						<!-- Leyenda para pagos con tarjeta -->
 						{#if recentlyCompletedSale.metodo_pago?.nombre_metodo === 'Tarjeta'}
@@ -2362,7 +2375,7 @@
 								{@const unitPrice = Math.round(det.monto_final / det.cantidad)}
 								<div class="flex justify-between items-start text-[9px] leading-tight">
 									<span class="w-24 text-left break-words pr-1"
-										>{getProductDetailName(det.id_producto)}</span
+										>{getProductDetailName(det.id_producto, det)}</span
 									>
 									<span class="w-10 text-center">{det.cantidad}</span>
 									<span class="w-16 text-right">{formatCurrency(unitPrice)}</span>
@@ -2449,7 +2462,6 @@
 					<!-- Pie de página y timbre fiscal -->
 					<div class="text-center mt-3 font-mono">
 						<p class="m-0 font-bold text-[10px]">¡GRACIAS POR SU COMPRA!</p>
-						<p class="m-0 text-[9px] text-neutral-500">Visítenos en www.minimarketgps.cl</p>
 
 						<!-- Timbre Electrónico SII (Requerido: Timbre PDF417 simulado y leyenda legal) -->
 						<div

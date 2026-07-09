@@ -9,7 +9,7 @@ func GuardarVenta(db *gorm.DB, venta *Venta) error {
 
 func ObtenerTodasVentas(db *gorm.DB) ([]Venta, error) {
 	var ventas []Venta
-	if err := db.Preload("MetodoPago").Preload("Detalles").Preload("Fiado").Preload("Caja").Find(&ventas).Error; err != nil {
+	if err := db.Preload("MetodoPago").Preload("Detalles").Preload("Detalles.Producto").Preload("Fiado").Preload("Caja").Preload("Empleado").Find(&ventas).Error; err != nil {
 		return nil, err
 	}
 	return ventas, nil
@@ -17,7 +17,7 @@ func ObtenerTodasVentas(db *gorm.DB) ([]Venta, error) {
 
 func ObtenerVentaPorID(db *gorm.DB, id string) (*Venta, error) {
 	var venta Venta
-	if err := db.Preload("MetodoPago").Preload("Detalles").Preload("Fiado").Preload("Caja").First(&venta, "id = ?", id).Error; err != nil {
+	if err := db.Preload("MetodoPago").Preload("Detalles").Preload("Detalles.Producto").Preload("Fiado").Preload("Caja").Preload("Empleado").First(&venta, "id = ?", id).Error; err != nil {
 		return nil, err
 	}
 	return &venta, nil
