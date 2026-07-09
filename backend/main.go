@@ -11,7 +11,6 @@ import (
 	"backend/internal/promociones"
 	"backend/internal/validations"
 	"backend/internal/ventas"
-	"time"
 
 	"github.com/gin-contrib/cors"
 
@@ -31,28 +30,17 @@ func main() {
 
 	r := gin.Default()
 
-	r.GET("/health", func(c *gin.Context) {
-		sqlDB, err := db.DB()
-		if err != nil {
-			c.JSON(500, gin.H{"status": "error", "message": "database connection failed"})
-			return
-		}
-		if err := sqlDB.Ping(); err != nil {
-			c.JSON(500, gin.H{"status": "error", "message": "database ping failed"})
-			return
-		}
-		c.JSON(200, gin.H{"status": "ok"})
-	})
+	config := cors.DefaultConfig()
+	// 1. Origen exacto de tu frontend (sin asteriscos)
+	config.AllowOrigins = []string{"http://146.83.198.35:1226"}
+	// 2. Permitir envío de credenciales (soluciona tu error rojo en consola)
+	config.AllowCredentials = true
+	// 3. Métodos permitidos
+	config.AllowMethods = []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}
+	// 4. Headers permitidos (asegúrate de incluir los que envíe tu frontend)
+	config.AllowHeaders = []string{"Origin", "Content-Length", "Content-Type", "Authorization"}
 
-	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{cfg.FrontURL, "http://localhost:5173", "http://127.0.0.1:5173"},
-		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
-		ExposeHeaders:    []string{"Content-Length"},
-		AllowCredentials: true,
-		MaxAge:           12 * time.Hour,
-	}))
-
+	r.Use(cors.New(config))
 	api := r.Group("/api")
 
 	authCtrl := auth.NewAuthController(db, cfg.JWTSecret, cfg.CookieDomain)
