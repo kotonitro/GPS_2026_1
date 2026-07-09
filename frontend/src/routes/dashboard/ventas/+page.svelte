@@ -36,7 +36,10 @@
 		Camera,
 		Lock,
 		Unlock,
-		X
+		X,
+		ArrowUp,
+		ArrowDown,
+		ArrowUpDown
 	} from '@lucide/svelte';
 	import Scanner from '$lib/components/Scanner.svelte';
 
@@ -245,6 +248,26 @@
 
 	// historial
 	let searchHistoryQuery = $state('');
+	let sortFecha = $state<'none' | 'asc' | 'desc'>('desc');
+	let sortTotal = $state<'none' | 'asc' | 'desc'>('none');
+	let historyPage = $state(1);
+	let historyItemsPerPage = $state(10);
+
+	function toggleSortFecha() {
+		sortTotal = 'none'; // reset other
+		if (sortFecha === 'none') sortFecha = 'asc';
+		else if (sortFecha === 'asc') sortFecha = 'desc';
+		else sortFecha = 'none';
+		historyPage = 1;
+	}
+
+	function toggleSortTotal() {
+		sortFecha = 'none'; // reset other
+		if (sortTotal === 'none') sortTotal = 'asc';
+		else if (sortTotal === 'asc') sortTotal = 'desc';
+		else sortTotal = 'none';
+		historyPage = 1;
+	}
 
 	// buscar po detalle
 	let selectedSale = $state<Venta | null>(null);
@@ -256,13 +279,43 @@
 	// Filtrado de historial
 	let filteredSales = $derived.by(() => {
 		const query = searchHistoryQuery.toLowerCase().trim();
-		return ventas.filter((v) => {
+		let result = ventas.filter((v) => {
 			if (!query) return true;
-			return (
-				v.id_venta.toLowerCase().includes(query) || v.id_empleado.toLowerCase().includes(query)
-			);
+
+			const folio = getNumericFolio(v.id_venta).toLowerCase();
+			const empName = getEmpleadoName(v.id_empleado).toLowerCase();
+			const payment = (v.metodo_pago?.nombre_metodo || 'efectivo').toLowerCase();
+
+			return folio.includes(query) || empName.includes(query) || payment.includes(query);
 		});
+
+		result.sort((a, b) => {
+			if (sortFecha !== 'none') {
+				const timeA = new Date(a.fecha_emision).getTime();
+				const timeB = new Date(b.fecha_emision).getTime();
+				if (timeA !== timeB) return sortFecha === 'desc' ? timeB - timeA : timeA - timeB;
+			}
+			if (sortTotal !== 'none') {
+				const diff =
+					sortTotal === 'desc'
+						? Number(b.monto_total) - Number(a.monto_total)
+						: Number(a.monto_total) - Number(b.monto_total);
+				if (diff !== 0) return diff;
+			}
+			// fallback default
+			const timeA = new Date(a.fecha_emision).getTime();
+			const timeB = new Date(b.fecha_emision).getTime();
+			if (timeA !== timeB) return timeB - timeA;
+			return b.id_venta.localeCompare(a.id_venta); // Tie-breaker to prevent random shifting
+		});
+
+		return result;
 	});
+
+	let totalHistoryPages = $derived(Math.ceil(filteredSales.length / historyItemsPerPage) || 1);
+	let paginatedSales = $derived(
+		filteredSales.slice((historyPage - 1) * historyItemsPerPage, historyPage * historyItemsPerPage)
+	);
 
 	function isPromotionActive(p: Promocion): boolean {
 		const now = new Date();
@@ -1570,8 +1623,8 @@
 			</div>
 		</div>
 
-		<!-- Buscar ventas -->
-		<div class="mb-6">
+		<!-- Buscar y Filtrar ventas -->
+		<div class="mb-6 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
 			<div class="relative w-full sm:max-w-xs">
 				<Search
 					class="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-text-muted"
@@ -1580,7 +1633,10 @@
 				<input
 					type="text"
 					bind:value={searchHistoryQuery}
-					placeholder="Buscar venta por ID..."
+					oninput={() => {
+						historyPage = 1;
+					}}
+					placeholder="Buscar por folio, vendedor o pago..."
 					class="w-full rounded-xl border border-border-color bg-bg-card py-2.5 pl-10 pr-4 text-sm text-text-primary focus:border-primario focus:outline-none focus:ring-1 focus:ring-primario"
 				/>
 			</div>
@@ -1604,11 +1660,24 @@
 						<tr>
 							<th
 								class="border-b border-border-color bg-text-primary/4 p-4 text-xs font-bold uppercase tracking-wider text-text-secondary"
-								>ID Venta</th
 							>
+								<button
+									class="flex items-center gap-1 hover:text-text-primary w-full text-left font-bold uppercase tracking-wider"
+									onclick={toggleSortFecha}
+								>
+									FECHA Y HORA
+									{#if sortFecha === 'asc'}
+										<ArrowUp size={12} />
+									{:else if sortFecha === 'desc'}
+										<ArrowDown size={12} />
+									{:else}
+										<ArrowUpDown size={12} class="opacity-50" />
+									{/if}
+								</button>
+							</th>
 							<th
 								class="border-b border-border-color bg-text-primary/4 p-4 text-xs font-bold uppercase tracking-wider text-text-secondary"
-								>Fecha y Hora</th
+								>Vendedor</th
 							>
 							<th
 								class="border-b border-border-color bg-text-primary/4 p-4 text-xs font-bold uppercase tracking-wider text-text-secondary"
@@ -1620,8 +1689,21 @@
 							>
 							<th
 								class="border-b border-border-color bg-text-primary/4 p-4 text-xs font-bold uppercase tracking-wider text-text-secondary"
-								>Total</th
 							>
+								<button
+									class="flex items-center gap-1 hover:text-text-primary w-full text-left font-bold uppercase tracking-wider"
+									onclick={toggleSortTotal}
+								>
+									TOTAL
+									{#if sortTotal === 'asc'}
+										<ArrowUp size={12} />
+									{:else if sortTotal === 'desc'}
+										<ArrowDown size={12} />
+									{:else}
+										<ArrowUpDown size={12} class="opacity-50" />
+									{/if}
+								</button>
+							</th>
 							<th
 								class="w-[100px] border-b border-border-color bg-text-primary/4 p-4 text-right text-xs font-bold uppercase tracking-wider text-text-secondary"
 								>Detalles</th
@@ -1629,13 +1711,15 @@
 						</tr>
 					</thead>
 					<tbody>
-						{#each filteredSales as sale (sale.id_venta)}
+						{#each paginatedSales as sale (sale.id_venta)}
 							<tr class="hover:bg-text-primary/[0.01]">
-								<td class="border-b border-border-color p-4 font-mono text-xs text-text-primary">
-									{sale.id_venta.substring(0, 8)}...
-								</td>
 								<td class="border-b border-border-color p-4 text-sm text-text-secondary">
 									{new Date(sale.fecha_emision).toLocaleString('es-CL')}
+								</td>
+								<td
+									class="border-b border-border-color p-4 text-sm font-semibold text-text-primary"
+								>
+									{getEmpleadoName(sale.id_empleado)}
 								</td>
 								<td class="border-b border-border-color p-4">
 									<span
@@ -1668,6 +1752,34 @@
 						{/each}
 					</tbody>
 				</table>
+
+				<!-- Controles de paginación -->
+				{#if totalHistoryPages > 1}
+					<div
+						class="flex flex-col sm:flex-row items-center justify-between border-t border-border-color p-4 bg-text-primary/[0.01] gap-4"
+					>
+						<span class="text-xs font-semibold text-text-muted">
+							Mostrando página {historyPage} de {totalHistoryPages} ({filteredSales.length} ventas en
+							total)
+						</span>
+						<div class="flex gap-2">
+							<button
+								class="px-4 py-2 text-xs font-bold uppercase tracking-wide rounded-lg border border-border-color bg-bg-card text-text-secondary hover:bg-text-primary/5 hover:text-text-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+								disabled={historyPage === 1}
+								onclick={() => historyPage--}
+							>
+								Anterior
+							</button>
+							<button
+								class="px-4 py-2 text-xs font-bold uppercase tracking-wide rounded-lg border border-border-color bg-bg-card text-text-secondary hover:bg-text-primary/5 hover:text-text-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+								disabled={historyPage === totalHistoryPages}
+								onclick={() => historyPage++}
+							>
+								Siguiente
+							</button>
+						</div>
+					</div>
+				{/if}
 			</div>
 		{/if}
 	{/if}
@@ -2164,13 +2276,11 @@
 			</header>
 
 			<!-- Área de vista previa (contenedor de boleta) -->
-			<div
-				class="p-6 overflow-y-auto flex-1 bg-text-primary/[0.01] border-b border-border-color flex justify-center"
-			>
+			<div class="p-6 overflow-y-auto flex-1 bg-text-primary/[0.01] border-b border-border-color">
 				<!-- Este es el elemento para impresión. Forzamos fondo blanco y letra negra en pantalla para un look de ticket térmico tradicional -->
 				<div
 					id="print-receipt-area"
-					class="printable-receipt bg-white text-neutral-900 p-6 rounded shadow-sm border border-neutral-200 font-mono text-xs w-full max-w-[340px] text-left"
+					class="printable-receipt bg-white text-neutral-900 p-6 rounded shadow-sm border border-neutral-200 font-mono text-xs w-full max-w-[340px] mx-auto text-left"
 				>
 					<!-- Encabezado de la boleta -->
 					<div class="text-center mb-4">
@@ -2185,12 +2295,12 @@
 							</div>
 						</div>
 
-						<h2 class="text-sm font-black uppercase text-neutral-800 m-0 mt-2">MINIMARKET GPS</h2>
+						<h2 class="text-sm font-black uppercase text-neutral-800 m-0 mt-2">MINIMARKET GO</h2>
 						<p class="text-[9px] text-neutral-500 m-0 font-bold">
-							Razón Social: Minimarket GPS Limitada
+							Razón Social: Minimarket Go Limitada
 						</p>
 						<p class="text-[9px] text-neutral-500 m-0">Giro: Almacén y Minimarket</p>
-						<p class="text-[9px] text-neutral-500 m-0">Dirección: Av. Principal 1234, Santiago</p>
+						<p class="text-[9px] text-neutral-500 m-0">Dirección: Talcahuano</p>
 						<p class="text-[9px] text-neutral-500 m-0">Teléfono: +56 2 2345 6789</p>
 					</div>
 
